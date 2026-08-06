@@ -887,6 +887,12 @@
   async function handleServerRegister() {
     const username = (document.getElementById("regUsername") || {}).value?.trim();
     const password = (document.getElementById("regPassword") || {}).value;
+    const securityQuestion = (
+      document.getElementById("regSecurityQuestion") || {}
+    ).value?.trim();
+    const securityAnswer = (
+      document.getElementById("regSecurityAnswer") || {}
+    ).value?.trim();
     const errorEl = document.getElementById("registerError");
     if (!username || !password || password.length < 6) {
       if (errorEl)
@@ -897,7 +903,13 @@
     try {
       const data = await apiFetch("/api/auth/register", {
         method: "POST",
-        body: JSON.stringify({ username, password, teamName: username + " SK" }),
+        body: JSON.stringify({
+          username,
+          password,
+          teamName: username + " SK",
+          securityQuestion: securityQuestion || null,
+          securityAnswer: securityAnswer || null,
+        }),
       });
       setToken(data.token);
       localStorage.setItem(CLUB_KEY, JSON.stringify(data.club || null));
@@ -908,8 +920,78 @@
     }
   }
 
+  async function handleForgotFetchQuestion() {
+    const username = (document.getElementById("forgotUsername") || {}).value?.trim();
+    const errorEl = document.getElementById("forgotError");
+    const box = document.getElementById("forgotQuestionBox");
+    if (!username) {
+      if (errorEl) errorEl.innerText = "Kullanıcı adı gir.";
+      return;
+    }
+    if (errorEl) errorEl.innerText = "";
+    try {
+      const data = await apiFetch(
+        "/api/auth/security-question?username=" + encodeURIComponent(username),
+        { method: "GET" },
+      );
+      document.getElementById("forgotQuestionText").innerText = data.question;
+      if (box) box.classList.remove("hidden");
+    } catch (e) {
+      if (box) box.classList.add("hidden");
+      if (errorEl) errorEl.innerText = e.message || "Soru alınamadı.";
+    }
+  }
+
+  async function handleForgotReset() {
+    const username = (document.getElementById("forgotUsername") || {}).value?.trim();
+    const answer = (document.getElementById("forgotAnswer") || {}).value?.trim();
+    const newPassword = (document.getElementById("forgotNewPassword") || {}).value;
+    const errorEl = document.getElementById("forgotError");
+    if (!username || !answer || !newPassword || newPassword.length < 6) {
+      if (errorEl)
+        errorEl.innerText = "Tüm alanları doldur (yeni şifre en az 6 karakter).";
+      return;
+    }
+    if (errorEl) errorEl.innerText = "Sıfırlanıyor...";
+    try {
+      await apiFetch("/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ username, answer, newPassword }),
+      });
+      if (errorEl) errorEl.innerText = "";
+      alert("Şifren sıfırlandı, şimdi yeni şifreyle giriş yapabilirsin.");
+      const loginU = document.getElementById("loginUsername");
+      const loginP = document.getElementById("loginPassword");
+      if (loginU) loginU.value = username;
+      if (loginP) loginP.value = "";
+      document.getElementById("showLoginFromForgot")?.click();
+    } catch (e) {
+      if (errorEl) errorEl.innerText = e.message || "Sıfırlama başarısız.";
+    }
+  }
+
   rewireButton("loginBtn", handleServerLogin);
   rewireButton("registerBtn", handleServerRegister);
+  rewireButton("forgotFetchBtn", handleForgotFetchQuestion);
+  rewireButton("forgotResetBtn", handleForgotReset);
+
+  // Enter tuşuyla gönderme — form etiketi olmadığı için input'lara elle bağlıyoruz.
+  function wireEnterSubmit(inputIds, handler) {
+    inputIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handler();
+        }
+      });
+    });
+  }
+  wireEnterSubmit(["loginUsername", "loginPassword"], handleServerLogin);
+  wireEnterSubmit(["regUsername", "regEmail", "regPassword"], handleServerRegister);
+  wireEnterSubmit(["forgotUsername"], handleForgotFetchQuestion);
+  wireEnterSubmit(["forgotAnswer", "forgotNewPassword"], handleForgotReset);
 
   const _origLogout = window.logoutUser;
   window.logoutUser = function () {
