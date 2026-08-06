@@ -16,6 +16,7 @@ function rowToTeam(r) {
     managerSince: r.manager_since,
     formation: r.formation,
     gameStyle: r.game_style,
+    passStyle: r.pass_style,
   };
 }
 
@@ -193,8 +194,8 @@ async function listCandidates(country, nationalTeamId) {
 
 async function getSquad(nationalTeamId) {
   const { rows } = await query(
-    `SELECT ns.player_id, ns.is_starter, ns.bench_order, ns.called_up_at,
-       p.name, p.pos, p.age, p.club_id, c.name AS club_name,
+    `SELECT ns.player_id, ns.is_starter, ns.bench_order, ns.called_up_at, ns.pos AS assigned_pos,
+       p.name, p.pos AS natural_pos, p.age, p.club_id, c.name AS club_name,
        ROUND((p.pace + p.passing + p.finishing + p.tackle + p.vision +
               p.stamina + p.strength + p.technique + p.agility + p.positioning
              ) / 10.0) AS overall
@@ -208,7 +209,8 @@ async function getSquad(nationalTeamId) {
   return rows.map((r) => ({
     playerId: r.player_id,
     name: r.name,
-    pos: r.pos,
+    pos: r.assigned_pos || r.natural_pos,
+    naturalPos: r.natural_pos,
     age: r.age,
     clubId: r.club_id,
     clubName: r.club_name,
@@ -251,25 +253,37 @@ async function dropPlayer(nationalTeamId, playerId) {
   return { ok: true };
 }
 
-/** İlk 11'i belirler (kadroda olmayan id'ler yok sayılır), formasyonu kaydeder. */
-async function setLineup(nationalTeamId, starterPlayerIds, formation) {
+/**
+ * İlk 11'i belirler (kadroda olmayan id'ler yok sayılır), formasyonu ve
+ * (varsa) her oyuncunun saha üstü mevkisini + pas stilini kaydeder.
+ * assignments: [{ playerId, pos }] — pos verilmezse oyuncunun doğal mevkisi kullanılır.
+ */
+async function setLineup(nationalTeamId, starterPlayerIds, formation, assignments, passStyle, gameStyle) {
   return withTransaction(async (client) => {
     await client.query(
       `UPDATE national_squad SET is_starter = FALSE WHERE national_team_id = $1`,
       [nationalTeamId],
     );
     const ids = (starterPlayerIds || []).slice(0, 11);
+    const posByPlayer = new Map(
+      (assignments || []).map((a) => [a.playerId, a.pos || null]),
+    );
     for (const pid of ids) {
       await client.query(
-        `UPDATE national_squad SET is_starter = TRUE
+        `UPDATE national_squad SET is_starter = TRUE, pos = $3
          WHERE national_team_id = $1 AND player_id = $2`,
-        [nationalTeamId, pid],
+        [nationalTeamId, pid, posByPlayer.get(pid) || null],
       );
     }
-    if (formation) {
+    if (formation || passStyle || gameStyle) {
       await client.query(
-        `UPDATE national_teams SET formation = $2, updated_at = NOW() WHERE id = $1`,
-        [nationalTeamId, formation],
+        `UPDATE national_teams SET
+           formation = COALESCE($2, formation),
+           pass_style = COALESCE($3, pass_style),
+           game_style = COALESCE($4, game_style),
+           updated_at = NOW()
+         WHERE id = $1`,
+        [nationalTeamId, formation || null, passStyle || null, gameStyle || null],
       );
     }
     return { ok: true };
@@ -306,7 +320,7 @@ function rowToMatchPlayer(r) {
 /** Maç motoruna verilecek şekilde: { players (starters), bench }. */
 async function getSquadForMatch(nationalTeamId) {
   const { rows } = await query(
-    `SELECT p.*, ns.is_starter, ns.bench_order
+    `SELECT p.*, ns.is_starter, ns.bench_order, COALESCE(ns.pos, p.pos) AS pos
      FROM national_squad ns
      JOIN players p ON p.id = ns.player_id
      WHERE ns.national_team_id = $1
