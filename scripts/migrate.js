@@ -24,6 +24,8 @@ const files = [
   "005_cup.sql",
   "006_national_team.sql",
   "007_national_manager_applications.sql",
+  "008_password_reset.sql",
+  "009_national_tactics.sql",
 ];
 
 async function main() {
