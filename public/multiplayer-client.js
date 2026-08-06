@@ -407,6 +407,14 @@
         );
         const status = document.getElementById("matchStatus");
         if (status) status.innerText = "🏁 Maç bitti";
+        if (window._emWatchingFixtureId) {
+          try {
+            window.lastPlayedFixtureId = window._emWatchingFixtureId;
+            if (typeof lastPlayedFixtureId !== "undefined") {
+              lastPlayedFixtureId = window._emWatchingFixtureId;
+            }
+          } catch (e2) {}
+        }
         if (window._emWatchPoll) {
           clearInterval(window._emWatchPoll);
           window._emWatchPoll = null;
@@ -1300,6 +1308,8 @@
     p.highestBidder = L.iAmHighest
       ? "Sen"
       : L.highestBidderName || null;
+    p.iAmHighest = !!L.iAmHighest;
+    p.userHasBid = !!(L.iAmHighest || L.userHasBid || L.iHaveBid);
     p.highestBidderClubId = L.highestBidderClubId;
     p.auctionEndsAt = L.auctionEndsAt;
     p.bidHistory = [];
@@ -1401,6 +1411,12 @@
       try {
         if (note) note.innerText = "Teklif gönderiliyor...";
         const res = await emPlaceBid(listingId, amount);
+        try {
+          p.userHasBid = true;
+          p.highestBidder = "Sen";
+          p.iAmHighest = true;
+          p.currentBid = amount;
+        } catch (e2) {}
         if (note)
           note.innerText =
             "Teklif kabul: " +
@@ -1442,6 +1458,7 @@
         if (note) note.innerText = "Listede kalma süresi en az 24 saat olmalı.";
         return;
       }
+      if (hours > 168) hours = 168; // max 7 gün
       try {
         if (note) note.innerText = "Listeleniyor...";
         await emListPlayer(p, openPrice, hours);
@@ -1925,38 +1942,44 @@
       }
     };
 
-    window.trainWholeSquadSameSkill = async function () {
+    window.trainSelectedPlayers = async function () {
       const bulk = document.getElementById("bulkTrainSkillSelect");
       const skill =
         (bulk && bulk.value) ||
         (typeof clubCoach !== "undefined" && clubCoach && clubCoach.skill) ||
         "stamina";
       const note = document.getElementById("trainingResultNote");
+      const selectedIds = [];
+      document.querySelectorAll(".train-player-cb:checked").forEach(function (cb) {
+        selectedIds.push(String(cb.dataset.playerId));
+      });
+      if (!selectedIds.length) {
+        if (note) note.innerText = "Önce oyuncu seç (soldaki kutular).";
+        return;
+      }
       try {
-        if (note) note.innerText = "Tüm kadro antrenmanı...";
-        const res = await apiFetch("/api/training/squad", {
-          method: "POST",
-          body: JSON.stringify({ skill: skill }),
-        });
-        // Takımı sunucudan çek
+        if (note) note.innerText = "Seçilen oyuncular antrenmanda...";
+        let count = 0;
+        for (let i = 0; i < selectedIds.length; i++) {
+          try {
+            await apiFetch("/api/training/player", {
+              method: "POST",
+              body: JSON.stringify({ playerId: selectedIds[i], skill: skill }),
+            });
+            count++;
+          } catch (e1) {}
+        }
         try {
           const t = await apiFetch("/api/team");
           if (t && t.team) applyServerTeamToClient(t.team);
         } catch (e) {}
-        if (res.recent) {
-          applyTrainingStateToClient({
-            coaches:
-              typeof clubCoaches !== "undefined" ? clubCoaches : [],
-            recent: res.recent,
-          });
-        }
+        try {
+          const tr = await apiFetch("/api/training");
+          if (tr) applyTrainingStateToClient(tr);
+        } catch (e) {}
         if (note)
           note.innerText =
-            "Tüm kadro (" +
-            (res.count || 0) +
-            " oyuncu) · " +
-            (res.skillLabel || skill) +
-            " antrenmanı uygulandı.";
+            count + " oyuncuya · " + skill + " antrenmanı uygulandı.";
         try {
           if (typeof renderTrainingSquadList === "function")
             renderTrainingSquadList();
@@ -1965,7 +1988,8 @@
         if (note) note.innerText = e.message || "Toplu antrenman başarısız";
       }
     };
-    window.trainWholeTeamWithCoach = window.trainWholeSquadSameSkill;
+    window.trainWholeSquadSameSkill = window.trainSelectedPlayers;
+    window.trainWholeTeamWithCoach = window.trainSelectedPlayers;
 
     // Antrenör işe al / güncelle
     const _origApplyCoach = window.applyCoachSettings;
