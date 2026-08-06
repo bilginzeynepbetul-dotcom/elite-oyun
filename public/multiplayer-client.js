@@ -2574,20 +2574,47 @@
   let _natGameStyle = "dengeli";
   let _natSelectedSlot = null; // sahada seçili boş/dolu slot index'i
   let _natApplications = [];
-  let _natManageSub = "tactic"; // "tactic" | "all" — Yönetim ekranındaki aktif alt sekme
+  let _natManageSub = "tactic"; // "tactic" | "all" — Taktikler ekranındaki milli alt sekmesi
+  let _tacticsMode = "club"; // "club" | "A" | "U21" — Taktikler ana sayfasındaki mod
 
   function syncNationalManageTabs() {
-    const tabA = document.getElementById("natManageTabA");
-    const tabU21 = document.getElementById("natManageTabU21");
     const isU21 = _natCategory === "U21";
-    if (tabA) tabA.style.background = isU21 ? "#334155" : "";
-    if (tabU21) tabU21.style.background = isU21 ? "" : "#334155";
+    document.querySelectorAll(".tactics-mode-btn").forEach((btn) => {
+      const active = btn.dataset.mode === _tacticsMode;
+      btn.style.background = active ? "" : "#334155";
+    });
     document.querySelectorAll(".nat-manage-subtab").forEach((btn) => {
       const active = btn.dataset.sub === _natManageSub;
       btn.classList.toggle("active", active);
       btn.style.background = active ? "" : "#334155";
     });
   }
+
+  /** Taktikler ana sayfasında Kulüp / A Milli / U21 modu değiştirir. */
+  window.setTacticsMode = async function (mode) {
+    _tacticsMode = mode === "A" || mode === "U21" ? mode : "club";
+    const clubView = document.getElementById("tacticsClubView");
+    const natView = document.getElementById("tacticsNationalView");
+    if (_tacticsMode === "club") {
+      if (clubView) clubView.style.display = "";
+      if (natView) natView.style.display = "none";
+      syncNationalManageTabs();
+      return;
+    }
+    if (clubView) clubView.style.display = "none";
+    if (natView) natView.style.display = "";
+    _natManageSub = "tactic";
+    _natCategory = _tacticsMode;
+    const body = document.getElementById("tacticsNatBody");
+    if (body) {
+      body.innerHTML =
+        '<div style="color:#64748b;text-align:center;padding:16px;">Yükleniyor…</div>';
+    }
+    const state = await fetchNationalState(_natCategory);
+    await fetchNationalApplicationsIfAdmin(state);
+    syncNationalManageTabs();
+    renderNationalManage();
+  };
 
   function fmtNatOverall(n) {
     return Math.round(n);
@@ -2718,8 +2745,8 @@
   }
 
   function renderNationalManage() {
-    const info = document.getElementById("nationalManageInfo");
-    const squadEl = document.getElementById("nationalManageSquad");
+    const info = document.getElementById("tacticsNatInfo");
+    const squadEl = document.getElementById("tacticsNatBody");
     if (!info || !squadEl || !_natState) return;
     const state = _natState;
     const t = state.team;
@@ -2834,7 +2861,7 @@
       // -------- Diziliş sahası (club page-tactics ile aynı görsel dil) --------
       html +=
         '<div class="tactics-title" style="margin-top:4px;">Diziliş — Tıkla ve Yerleştir</div>' +
-        '<div class="formation-hint">Sahada bir bölgeye tıkla, sonra aşağıdaki kadrodan bir oyuncuya tıkla — o bölgeye yerleşir. Dolu bölgeye tıklarsan oyuncu değişir.</div>' +
+        '<div class="formation-hint">Oyuncuya tıkla → kaleci hariç tüm boş bölgeler görünür, hedef bölgeye tıkla taşınır (doluysa yer değişir). Ya da bir bölgeye tıkla, sonra aşağıdaki kadrodan bir oyuncuya tıkla — o bölgeye yerleşir.</div>' +
         '<div class="formation-presets-row">' +
         NAT_FORMATIONS.map(
           (f) =>
@@ -2855,6 +2882,31 @@
         '<div class="pitch-box pitch-box-left"></div>' +
         '<div class="pitch-box pitch-box-right"></div>' +
         '<div class="pitch-tokens-layer">' +
+        (_natSelectedSlot !== null
+          ? PITCH_ZONES.filter((z) => {
+              if (String(z.pos).toUpperCase() === "GK") return false;
+              return !_natLineup.some((s) => s.x === z.x && s.y === z.y);
+            })
+              .map(
+                (z) =>
+                  '<div class="formation-token" style="left:' +
+                  (z.x * 0.5 - 13) +
+                  "px;top:" +
+                  (z.y * 0.5 - 13) +
+                  'px;background:rgba(15,23,42,0.55);border:1.5px dashed #facc15;color:#facc15;font-size:8px;font-weight:700;box-shadow:0 0 10px rgba(250,204,21,0.35);cursor:pointer;" onclick="handleNationalPitchClick(\'zone\',-1,' +
+                  z.x +
+                  "," +
+                  z.y +
+                  ",'" +
+                  z.pos +
+                  '\')" title="Buraya taşı: ' +
+                  z.pos +
+                  '">' +
+                  z.pos +
+                  "</div>",
+              )
+              .join("")
+          : "") +
         _natLineup
           .map((slot, i) => {
             const p = slot.playerId ? natSquadPlayerById(slot.playerId) : null;
@@ -2874,7 +2926,7 @@
               left +
               "px;top:" +
               top +
-              'px;" onclick="selectNationalSlot(' +
+              'px;" onclick="handleNationalPitchClick(\'slot\',' +
               i +
               ')" title="' +
               (p ? p.name + " · " + slot.pos : "Boş bölge: " + slot.pos) +
@@ -3017,25 +3069,8 @@
 
   window.goToNationalManage = async function () {
     hideMainMenuAndShowBack();
-    switchPage("page-national-manage");
-    _natManageSub = "tactic";
-    const state = await fetchNationalState();
-    await fetchNationalApplicationsIfAdmin(state);
-    syncNationalManageTabs();
-    renderNationalManage();
-  };
-  window.showNationalManageCategory = async function (cat) {
-    _natCategory = cat === "U21" ? "U21" : "A";
-    syncNationalManageTabs();
-    const squadEl = document.getElementById("nationalManageSquad");
-    if (squadEl) {
-      squadEl.innerHTML =
-        '<div style="color:#64748b;text-align:center;padding:16px;">Yükleniyor…</div>';
-    }
-    const state = await fetchNationalState(_natCategory);
-    await fetchNationalApplicationsIfAdmin(state);
-    syncNationalManageTabs();
-    renderNationalManage();
+    switchPage("page-tactics");
+    await window.setTacticsMode(_natCategory === "U21" ? "U21" : "A");
   };
   window.showNationalManageSub = function (sub) {
     _natManageSub = sub === "all" ? "all" : "tactic";
@@ -3142,8 +3177,36 @@
     _natSelectedSlot = null;
     renderNationalManage();
   };
-  window.selectNationalSlot = function (index) {
-    _natSelectedSlot = _natSelectedSlot === index ? null : index;
+  window.handleNationalPitchClick = function (kind, index, zx, zy, zpos) {
+    if (_natSelectedSlot === null) {
+      if (kind === "slot") {
+        _natSelectedSlot = index;
+        renderNationalManage();
+      }
+      return;
+    }
+    if (kind === "slot") {
+      if (index === _natSelectedSlot) {
+        _natSelectedSlot = null;
+        renderNationalManage();
+        return;
+      }
+      // İki dolu/boş bölge arasında oyuncu takası
+      const a = _natLineup[_natSelectedSlot];
+      const b = _natLineup[index];
+      const tmp = a.playerId;
+      a.playerId = b.playerId;
+      b.playerId = tmp;
+      _natSelectedSlot = null;
+      renderNationalManage();
+      return;
+    }
+    // kind === "zone": seçili bölgeyi (ve varsa oyuncusunu) boş hedef bölgeye taşı
+    const slot = _natLineup[_natSelectedSlot];
+    slot.x = zx;
+    slot.y = zy;
+    slot.pos = zpos;
+    _natSelectedSlot = null;
     renderNationalManage();
   };
   window.placeNationalPlayer = function (playerId) {

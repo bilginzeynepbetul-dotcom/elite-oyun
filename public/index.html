@@ -3733,6 +3733,36 @@
     <!-- ===== SAYFA 3: TAKTİK (diziliş sahası + ÖGT) ===== -->
     <div id="page-tactics" class="page">
       <div class="report-container">
+        <div style="display: flex; gap: 8px; margin-bottom: 12px" id="tacticsModeRow">
+          <button
+            class="sub-btn tactics-mode-btn"
+            id="tacticsModeClub"
+            data-mode="club"
+            style="flex: 1"
+            onclick="setTacticsMode('club')"
+          >
+            ⚽ Kulüp
+          </button>
+          <button
+            class="sub-btn tactics-mode-btn"
+            id="tacticsModeA"
+            data-mode="A"
+            style="flex: 1; background: #334155"
+            onclick="setTacticsMode('A')"
+          >
+            🏳️ A Milli
+          </button>
+          <button
+            class="sub-btn tactics-mode-btn"
+            id="tacticsModeU21"
+            data-mode="U21"
+            style="flex: 1; background: #334155"
+            onclick="setTacticsMode('U21')"
+          >
+            🏳️ U21
+          </button>
+        </div>
+        <div id="tacticsClubView">
         <div class="tactics-title">Diziliş — Tıkla ve Yer Değiştir</div>
         <div class="formation-hint">
           Oyuncuya tıkla → kaleci hariç tüm bölgeler görünür. Hedef bölgeye
@@ -4064,6 +4094,38 @@
           ➕ Talimat Ekle
         </button>
         <div id="plannedInstructionsList"></div>
+        </div>
+
+        <div id="tacticsNationalView" style="display: none">
+          <div id="tacticsNatInfo"
+            style="
+              padding: 12px;
+              background: #0f172a;
+              border: 1px solid #2c3a52;
+              border-radius: 12px;
+              margin-bottom: 12px;
+            "
+          ></div>
+          <div style="display: flex; gap: 8px; margin-bottom: 12px" id="tacticsNatSubTabs">
+            <button
+              class="sub-btn nat-manage-subtab active"
+              data-sub="tactic"
+              style="flex: 1"
+              onclick="showNationalManageSub('tactic')"
+            >
+              🎯 Taktik
+            </button>
+            <button
+              class="sub-btn nat-manage-subtab"
+              data-sub="all"
+              style="flex: 1; background: #334155"
+              onclick="showNationalManageSub('all')"
+            >
+              👥 Tüm Oyuncular
+            </button>
+          </div>
+          <div id="tacticsNatBody"></div>
+        </div>
       </div>
     </div>
 
@@ -4081,69 +4143,6 @@
           Saati gelen maçlar listelenir · Tıkla ve oyna / izle
         </div>
         <div id="liveMatchesList"></div>
-      </div>
-    </div>
-
-    <div id="page-national-manage" class="page">
-      <div class="report-container">
-        <div class="tactics-title">🏳️ Milli Takım Yönetimi</div>
-        <div style="display: flex; gap: 8px; margin-bottom: 12px">
-          <button
-            class="sub-btn"
-            id="natManageTabA"
-            style="flex: 1"
-            onclick="showNationalManageCategory('A')"
-          >
-            A Milli
-          </button>
-          <button
-            class="sub-btn"
-            id="natManageTabU21"
-            style="flex: 1; background: #334155"
-            onclick="showNationalManageCategory('U21')"
-          >
-            U21
-          </button>
-        </div>
-        <div
-          id="nationalManageInfo"
-          style="
-            padding: 12px;
-            background: #0f172a;
-            border: 1px solid #2c3a52;
-            border-radius: 12px;
-            margin-bottom: 12px;
-          "
-        ></div>
-        <div
-          style="display: flex; gap: 8px; margin-bottom: 12px"
-          id="nationalManageSubTabs"
-        >
-          <button
-            class="sub-btn nat-manage-subtab active"
-            data-sub="tactic"
-            style="flex: 1"
-            onclick="showNationalManageSub('tactic')"
-          >
-            🎯 Taktik
-          </button>
-          <button
-            class="sub-btn nat-manage-subtab"
-            data-sub="all"
-            style="flex: 1; background: #334155"
-            onclick="showNationalManageSub('all')"
-          >
-            👥 Tüm Oyuncular
-          </button>
-        </div>
-        <div id="nationalManageSquad"></div>
-        <button
-          class="sub-btn"
-          style="width: 100%; margin-top: 12px"
-          onclick="goToNationalTeams()"
-        >
-          Milli Sıralama &amp; Gruplar
-        </button>
       </div>
     </div>
 
@@ -6396,43 +6395,6 @@
           renderLiveMatches();
         }
       }
-      function goToNationalManage() {
-        hideMainMenuAndShowBack();
-        switchPage("page-national-manage");
-        const info = document.getElementById("nationalManageInfo");
-        if (info) {
-          info.innerHTML =
-            '<div style="font-size:15px;font-weight:700;color:#e2e8f0;">🏳️ ' +
-            USER_COUNTRY +
-            " Milli Takımı</div>" +
-            '<div style="font-size:12px;color:#94a3b8;margin-top:6px;">Kulüp: <b style="color:#4ade80;">' +
-            teamConfig.home.name +
-            "</b></div>" +
-            '<div style="font-size:12px;color:#94a3b8;margin-top:4px;">Menajer: <b>' +
-            ((document.getElementById("menuUsername") || {}).innerText ||
-              "admin") +
-            "</b></div>" +
-            '<div style="font-size:11px;color:#64748b;margin-top:8px;">Milli maçlar: Perşembe 21:00 (TR)</div>';
-        }
-        const squad = document.getElementById("nationalManageSquad");
-        if (squad) {
-          const picks = [...(teamConfig.home.players || [])].slice(0, 8);
-          squad.innerHTML =
-            picks
-              .map(
-                (p) =>
-                  '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.35);font-size:12px;color:#e2e8f0;">' +
-                  "<span>" +
-                  p.name +
-                  " · " +
-                  (p.pos || "") +
-                  '</span><span style="color:#94a3b8;">' +
-                  (p.age || "?") +
-                  "y</span></div>",
-              )
-              .join("") || '<div style="color:#64748b;">Kadro özeti yok.</div>';
-        }
-      }
       function updateMenuClubNat() {
         const c = document.getElementById("menuClubName");
         const n = document.getElementById("menuNatName");
@@ -8155,6 +8117,7 @@
       function goToTactics() {
         hideMainMenuAndShowBack();
         switchPage("page-tactics");
+        setTacticsMode("club");
         setFormationSide("home");
         populatePlanSubSelects();
         updatePlanFormUI();
