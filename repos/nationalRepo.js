@@ -11,6 +11,7 @@ function rowToTeam(r) {
   return {
     id: r.id,
     country: r.country,
+    category: r.category || "A",
     managerUserId: r.manager_user_id,
     managerClubId: r.manager_club_id,
     managerSince: r.manager_since,
@@ -20,9 +21,28 @@ function rowToTeam(r) {
   };
 }
 
-async function getTeamByCountry(country) {
-  const { rows } = await query(`SELECT * FROM national_teams WHERE country = $1`, [country]);
+function normCategory(cat) {
+  const c = String(cat || "A").toUpperCase();
+  return c === "U21" ? "U21" : "A";
+}
+
+async function getTeamByCountry(country, category) {
+  const cat = normCategory(category);
+  const { rows } = await query(
+    `SELECT * FROM national_teams WHERE country = $1 AND category = $2`,
+    [country, cat],
+  );
   return rowToTeam(rows[0]);
+}
+
+/** category kolonu yoksa (migrate öncesi) country ile tek satır dene */
+async function getTeamByCountryFallback(country, category) {
+  try {
+    return await getTeamByCountry(country, category);
+  } catch (e) {
+    const { rows } = await query(`SELECT * FROM national_teams WHERE country = $1`, [country]);
+    return rowToTeam(rows[0]);
+  }
 }
 
 async function getTeamById(id) {
@@ -163,8 +183,14 @@ async function resignManager(nationalTeamId, userId) {
   });
 }
 
-/** Ülkenin tüm kulüplerindeki tüm oyuncular — hiçbir kısıtlama yok, herkes aday. */
-async function listCandidates(country, nationalTeamId) {
+/** Ülkenin kulüplerindeki adaylar. maxAge verilirse (U21 → 21) yaş filtresi. */
+async function listCandidates(country, nationalTeamId, maxAge) {
+  const params = [country, nationalTeamId];
+  let ageClause = "";
+  if (maxAge != null && Number(maxAge) > 0) {
+    params.push(Number(maxAge));
+    ageClause = ` AND p.age <= $${params.length}`;
+  }
   const { rows } = await query(
     `SELECT p.id, p.name, p.pos, p.age, p.club_id, c.name AS club_name,
        ROUND((p.pace + p.passing + p.finishing + p.tackle + p.vision +
@@ -176,9 +202,9 @@ async function listCandidates(country, nationalTeamId) {
        ) AS called
      FROM players p
      JOIN clubs c ON c.id = p.club_id
-     WHERE c.country = $1 AND p.club_id IS NOT NULL
+     WHERE c.country = $1 AND p.club_id IS NOT NULL` + ageClause + `
      ORDER BY overall DESC`,
-    [country, nationalTeamId],
+    params,
   );
   return rows.map((r) => ({
     playerId: r.id,
@@ -413,6 +439,7 @@ async function finishFixture(fixtureId, homeGoals, awayGoals) {
 module.exports = {
   MAX_SQUAD,
   getTeamByCountry,
+  normCategory,
   getTeamById,
   claimManager,
   resignManager,

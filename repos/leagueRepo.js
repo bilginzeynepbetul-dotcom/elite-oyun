@@ -61,7 +61,8 @@ function generateRoundRobin(clubIds, opts = {}) {
     // İlk maç ~2 dk sonra (kullanıcı başlatmaz; scheduler alır)
     startAt = new Date(Date.now() + 2 * 60 * 1000);
   }
-  if (startAt.getTime() < Date.now()) {
+  // Takvim modunda geçmiş/gelecek kickoff'lara dokunma (calendar ezebilir)
+  if (opts.bumpPast === true && startAt.getTime() < Date.now()) {
     startAt = new Date(Date.now() + 60 * 1000);
   }
 
@@ -183,12 +184,45 @@ async function generateFixturesForSeason(seasonId, opts = {}) {
       return { created: 0, skipped: true, reason: "En az 2 kulüp gerekli" };
     }
 
-    const pairs = generateRoundRobin(clubIds, {
+    // --- Gerçek takvim slotları (3 saat kuralı iptal) ---
+    let startAt = opts.startAt;
+    let slots = opts.slots;
+    try {
+      const seasonConfig = require("./seasonConfig");
+      if (startAt == null) startAt = await seasonConfig.getSeasonStartAt();
+      if (slots == null && seasonConfig.getLeagueMatchSlots) {
+        slots = await seasonConfig.getLeagueMatchSlots();
+      }
+    } catch (_) {}
+    if (!startAt) startAt = new Date();
+
+    const rawPairs = generateRoundRobin(clubIds, {
       doubleRound: opts.doubleRound !== false,
-      intervalHours: opts.intervalHours,
-      intervalMinutes: opts.intervalMinutes,
-      startAt: opts.startAt,
-    });
+      intervalHours: 1,
+      startAt: startAt,
+      bumpPast: false,
+    }).map((f) => ({
+      homeClubId: f.homeClubId,
+      awayClubId: f.awayClubId,
+    }));
+
+    let pairs;
+    try {
+      const cal = require("./calendarSchedule");
+      pairs = cal.assignKickoffsToFixtures(
+        rawPairs,
+        new Date(startAt),
+        slots || cal.DEFAULT_SLOTS,
+      );
+    } catch (e) {
+      console.warn("[leagueRepo] calendar fallback", e.message);
+      pairs = generateRoundRobin(clubIds, {
+        doubleRound: opts.doubleRound !== false,
+        intervalHours: 72,
+        startAt: startAt,
+        bumpPast: false,
+      });
+    }
 
     let created = 0;
     for (const f of pairs) {
