@@ -67,6 +67,8 @@ async function getState(country, userId, clubId, username) {
       id: team.id,
       country: team.country,
       formation: team.formation,
+      passStyle: team.passStyle,
+      gameStyle: team.gameStyle,
       isManagerVacant: !team.managerUserId,
       isMeManager: team.managerUserId === userId,
       managerClubName: managerName,
@@ -147,10 +149,17 @@ async function drop(country, userId, playerId) {
   return nationalRepo.dropPlayer(chk.team.id, playerId);
 }
 
-async function saveLineup(country, userId, starterPlayerIds, formation) {
+async function saveLineup(country, userId, starterPlayerIds, formation, assignments, passStyle, gameStyle) {
   const chk = await requireManager(country, userId);
   if (!chk.ok) return chk;
-  return nationalRepo.setLineup(chk.team.id, starterPlayerIds, formation);
+  return nationalRepo.setLineup(
+    chk.team.id,
+    starterPlayerIds,
+    formation,
+    assignments,
+    passStyle,
+    gameStyle,
+  );
 }
 
 /** Sıradaki maç yoksa yeni bir tane açar (rastgele "dünya" rakibi). */

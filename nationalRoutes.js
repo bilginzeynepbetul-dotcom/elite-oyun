@@ -118,11 +118,17 @@ function createNationalRouter(opts) {
     try {
       const starterPlayerIds = (req.body && req.body.starterPlayerIds) || [];
       const formation = req.body && req.body.formation;
+      const assignments = (req.body && req.body.assignments) || [];
+      const passStyle = req.body && req.body.passStyle;
+      const gameStyle = req.body && req.body.gameStyle;
       const result = await nationalSystem.saveLineup(
         COUNTRY,
         getUserId(req),
         starterPlayerIds,
         formation,
+        assignments,
+        passStyle,
+        gameStyle,
       );
       if (!result.ok) return res.status(400).json(result);
       res.json(result);

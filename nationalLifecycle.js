@@ -90,7 +90,7 @@ async function startNationalFixtureMatch(opts) {
   const homeTeam = {
     name: (team && team.country) + " Milli Takımı",
     gameStyle: (team && team.gameStyle) || "dengeli",
-    passStyle: "kısa",
+    passStyle: (team && team.passStyle) || "kisa",
     attackDir: "orta",
     currentFormation: (team && team.formation) || "4-4-2",
     players: squad.starters,
