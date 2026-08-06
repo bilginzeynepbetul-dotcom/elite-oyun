@@ -84,10 +84,14 @@ async function getState(country, userId, clubId, username) {
   };
 }
 
-async function apply(country, userId, clubId, message) {
+async function apply(country, userId, clubId, message, username) {
   if (!clubId) return { ok: false, error: "Önce kendi kulübün olmalı" };
   const team = await ensureTeam(country);
   if (!team) return { ok: false, error: "Milli takım bulunamadı" };
+  // Admin hesabı başvurunca ekstra onay adımına gerek yok — direkt TD olur.
+  if (isAdmin(username) && !team.managerUserId) {
+    return nationalRepo.claimManager(team.id, userId, clubId);
+  }
   return nationalRepo.applyForManager(team.id, userId, clubId, message);
 }
 

@@ -33,7 +33,13 @@ function createNationalRouter(opts) {
   router.post("/apply", async (req, res) => {
     try {
       const message = req.body && req.body.message;
-      const result = await nationalSystem.apply(COUNTRY, getUserId(req), getClubId(req), message);
+      const result = await nationalSystem.apply(
+        COUNTRY,
+        getUserId(req),
+        getClubId(req),
+        message,
+        getUsername(req),
+      );
       if (!result.ok) return res.status(400).json(result);
       res.json(result);
     } catch (e) {
