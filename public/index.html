@@ -25,16 +25,17 @@
       .back-arrow {
         position: fixed;
         top: 12px;
-        left: 12px;
+        right: 12px;
+        left: auto;
         background: rgba(15, 23, 42, 0.85);
         border: 1px solid #2c3a52;
         border-radius: 50%;
-        width: 44px;
-        height: 44px;
+        width: 40px;
+        height: 40px;
         display: none;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 18px;
         color: #94a3b8;
         cursor: pointer;
         z-index: 99999;
@@ -47,6 +48,33 @@
         border-color: #38bdf8;
       }
       .back-arrow.visible {
+        display: flex;
+      }
+      .home-arrow {
+        position: fixed;
+        top: 12px;
+        right: 58px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid #2c3a52;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        color: #94a3b8;
+        cursor: pointer;
+        z-index: 99999;
+        transition: all 0.2s ease;
+        backdrop-filter: blur(4px);
+      }
+      .home-arrow:hover {
+        background: #1e293b;
+        color: #e2e8f0;
+        border-color: #4ade80;
+      }
+      .home-arrow.visible {
         display: flex;
       }
 
@@ -1604,56 +1632,6 @@
         white-space: nowrap;
       }
 
-
-      .menu-item-expand {
-        grid-column: 1 / -1;
-        display: flex;
-        flex-direction: column;
-        background: linear-gradient(135deg, #182338 0%, #101a2c 100%);
-        border: 1px solid #2c3a52;
-        border-radius: 16px;
-        overflow: hidden;
-      }
-      .menu-item-expand > .menu-item-head {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px;
-        cursor: pointer;
-        color: #cbd5e1;
-      }
-      .menu-item-expand .chevron {
-        margin-left: auto;
-        font-size: 12px;
-        color: #64748b;
-        transition: transform 0.2s;
-      }
-      .menu-item-expand.open .chevron {
-        transform: rotate(180deg);
-        color: #38bdf8;
-      }
-      .menu-subgrid {
-        display: none;
-        flex-direction: column;
-        border-top: 1px solid #2c3a52;
-        background: #0b1220;
-      }
-      .menu-item-expand.open .menu-subgrid {
-        display: flex;
-      }
-      .menu-subitem {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 16px 12px 20px;
-        cursor: pointer;
-        color: #cbd5e1;
-        border-bottom: 1px solid rgba(44, 58, 82, 0.5);
-        font-size: 13px;
-      }
-      .menu-subitem:last-child { border-bottom: none; }
-      .menu-subitem:hover { background: rgba(56, 189, 248, 0.08); }
-
       .menu-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1922,7 +1900,8 @@
   </head>
   <body>
     <!-- ===== GERİ OK BUTONU ===== -->
-    <div class="back-arrow" id="backArrow" onclick="handleBackArrow()">◀</div>
+    <div class="home-arrow" id="homeArrow" onclick="goToMainMenuHome()" title="Ana menü">🏠</div>
+    <div class="back-arrow" id="backArrow" onclick="handleBackArrow()" title="Geri">◀</div>
 
     <!-- ===== GİRİŞ EKRANI ===== -->
     <div class="login-overlay" id="loginOverlay">
@@ -2179,7 +2158,7 @@
           </button>
         </div>
         <div class="announcements">
-          <div class="title">📢 Duyurular</div>
+          <div class="title">📢 Duyurular <span style="font-weight:500;color:#64748b;font-size:11px;">(tüm oyuncular)</span></div>
           <div id="announcementList">
             <div class="announcement-item">
               <span class="icon">🎉</span
@@ -2209,32 +2188,32 @@
               <div class="subtitle">Saati gelen tüm maçlar</div>
             </div>
           </div>
-          <div class="menu-item-expand" id="menuMatchesExpand">
-            <div class="menu-item-head" onclick="toggleMatchesMenu(event)">
-              <div class="icon-badge" style="background:linear-gradient(135deg,#38bdf8,#6366f1);width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">📅</div>
-              <div class="text-wrap">
-                <div class="title">Maçlar</div>
-                <div class="subtitle">Lig · Kupa · Kıtalar · Milli</div>
-              </div>
-              <span class="chevron">▼</span>
+          <div class="menu-item" onclick="goToLeagueHub()">
+            <div class="icon-badge">🏆</div>
+            <div class="text-wrap">
+              <div class="title">Lig</div>
+              <div class="subtitle">Fikstür · Puan · Krallar</div>
             </div>
-            <div class="menu-subgrid">
-              <div class="menu-subitem" onclick="goToLeagueHub()">
-                <span class="sub-icon">🏆</span>
-                <span><b>Lig</b> · Fikstür, puan, krallar</span>
-              </div>
-              <div class="menu-subitem" onclick="goToCupHub()">
-                <span class="sub-icon">🏅</span>
-                <span><b>Kupa</b> · Eşleşme ağacı</span>
-              </div>
-              <div class="menu-subitem" onclick="goToCLHub()">
-                <span class="sub-icon">🌟</span>
-                <span><b>Kıtalar Ligi</b> · Grup &amp; eleme</span>
-              </div>
-              <div class="menu-subitem" onclick="goToNationalTeams()">
-                <span class="sub-icon">🏳️</span>
-                <span><b>Milli Takımlar</b> · A &amp; U21</span>
-              </div>
+          </div>
+          <div class="menu-item" onclick="goToCupHub()">
+            <div class="icon-badge">🏅</div>
+            <div class="text-wrap">
+              <div class="title">Kupa</div>
+              <div class="subtitle">Eleme · Tarihçe</div>
+            </div>
+          </div>
+          <div class="menu-item" onclick="goToCLHub()">
+            <div class="icon-badge">🌟</div>
+            <div class="text-wrap">
+              <div class="title">Kıtalar Ligi</div>
+              <div class="subtitle">Grup · Eleme</div>
+            </div>
+          </div>
+          <div class="menu-item" onclick="goToNationalTeams()">
+            <div class="icon-badge">🏳️</div>
+            <div class="text-wrap">
+              <div class="title">Milli Takımlar</div>
+              <div class="subtitle">A &amp; U21 · Gruplar</div>
             </div>
           </div>
           <div class="menu-item" onclick="goToTactics()">
@@ -2300,6 +2279,13 @@
               <div class="subtitle" id="menuSaveStatus">Elle veya otomatik</div>
             </div>
           </div>
+          <div class="menu-item" onclick="goToPremium()">
+            <div class="icon-badge">⭐</div>
+            <div class="text-wrap">
+              <div class="title">Elite Üyelik</div>
+              <div class="subtitle">Haftalık · Aylık · Yıllık</div>
+            </div>
+          </div>
           <div class="menu-item" onclick="logoutUser()">
             <div class="icon-badge">🚪</div>
             <div class="text-wrap">
@@ -2307,6 +2293,23 @@
               <div class="subtitle">Oturumu kapat</div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+        <div id="page-premium" class="page">
+      <div class="report-container">
+        <div class="tactics-title">⭐ Elite Üyelik</div>
+        <div class="formation-hint">
+          Reklamsız deneyim, ekstra antrenman hakkı, transfer slotu ve günlük ödül
+          çarpanı. İstediğin zaman iptal edebilirsin (demo).
+        </div>
+        <div id="premiumStatusBox" style="margin-bottom:14px;"></div>
+        <div id="premiumPlans" style="display:grid;gap:12px;"></div>
+        <div style="margin-top:18px;padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;font-size:12px;color:#94a3b8;">
+          <b style="color:#e2e8f0;">Günlük giriş ödülü</b><br/>
+          Her gün oyuna girince bütçe + küçük hediye. Elite üyelerde ödül x2.
+          Seri bozulursa sıfırlanır.
         </div>
       </div>
     </div>
@@ -2803,9 +2806,8 @@
             data-sub="played"
             style="width: auto; padding: 6px 12px; font-size: 11px"
             onclick="showCompSub(_currentComp||'cup','played')"
-            id="compTabTree"
           >
-            Eşleşme Ağacı
+            Puan Durumu
           </button>
           <button
             class="sub-btn comp-subtab"
@@ -4705,6 +4707,10 @@
       function showMainMenu() {
         mainMenu.classList.remove("hidden");
         backArrow.classList.remove("visible");
+        const _ha = document.getElementById("homeArrow");
+        if (_ha) _ha.classList.remove("visible");
+        try { renderGlobalAnnouncements(); } catch (e) {}
+        try { checkDailyReward(); } catch (e) {}
         pageHistory = [];
         currentPageId = null;
         const soundBtn = document.getElementById("soundToggle");
@@ -4745,7 +4751,24 @@
       function hideMainMenuAndShowBack() {
         mainMenu.classList.add("hidden");
         backArrow.classList.add("visible");
+        const home = document.getElementById("homeArrow");
+        if (home) home.classList.add("visible");
       }
+      function goToMainMenuHome() {
+        try {
+          document.querySelectorAll(".page.active").forEach(function (el) {
+            el.classList.remove("active");
+          });
+        } catch (e) {}
+        backArrow.classList.remove("visible");
+        const home = document.getElementById("homeArrow");
+        if (home) home.classList.remove("visible");
+        mainMenu.classList.remove("hidden");
+        try { refreshNextMatchCard(); } catch (e) {}
+        try { renderGlobalAnnouncements(); } catch (e) {}
+        try { checkDailyReward(); } catch (e) {}
+      }
+      window.goToMainMenuHome = goToMainMenuHome;
 
 
       // ============================================================
@@ -6828,12 +6851,6 @@
 
 
 
-      function toggleMatchesMenu(e) {
-        if (e) e.stopPropagation();
-        const box = document.getElementById("menuMatchesExpand");
-        if (box) box.classList.toggle("open");
-      }
-
       function showMatchSummary() {
         const ov = document.getElementById("matchSummaryOverlay");
         if (!ov) return;
@@ -7597,6 +7614,17 @@
           (player.condition || 80) + condGain,
         );
         const label = SKILL_LABELS_TR[skill] || skill;
+        try {
+          const prevInt = Math.floor(Number(cur) || 0);
+          const newInt = Math.floor(Number(player[skill]) || 0);
+          if (newInt > prevInt && typeof pushNotification === "function") {
+            pushNotification(
+              "📈",
+              player.name + ": " + label + " " + prevInt + " → " + newInt,
+              "Antrenman",
+            );
+          }
+        } catch (e) {}
         const note = document.getElementById("trainingResultNote");
         const list = document.getElementById("trainingResultList");
         if (note)
@@ -7794,13 +7822,31 @@
           time: "Şimdi",
         },
       ];
-      function pushNotification(icon, text, time) {
+      // Önemli olay bildirimleri (skill, transfer, teklif, ödül…)
+      function pushNotification(icon, text, category) {
+        const cat = category || "Olay";
+        // Spam filtre: kaydet / yükle mesajlarını atla
+        const low = String(text || "").toLowerCase();
+        if (
+          low.indexOf("kariyer kaydedildi") >= 0 ||
+          low.indexOf("kayıtlı kariyer") >= 0 ||
+          low.indexOf("kariyer yüklendi") >= 0
+        ) {
+          return;
+        }
         gameNotifications.unshift({
           icon: icon || "🔔",
           text: text,
-          time: time || "Şimdi",
+          time: cat,
+          at: Date.now(),
         });
-        if (gameNotifications.length > 40) gameNotifications.pop();
+        if (gameNotifications.length > 50) gameNotifications.pop();
+        try {
+          localStorage.setItem(
+            "em_notifications_" + (managerName || "guest"),
+            JSON.stringify(gameNotifications.slice(0, 50)),
+          );
+        } catch (e) {}
         const dot = document.getElementById("notifDot");
         if (dot) dot.classList.add("active");
       }
@@ -7810,37 +7856,27 @@
           e.stopPropagation();
         }
         const notifs = gameNotifications.slice();
-        notifs.push({
-          icon: "⚽",
-          text: "Oynanan maç: " + managerStats.matches,
-          time: "Genel",
-        });
-        const leaguePts =
-          worldLeagues[USER_COUNTRY] &&
-          worldLeagues[USER_COUNTRY][USER_DIVISION]
-            ? worldLeagues[USER_COUNTRY][USER_DIVISION].find(
-                (t) => t.name === teamConfig.home.name,
-              )?.pts || 0
-            : 0;
-        notifs.push({
-          icon: "🏆",
-          text: teamConfig.home.name + " ligde " + leaguePts + " puan.",
-          time: "Lig",
-        });
         const list = document.getElementById("notificationsList");
-        if (list)
-          list.innerHTML = notifs
-            .map(
-              (n) =>
-                '<div class="team-player-row"><span style="font-size:16px;margin-right:8px;">' +
-                n.icon +
-                '</span><span style="flex:1;color:#cbd5e1;font-size:12.5px;">' +
-                n.text +
-                '</span><span style="color:#64748b;font-size:10px;">' +
-                n.time +
-                "</span></div>",
-            )
-            .join("");
+        if (list) {
+          if (!notifs.length) {
+            list.innerHTML =
+              '<div style="color:#64748b;text-align:center;padding:16px;font-size:13px;">Henüz önemli bildirim yok.<br/>Transfer, skill artışı, teklifler burada görünür.</div>';
+          } else {
+            list.innerHTML = notifs
+              .map(function (n) {
+                return (
+                  '<div class="team-player-row"><span style="font-size:16px;margin-right:8px;">' +
+                  n.icon +
+                  '</span><span style="flex:1;color:#cbd5e1;font-size:12.5px;">' +
+                  n.text +
+                  '</span><span style="color:#64748b;font-size:10px;">' +
+                  (n.time || "") +
+                  "</span></div>"
+                );
+              })
+              .join("");
+          }
+        }
         const dot = document.getElementById("notifDot");
         if (dot) dot.classList.remove("active");
         const modal = document.getElementById("notificationsModal");
@@ -7850,6 +7886,209 @@
         }
       }
 
+      // ---- Günlük giriş ödülü ----
+      function dailyRewardKey() {
+        return "em_daily_" + String(managerName || "guest").toLowerCase();
+      }
+      function checkDailyReward() {
+        try {
+          const key = dailyRewardKey();
+          const raw = localStorage.getItem(key);
+          let data = raw ? JSON.parse(raw) : { last: null, streak: 0 };
+          const today = new Date().toISOString().slice(0, 10);
+          if (data.last === today) return;
+          const yest = new Date();
+          yest.setDate(yest.getDate() - 1);
+          const ystr = yest.toISOString().slice(0, 10);
+          if (data.last === ystr) data.streak = (data.streak || 0) + 1;
+          else data.streak = 1;
+          data.last = today;
+          localStorage.setItem(key, JSON.stringify(data));
+          const premium = getPremiumStatus();
+          let amount = 25000 + data.streak * 5000;
+          if (premium.active) amount = Math.round(amount * 2);
+          if (typeof clubBudget === "number") clubBudget += amount;
+          else if (teamConfig.home) {
+            teamConfig.home.budget = (teamConfig.home.budget || 0) + amount;
+          }
+          pushNotification(
+            "🎁",
+            "Günlük ödül: +" +
+              (typeof formatMoney === "function"
+                ? formatMoney(amount)
+                : amount + " €") +
+              " · Seri " +
+              data.streak +
+              " gün" +
+              (premium.active ? " (Elite x2)" : ""),
+            "Ödül",
+          );
+          try {
+            if (typeof updateMenuBudget === "function") updateMenuBudget();
+          } catch (e) {}
+        } catch (e) {
+          console.warn("daily reward", e);
+        }
+      }
+
+      // ---- Elite üyelik (client demo; ödeme entegrasyonu sonra) ----
+      function premiumKey() {
+        return "em_premium_" + String(managerName || "guest").toLowerCase();
+      }
+      function getPremiumStatus() {
+        try {
+          const raw = localStorage.getItem(premiumKey());
+          if (!raw) return { active: false, plan: null, until: null };
+          const d = JSON.parse(raw);
+          if (d.until && Date.now() < d.until)
+            return { active: true, plan: d.plan, until: d.until };
+        } catch (e) {}
+        return { active: false, plan: null, until: null };
+      }
+      function activatePremium(plan) {
+        const days = plan === "weekly" ? 7 : plan === "yearly" ? 365 : 30;
+        const until = Date.now() + days * 24 * 60 * 60 * 1000;
+        localStorage.setItem(
+          premiumKey(),
+          JSON.stringify({ plan: plan, until: until }),
+        );
+        pushNotification(
+          "⭐",
+          "Elite üyelik aktif · " +
+            (plan === "weekly"
+              ? "Haftalık"
+              : plan === "yearly"
+                ? "Yıllık"
+                : "Aylık"),
+          "Üyelik",
+        );
+        renderPremiumPage();
+      }
+      function goToPremium() {
+        hideMainMenuAndShowBack();
+        switchPage("page-premium");
+        renderPremiumPage();
+      }
+      function renderPremiumPage() {
+        const st = getPremiumStatus();
+        const box = document.getElementById("premiumStatusBox");
+        const plans = document.getElementById("premiumPlans");
+        if (box) {
+          if (st.active) {
+            box.innerHTML =
+              '<div style="padding:14px;background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #facc15;border-radius:14px;color:#e2e8f0;">' +
+              '<div style="font-weight:800;color:#facc15;">⭐ Elite aktif</div>' +
+              '<div style="font-size:13px;color:#94a3b8;margin-top:4px;">Plan: <b style="color:#e2e8f0;">' +
+              (st.plan === "weekly"
+                ? "Haftalık"
+                : st.plan === "yearly"
+                  ? "Yıllık"
+                  : "Aylık") +
+              "</b> · Bitiş: " +
+              new Date(st.until).toLocaleDateString("tr-TR") +
+              "</div></div>";
+          } else {
+            box.innerHTML =
+              '<div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;color:#94a3b8;font-size:13px;">Şu an ücretsiz plandasın. Elite ile ekstra antrenman, transfer slotu ve günlük ödül x2.</div>';
+          }
+        }
+        if (!plans) return;
+        const list = [
+          {
+            id: "weekly",
+            title: "Haftalık",
+            price: "49 ₺",
+            desc: "7 gün Elite · denemek için ideal",
+          },
+          {
+            id: "monthly",
+            title: "Aylık",
+            price: "149 ₺",
+            desc: "30 gün · en popüler",
+            badge: "Popüler",
+          },
+          {
+            id: "yearly",
+            title: "Yıllık",
+            price: "999 ₺",
+            desc: "365 gün · ~2 ay bedava",
+            badge: "En avantajlı",
+          },
+        ];
+        plans.innerHTML = list
+          .map(function (pl) {
+            return (
+              '<div style="padding:16px;background:#0f172a;border:1px solid ' +
+              (pl.badge ? "#facc15" : "#2c3a52") +
+              ';border-radius:14px;">' +
+              (pl.badge
+                ? '<div style="font-size:10px;color:#facc15;font-weight:700;margin-bottom:4px;">' +
+                  pl.badge +
+                  "</div>"
+                  : "") +
+              '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+              '<div><div style="font-size:16px;font-weight:800;color:#e2e8f0;">' +
+              pl.title +
+              '</div><div style="font-size:12px;color:#94a3b8;margin-top:2px;">' +
+              pl.desc +
+              "</div></div>" +
+              '<div style="text-align:right;"><div style="font-size:18px;font-weight:800;color:#4ade80;">' +
+              pl.price +
+              '</div><button type="button" class="sub-btn" style="width:auto;margin-top:6px;padding:6px 12px;font-size:12px;" onclick="activatePremium(\'' +
+              pl.id +
+              "')\">Seç</button></div></div>" +
+              '<ul style="margin:12px 0 0;padding-left:18px;font-size:12px;color:#cbd5e1;line-height:1.6;">' +
+              "<li>Günlük giriş ödülü x2</li>" +
+              "<li>+1 antrenman hakkı / gün</li>" +
+              "<li>Transfer listesinde öne çıkma</li>" +
+              "<li>Özel Elite rozeti</li></ul></div>"
+            );
+          })
+          .join("");
+      }
+      window.goToPremium = goToPremium;
+      window.activatePremium = activatePremium;
+
+      // ---- Global duyurular (tüm oyuncular) ----
+      const GLOBAL_ANNOUNCEMENTS = [
+        {
+          icon: "🎉",
+          text: "Elite Manager Online açık beta — hoş geldiniz!",
+          time: "Sabit",
+        },
+        {
+          icon: "📅",
+          text: "Sezon 10.08.2026 gerçek takvimle başlar. Maçlar Cmt/Paz slotlarında.",
+          time: "Sezon",
+        },
+        {
+          icon: "⭐",
+          text: "Elite üyelik ve günlük giriş ödülleri aktif.",
+          time: "Sistem",
+        },
+        {
+          icon: "⚽",
+          text: "Kupa eşleşme ağacı ve milli A/U21 sekmeleri yenilendi.",
+          time: "Güncelleme",
+        },
+      ];
+      function renderGlobalAnnouncements() {
+        const list = document.getElementById("announcementList");
+        if (!list) return;
+        list.innerHTML = GLOBAL_ANNOUNCEMENTS.map(function (a) {
+          return (
+            '<div class="announcement-item"><span class="icon">' +
+            a.icon +
+            '</span><span class="text">' +
+            a.text +
+            '</span><span class="time">' +
+            a.time +
+            "</span></div>"
+          );
+        }).join("");
+      }
+
+
       function logoutUser() {
         try {
           saveCareer(false);
@@ -7857,6 +8096,8 @@
         if (window._careerSaveTimer) clearInterval(window._careerSaveTimer);
         mainMenu.classList.add("hidden");
         backArrow.classList.remove("visible");
+        const homeA = document.getElementById("homeArrow");
+        if (homeA) homeA.classList.remove("visible");
         loginOverlay.classList.remove("hidden");
       }
 
@@ -10173,6 +10414,9 @@
         const errEl = document.getElementById("bidModalError");
         if (!p) {
           closeBidModal();
+          try {
+            pushNotification("💼", "Oyuncunuza / listeden teklif işlemi yapıldı", "Transfer");
+          } catch (e) {}
           return;
         }
         if (Date.now() >= (p.auctionEndsAt || 0)) {
