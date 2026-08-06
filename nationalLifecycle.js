@@ -81,12 +81,23 @@ async function startNationalFixtureMatch(opts) {
   if (!fixture) throw new Error("Milli fikstür yok");
   if (fixture.status === "finished") throw new Error("Maç zaten bitmiş");
 
-  const squad = await nationalRepo.getSquadForMatch(fixture.nationalTeamId);
-  if (!squad.starters.length) {
-    throw new Error("Kadroda çağrılmış ilk 11 yok — TD kadro belirlemeli");
+  const team = await nationalRepo.getTeamById(fixture.nationalTeamId);
+
+  // Çağırma/ilk 11 maç saatine kadar yapılabilir. TD unuttuysa (ilk 11
+  // eksikse) yapay zeka kadroyu/ilk 11'i otomatik tamamlar ki maç iptal
+  // olmasın.
+  try {
+    await nationalSystem.autoFillSquadForMatch(team);
+  } catch (e) {
+    console.error("[nationalLifecycle] autoFillSquadForMatch", e);
   }
 
-  const team = await nationalRepo.getTeamById(fixture.nationalTeamId);
+  const squad = await nationalRepo.getSquadForMatch(fixture.nationalTeamId);
+  if (!squad.starters.length) {
+    throw new Error(
+      "Kadroda ilk 11 oluşturulamadı — ülkede uygun oyuncu bulunamadı",
+    );
+  }
   const homeTeam = {
     name: (team && team.country) + " Milli Takımı",
     gameStyle: (team && team.gameStyle) || "dengeli",

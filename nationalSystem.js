@@ -206,6 +206,101 @@ async function saveLineup(country, userId, starterPlayerIds, formation, assignme
   );
 }
 
+// Sadece pozisyon etiketleri — server tarafında x/y'ye gerek yok
+// (matchEngine.js sadece p.pos kullanıyor). index.html'deki
+// FORMATION_PRESETS ile aynı pozisyon sırası.
+const AUTO_FORMATIONS = {
+  "4-4-2": ["GK", "DL", "DC", "DC", "DR", "ML", "MC", "MC", "MR", "FL", "FR"],
+  "4-3-3": ["GK", "DL", "DC", "DC", "DR", "MC", "MC", "MC", "FL", "FC", "FR"],
+  "4-2-3-1": ["GK", "DL", "DC", "DC", "DR", "DM", "DM", "ML", "OMC", "MR", "FC"],
+  "3-5-2": ["GK", "DC", "DC", "DC", "ML", "MC", "DM", "MC", "MR", "FL", "FR"],
+  "5-3-2": ["GK", "DL", "DC", "DC", "DC", "DR", "MC", "MC", "MC", "FL", "FR"],
+};
+const AUTO_FALLBACK_FORMATION = "4-4-2";
+
+/**
+ * TD kadroyu/ilk 11'i maç saatine kadar belirlemezse, yapay zeka devreye
+ * girer: eksikse en kaliteli uygun oyunculardan kadroyu tamamlar ve mevcut
+ * kadrodan (varsa) en iyi 11'i, yoksa yeni çağrılanları, formasyona göre
+ * ilk 11'e yerleştirir. Zaten geçerli bir ilk 11 varsa dokunmaz.
+ */
+async function autoFillSquadForMatch(team) {
+  if (!team) return;
+  let squad = await nationalRepo.getSquad(team.id);
+  if (squad.filter((p) => p.isStarter).length >= 11) return; // TD zaten hazırlamış
+
+  const maxAge = team.category === "U21" ? 21 : null;
+  if (squad.length < 11) {
+    const candidatesRaw = await nationalRepo.listCandidates(team.country, team.id, maxAge);
+    const pool = candidatesRaw.filter((c) => !c.called);
+    for (const cand of pool) {
+      if (squad.length >= 11) break;
+      const res = await nationalRepo.callUpPlayer(team.id, cand.playerId, cand.clubId);
+      if (res && res.ok) squad.push({ ...cand, isStarter: false });
+    }
+  }
+  if (squad.length < 11) return; // ülkede yeterli uygun oyuncu yok — elden bir şey gelmez
+
+  const formation =
+    team.formation && AUTO_FORMATIONS[team.formation]
+      ? team.formation
+      : AUTO_FALLBACK_FORMATION;
+  const slots = AUTO_FORMATIONS[formation];
+
+  const ranked = [...squad].sort((a, b) => (b.overall || 0) - (a.overall || 0));
+  const used = new Set();
+  const finalAssignments = [];
+
+  // 1) Her slota, doğal mevkisi uyan en kaliteli müsait oyuncuyu yerleştir.
+  slots.forEach((pos) => {
+    const match = ranked.find(
+      (p) => !used.has(p.playerId) && (p.naturalPos || p.pos) === pos,
+    );
+    if (match) {
+      used.add(match.playerId);
+      finalAssignments.push({ playerId: match.playerId, pos });
+    }
+  });
+  // 2) Doğal mevkisi uymayan kalan boş slotları, kalan en kaliteli
+  //    oyuncularla (kaleci hariç GK slotuna kaleci olmayan konmaz) doldur.
+  const leftovers = ranked.filter((p) => !used.has(p.playerId));
+  slots.forEach((pos) => {
+    if (finalAssignments.some((a) => a.pos === pos)) return;
+    const idx = leftovers.findIndex((p) =>
+      !used.has(p.playerId) && (pos !== "GK" || (p.naturalPos || p.pos) === "GK"),
+    );
+    const pick = idx !== -1 ? leftovers[idx] : leftovers.find((p) => !used.has(p.playerId));
+    if (pick) {
+      used.add(pick.playerId);
+      finalAssignments.push({ playerId: pick.playerId, pos });
+    }
+  });
+
+  const starterPlayerIds = finalAssignments.map((a) => a.playerId);
+  await nationalRepo.setLineup(
+    team.id,
+    starterPlayerIds,
+    formation,
+    finalAssignments,
+    team.passStyle || "kisa",
+    team.gameStyle || "dengeli",
+  );
+
+  try {
+    if (team.managerUserId) {
+      const socialSystem = require("./socialSystem");
+      await socialSystem.pushNotification(
+        team.managerUserId,
+        "🤖",
+        `Kadro/ilk 11 belirlenmediği için ${team.country} ${team.category} kadrosunu yapay zeka otomatik oluşturdu.`,
+        "Milli Takım",
+      );
+    }
+  } catch (e) {
+    console.warn("[national] autoFillSquadForMatch notify", e.message);
+  }
+}
+
 /** Sıradaki maç yoksa yeni bir tane açar (rastgele "dünya" rakibi). */
 async function scheduleNextFixtureIfNeeded(country, category) {
   const team = await ensureTeam(country, category);
@@ -235,6 +330,7 @@ module.exports = {
   callUp,
   drop,
   saveLineup,
+  autoFillSquadForMatch,
   scheduleNextFixtureIfNeeded,
   OPPONENT_NAMES,
 };
