@@ -44,7 +44,19 @@ async function main() {
   const app = express();
   app.use(cors({ origin: true, credentials: true }));
   app.use(express.json({ limit: "1mb" }));
-  app.use(express.static("public"));
+  // index.html ve multiplayer-client.js sık güncelleniyor; tarayıcı/telefon
+  // eski sürümü önbellekten göstermesin diye no-cache zorluyoruz.
+  app.use(
+    express.static("public", {
+      etag: false,
+      lastModified: false,
+      setHeaders: (res) => {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      },
+    }),
+  );
 
   const server = http.createServer(app);
   const io = new Server(server, {
