@@ -4087,6 +4087,24 @@
     <div id="page-national-manage" class="page">
       <div class="report-container">
         <div class="tactics-title">🏳️ Milli Takım Yönetimi</div>
+        <div style="display: flex; gap: 8px; margin-bottom: 12px">
+          <button
+            class="sub-btn"
+            id="natManageTabA"
+            style="flex: 1"
+            onclick="showNationalManageCategory('A')"
+          >
+            A Milli
+          </button>
+          <button
+            class="sub-btn"
+            id="natManageTabU21"
+            style="flex: 1; background: #334155"
+            onclick="showNationalManageCategory('U21')"
+          >
+            U21
+          </button>
+        </div>
         <div
           id="nationalManageInfo"
           style="
@@ -4097,7 +4115,27 @@
             margin-bottom: 12px;
           "
         ></div>
-        <div class="youth-section-title">A Milli Kadro (özet)</div>
+        <div
+          style="display: flex; gap: 8px; margin-bottom: 12px"
+          id="nationalManageSubTabs"
+        >
+          <button
+            class="sub-btn nat-manage-subtab active"
+            data-sub="tactic"
+            style="flex: 1"
+            onclick="showNationalManageSub('tactic')"
+          >
+            🎯 Taktik
+          </button>
+          <button
+            class="sub-btn nat-manage-subtab"
+            data-sub="all"
+            style="flex: 1; background: #334155"
+            onclick="showNationalManageSub('all')"
+          >
+            👥 Tüm Oyuncular
+          </button>
+        </div>
         <div id="nationalManageSquad"></div>
         <button
           class="sub-btn"

@@ -2574,6 +2574,20 @@
   let _natGameStyle = "dengeli";
   let _natSelectedSlot = null; // sahada seçili boş/dolu slot index'i
   let _natApplications = [];
+  let _natManageSub = "tactic"; // "tactic" | "all" — Yönetim ekranındaki aktif alt sekme
+
+  function syncNationalManageTabs() {
+    const tabA = document.getElementById("natManageTabA");
+    const tabU21 = document.getElementById("natManageTabU21");
+    const isU21 = _natCategory === "U21";
+    if (tabA) tabA.style.background = isU21 ? "#334155" : "";
+    if (tabU21) tabU21.style.background = isU21 ? "" : "#334155";
+    document.querySelectorAll(".nat-manage-subtab").forEach((btn) => {
+      const active = btn.dataset.sub === _natManageSub;
+      btn.classList.toggle("active", active);
+      btn.style.background = active ? "" : "#334155";
+    });
+  }
 
   function fmtNatOverall(n) {
     return Math.round(n);
@@ -2773,6 +2787,48 @@
     info.innerHTML = infoHtml;
 
     let html = "";
+    const sub = _natManageSub === "all" ? "all" : "tactic";
+
+    if (sub === "all") {
+      // -------- Tüm Oyuncular: kalite sırasına göre (en iyi üstte) tam aday havuzu --------
+      const pool = state.candidates || []; // backend zaten overall DESC sıralıyor
+      html +=
+        '<div class="formation-hint">Kadroya henüz çağrılmamış tüm ' +
+        (t.country || "") +
+        (_natCategory === "U21" ? " U21" : " A") +
+        " uygun oyuncular — kaliteye göre en iyi en üstte.</div>";
+      if (!t.isMeManager) {
+        html +=
+          '<div style="color:#94a3b8;font-size:12px;padding:8px 0;">Oyuncu çağırmak için bu takımın teknik direktörü olman gerekiyor.</div>';
+      }
+      html += pool.length
+        ? '<div class="youth-section-title">Tüm Oyuncular (' + pool.length + ")</div>" +
+          pool
+            .map(
+              (p) =>
+                '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.25);font-size:12px;color:#e2e8f0;">' +
+                "<span>" +
+                p.name +
+                " · " +
+                p.pos +
+                ' <span style="color:#94a3b8;">(' +
+                p.clubName +
+                ", " +
+                fmtNatOverall(p.overall) +
+                ")</span></span>" +
+                (t.isMeManager
+                  ? '<button style="font-size:10px;padding:3px 6px;" onclick="callUpNationalPlayer(\'' +
+                    p.playerId +
+                    "')\">Çağır</button>"
+                  : "") +
+                "</div>",
+            )
+            .join("")
+        : '<div style="color:#64748b;font-size:12px;padding:8px;">Uygun aday oyuncu bulunamadı.</div>';
+
+      squadEl.innerHTML = html;
+      return;
+    }
 
     if (t.isMeManager) {
       // -------- Diziliş sahası (club page-tactics ile aynı görsel dil) --------
@@ -2922,27 +2978,7 @@
 
     if (t.isMeManager) {
       html +=
-        '<div class="youth-section-title">Aday Havuzu</div>' +
-        (state.candidates || [])
-          .slice(0, 40)
-          .map(
-            (p) =>
-              '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.25);font-size:12px;color:#e2e8f0;">' +
-              "<span>" +
-              p.name +
-              " · " +
-              p.pos +
-              ' <span style="color:#94a3b8;">(' +
-              p.clubName +
-              ", " +
-              fmtNatOverall(p.overall) +
-              ")</span></span>" +
-              '<button style="font-size:10px;padding:3px 6px;" onclick="callUpNationalPlayer(\'' +
-              p.playerId +
-              "')\">Çağır</button></div>",
-          )
-          .join("");
-
+        '<div class="formation-hint" style="margin-top:6px;">Kadroya oyuncu eklemek için <b>👥 Tüm Oyuncular</b> sekmesine geç.</div>';
       html +=
         '<button class="sub-btn" style="width:100%;margin-top:12px;" onclick="saveNationalLineupClick()">İlk 11, Taktik &amp; Formasyonu Kaydet</button>';
     }
@@ -2982,8 +3018,28 @@
   window.goToNationalManage = async function () {
     hideMainMenuAndShowBack();
     switchPage("page-national-manage");
+    _natManageSub = "tactic";
     const state = await fetchNationalState();
     await fetchNationalApplicationsIfAdmin(state);
+    syncNationalManageTabs();
+    renderNationalManage();
+  };
+  window.showNationalManageCategory = async function (cat) {
+    _natCategory = cat === "U21" ? "U21" : "A";
+    syncNationalManageTabs();
+    const squadEl = document.getElementById("nationalManageSquad");
+    if (squadEl) {
+      squadEl.innerHTML =
+        '<div style="color:#64748b;text-align:center;padding:16px;">Yükleniyor…</div>';
+    }
+    const state = await fetchNationalState(_natCategory);
+    await fetchNationalApplicationsIfAdmin(state);
+    syncNationalManageTabs();
+    renderNationalManage();
+  };
+  window.showNationalManageSub = function (sub) {
+    _natManageSub = sub === "all" ? "all" : "tactic";
+    syncNationalManageTabs();
     renderNationalManage();
   };
 
