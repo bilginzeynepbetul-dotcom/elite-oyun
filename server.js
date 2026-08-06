@@ -13,6 +13,7 @@ const {
   createAuthRouter,
   authMiddleware,
   meHandler,
+  adminResetPasswordHandler,
   socketAuthMiddleware,
 } = require("./authRoutes");
 const { createTeamRouter } = require("./teamRoutes");
@@ -84,6 +85,7 @@ async function main() {
 
   // Protected
   app.get("/api/me", authMiddleware, meHandler);
+  app.post("/api/auth/admin-reset-password", authMiddleware, adminResetPasswordHandler);
   app.use("/api", authMiddleware, createTeamRouter());
   app.use("/api", authMiddleware, createLeagueRouter());
   app.use("/api", authMiddleware, createCupRouter());

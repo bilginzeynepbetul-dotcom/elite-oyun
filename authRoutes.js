@@ -84,6 +84,12 @@ function createAuthRouter() {
       const teamName = (req.body && req.body.teamName
         ? String(req.body.teamName).trim().slice(0, 64)
         : null) || null;
+      const securityQuestion = (req.body && req.body.securityQuestion
+        ? String(req.body.securityQuestion).trim().slice(0, 120)
+        : null) || null;
+      const securityAnswerRaw = (req.body && req.body.securityAnswer
+        ? String(req.body.securityAnswer).trim()
+        : null) || null;
 
       if (!username || username.length < 3) {
         return res.status(400).json({ error: "Kullanıcı adı en az 3 karakter" });
@@ -106,13 +112,16 @@ function createAuthRouter() {
       }
 
       const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      const securityAnswerHash = securityAnswerRaw
+        ? await bcrypt.hash(securityAnswerRaw.toLowerCase(), BCRYPT_ROUNDS)
+        : null;
 
       const result = await withTransaction(async (client) => {
         const userIns = await client.query(
-          `INSERT INTO users (username, password_hash)
-           VALUES ($1, $2)
+          `INSERT INTO users (username, password_hash, security_question, security_answer_hash)
+           VALUES ($1, $2, $3, $4)
            RETURNING id, username, created_at`,
-          [username, passwordHash],
+          [username, passwordHash, securityQuestion, securityAnswerHash],
         );
         const user = userIns.rows[0];
 
@@ -226,7 +235,97 @@ function createAuthRouter() {
     }
   });
 
+  // GET /api/auth/security-question?username=...  (herkese açık)
+  router.get("/security-question", async (req, res) => {
+    try {
+      const username = String((req.query && req.query.username) || "").trim();
+      if (!username) return res.status(400).json({ error: "Kullanıcı adı gerekli" });
+      const { rows } = await query(
+        `SELECT security_question FROM users WHERE LOWER(username) = LOWER($1)`,
+        [username],
+      );
+      if (!rows[0] || !rows[0].security_question) {
+        return res
+          .status(404)
+          .json({ error: "Bu hesap için güvenlik sorusu tanımlı değil. Admin ile iletişime geç." });
+      }
+      res.json({ question: rows[0].security_question });
+    } catch (e) {
+      console.error("[auth/security-question]", e);
+      res.status(500).json({ error: "Sorgu başarısız" });
+    }
+  });
+
+  // POST /api/auth/reset-password  { username, answer, newPassword }  (herkese açık)
+  router.post("/reset-password", async (req, res) => {
+    try {
+      const username = String((req.body && req.body.username) || "").trim();
+      const answer = String((req.body && req.body.answer) || "").trim().toLowerCase();
+      const newPassword = String((req.body && req.body.newPassword) || "");
+      if (!username || !answer || !newPassword) {
+        return res.status(400).json({ error: "Tüm alanlar gerekli" });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: "Yeni şifre en az 6 karakter olmalı" });
+      }
+      const { rows } = await query(
+        `SELECT id, security_answer_hash FROM users WHERE LOWER(username) = LOWER($1)`,
+        [username],
+      );
+      const user = rows[0];
+      if (!user || !user.security_answer_hash) {
+        return res.status(404).json({ error: "Bu hesap için güvenlik sorusu tanımlı değil" });
+      }
+      const ok = await bcrypt.compare(answer, user.security_answer_hash);
+      if (!ok) {
+        return res.status(401).json({ error: "Cevap yanlış" });
+      }
+      const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+      await query(`UPDATE users SET password_hash = $2 WHERE id = $1`, [
+        user.id,
+        newHash,
+      ]);
+      res.json({ ok: true });
+    } catch (e) {
+      console.error("[auth/reset-password]", e);
+      res.status(500).json({ error: "Sıfırlama başarısız" });
+    }
+  });
+
   return router;
+}
+
+/**
+ * POST /api/auth/admin-reset-password  { targetUsername, newPassword }
+ * authMiddleware ile korunur; sadece .env ADMIN_USERNAME hesabı kullanabilir.
+ * Güvenlik sorusu tanımlamamış eski hesaplar (ör. demo admin) için son çare.
+ */
+async function adminResetPasswordHandler(req, res) {
+  try {
+    const { isAdmin } = require("./nationalSystem");
+    if (!isAdmin(req.user.username)) {
+      return res.status(403).json({ error: "Bu işlem için yetkin yok" });
+    }
+    const targetUsername = String((req.body && req.body.targetUsername) || "").trim();
+    const newPassword = String((req.body && req.body.newPassword) || "");
+    if (!targetUsername || newPassword.length < 6) {
+      return res.status(400).json({ error: "Kullanıcı adı ve en az 6 karakterlik yeni şifre gerekli" });
+    }
+    const { rows } = await query(
+      `SELECT id FROM users WHERE LOWER(username) = LOWER($1)`,
+      [targetUsername],
+    );
+    if (!rows[0]) return res.status(404).json({ error: "Kullanıcı bulunamadı" });
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await query(`UPDATE users SET password_hash = $2 WHERE id = $1`, [
+      rows[0].id,
+      newHash,
+    ]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("[auth/admin-reset-password]", e);
+    res.status(500).json({ error: "Sıfırlama başarısız" });
+  }
 }
 
 /** GET /api/me — authMiddleware ile korunmalı */
@@ -275,6 +374,7 @@ module.exports = {
   createAuthRouter,
   authMiddleware,
   meHandler,
+  adminResetPasswordHandler,
   socketAuthMiddleware,
   enrichClubId,
   signToken,
