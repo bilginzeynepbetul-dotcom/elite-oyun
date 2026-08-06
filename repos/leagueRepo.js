@@ -188,7 +188,7 @@ async function generateFixturesForSeason(seasonId, opts = {}) {
     let startAt = opts.startAt;
     let slots = opts.slots;
     try {
-      const seasonConfig = require("./seasonConfig");
+      const seasonConfig = require("../seasonConfig");
       if (startAt == null) startAt = await seasonConfig.getSeasonStartAt();
       if (slots == null && seasonConfig.getLeagueMatchSlots) {
         slots = await seasonConfig.getLeagueMatchSlots();
@@ -208,7 +208,7 @@ async function generateFixturesForSeason(seasonId, opts = {}) {
 
     let pairs;
     try {
-      const cal = require("./calendarSchedule");
+      const cal = require("../calendarSchedule");
       pairs = cal.assignKickoffsToFixtures(
         rawPairs,
         new Date(startAt),
