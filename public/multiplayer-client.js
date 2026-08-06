@@ -708,71 +708,211 @@
       const data = await apiFetch("/api/cup/bracket");
       if (!data.edition) {
         list.innerHTML =
-          '<div style="color:#64748b;text-align:center;padding:12px;">Kupa henüz oluşmadı.</div>';
+          '<div style="color:#64748b;text-align:center;padding:16px;">Kupa henüz oluşmadı.</div>';
         return;
       }
+
+      const fixtures = data.bracket || [];
       const rounds = {};
-      (data.bracket || []).forEach((f) => {
+      fixtures.forEach((f) => {
         (rounds[f.round] = rounds[f.round] || []).push(f);
       });
-      let html =
-        '<div class="youth-section-title">🏅 Kupa ' + data.edition.yearLabel + "</div>";
-      Object.keys(rounds)
-        .sort((a, b) => a - b)
-        .forEach((r) => {
-          const roundFixtures = rounds[r];
-          html +=
-            '<div style="font-size:12px;font-weight:700;color:#facc15;margin:10px 0 4px;">' +
-            (roundFixtures[0].roundLabel || "Tur " + r) +
-            "</div>";
-          roundFixtures.forEach((f) => {
-            if (f.id) cacheFixture({ id: f.id, homeClubId: f.homeClubId, awayClubId: f.awayClubId });
-            let scoreHtml;
-            let metaHtml = "";
-            let btn = "";
-            if (f.status === "bye") {
-              scoreHtml = '<span style="color:#64748b;">BYE (rakipsiz turu geçti)</span>';
-            } else if (f.status === "finished") {
-              scoreHtml =
-                '<b style="color:#facc15;">' + f.homeGoals + " - " + f.awayGoals + "</b>" +
-                (f.penalties ? ' <span style="color:#94a3b8;font-size:10px;">(penaltılar)</span>' : "");
-            } else {
-              scoreHtml = '<span style="color:#64748b;">vs</span>';
-              const when = f.kickoffAt
-                ? new Date(f.kickoffAt).toLocaleString("tr-TR", {
-                    weekday: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "";
-              metaHtml =
-                '<div style="font-size:10px;color:#38bdf8;margin-top:2px;">' +
-                when +
-                (f.status === "live" ? " · ● CANLI" : "") +
-                "</div>";
-              btn =
-                '<button class="sub-btn" style="width:auto;padding:3px 8px;font-size:10px;margin-left:6px;" onclick="watchFixture(\'' +
-                f.id +
-                '\')">İzle</button>';
-            }
-            html +=
-              '<div style="padding:8px 10px;margin-bottom:5px;background:#0f172a;border:1px solid #2c3a52;border-radius:8px;font-size:12.5px;color:#e2e8f0;">' +
-              (f.homeName || "—") +
-              " " +
-              scoreHtml +
-              " " +
-              (f.awayName || "") +
-              btn +
-              metaHtml +
-              "</div>";
-          });
-        });
-      if (data.edition.championClubId) {
-        html +=
-          '<div style="text-align:center;margin-top:12px;padding:10px;background:#0f172a;border:1px solid #facc15;border-radius:10px;color:#facc15;font-weight:800;">🏆 Bu kupanın şampiyonu belli oldu!</div>';
+      const roundKeys = Object.keys(rounds)
+        .map(Number)
+        .sort((a, b) => a - b);
+      const totalRounds =
+        (data.edition && data.edition.totalRounds) ||
+        (roundKeys.length ? Math.max.apply(null, roundKeys) : 1);
+
+      function statusBadge(f) {
+        if (f.status === "bye")
+          return '<span style="font-size:9px;color:#64748b;letter-spacing:0.04em;">BYE</span>';
+        if (f.status === "finished")
+          return '<span style="font-size:9px;color:#4ade80;">BİTTİ</span>';
+        if (f.status === "live")
+          return '<span style="font-size:9px;color:#f87171;font-weight:700;">● CANLI</span>';
+        return '<span style="font-size:9px;color:#38bdf8;">PLANLI</span>';
       }
+
+      function teamLine(name, goals, isWinner, isBye) {
+        const nm = name || (isBye ? "—" : "TBD");
+        const g =
+          goals != null && goals !== ""
+            ? '<b style="min-width:16px;text-align:right;color:#facc15;">' +
+              goals +
+              "</b>"
+            : '<span style="min-width:16px;color:#334155;">·</span>';
+        const winStyle = isWinner
+          ? "color:#4ade80;font-weight:700;"
+          : "color:#e2e8f0;font-weight:500;";
+        return (
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 8px;border-radius:6px;' +
+          (isWinner ? "background:rgba(74,222,128,0.08);" : "") +
+          '">' +
+          '<span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
+          winStyle +
+          '">' +
+          nm +
+          "</span>" +
+          g +
+          "</div>"
+        );
+      }
+
+      function matchCard(f) {
+        if (f.id) {
+          cacheFixture({
+            id: f.id,
+            homeClubId: f.homeClubId,
+            awayClubId: f.awayClubId,
+          });
+        }
+        const finished = f.status === "finished";
+        const homeWin =
+          finished &&
+          f.homeGoals != null &&
+          f.awayGoals != null &&
+          Number(f.homeGoals) > Number(f.awayGoals);
+        const awayWin =
+          finished &&
+          f.homeGoals != null &&
+          f.awayGoals != null &&
+          Number(f.awayGoals) > Number(f.homeGoals);
+        // penaltılar: basit — eşitse pen notu
+        let when = "";
+        if (f.kickoffAt && f.status !== "finished" && f.status !== "bye") {
+          when = new Date(f.kickoffAt).toLocaleString("tr-TR", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        }
+        let btn = "";
+        if (f.id && (f.status === "scheduled" || f.status === "live")) {
+          btn =
+            '<button type="button" class="sub-btn" style="width:100%;margin-top:6px;padding:4px 8px;font-size:10px;" onclick="watchFixture(\'' +
+            f.id +
+            "')\">" +
+            (f.status === "live" ? "Canlı İzle" : "İzle") +
+            "</button>";
+        }
+        const border =
+          f.status === "live"
+            ? "#f87171"
+            : finished
+              ? "#334155"
+              : "#2c3a52";
+        return (
+          '<div style="min-width:160px;max-width:200px;background:#0f172a;border:1px solid ' +
+          border +
+          ';border-radius:10px;padding:6px;box-shadow:0 4px 14px rgba(0,0,0,0.25);">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;padding:0 4px;">' +
+          statusBadge(f) +
+          (f.penalties
+            ? '<span style="font-size:9px;color:#94a3b8;">pen</span>'
+            : "") +
+          "</div>" +
+          teamLine(f.homeName, finished ? f.homeGoals : null, homeWin, false) +
+          '<div style="height:1px;background:#1e293b;margin:2px 6px;"></div>' +
+          teamLine(
+            f.awayName,
+            finished ? f.awayGoals : null,
+            awayWin,
+            f.status === "bye",
+          ) +
+          (when
+            ? '<div style="font-size:10px;color:#64748b;text-align:center;margin-top:4px;">' +
+              when +
+              "</div>"
+            : "") +
+          btn +
+          "</div>"
+        );
+      }
+
+      let html =
+        '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">' +
+        '<div class="youth-section-title" style="margin:0;">🏅 Kupa ' +
+        (data.edition.yearLabel || "") +
+        " — Eşleşme Ağacı</div>" +
+        '<div style="font-size:11px;color:#94a3b8;">Tur ' +
+        (data.edition.currentRound || "?") +
+        " / " +
+        totalRounds +
+        "</div></div>";
+
+      // Yatay kaydırılabilir ağaç
+      html +=
+        '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:12px;">' +
+        '<div style="display:flex;align-items:stretch;gap:0;min-width:min-content;">';
+
+      roundKeys.forEach((rk, colIdx) => {
+        const roundFixtures = rounds[rk];
+        const label =
+          (roundFixtures[0] && roundFixtures[0].roundLabel) || "Tur " + rk;
+        html +=
+          '<div style="display:flex;flex-direction:column;justify-content:space-around;gap:14px;padding:0 10px;position:relative;min-width:180px;">' +
+          '<div style="text-align:center;font-size:11px;font-weight:700;color:#facc15;letter-spacing:0.04em;margin-bottom:4px;text-transform:uppercase;">' +
+          label +
+          "</div>";
+        roundFixtures.forEach((f) => {
+          html +=
+            '<div style="display:flex;align-items:center;gap:0;">' +
+            matchCard(f) +
+            "</div>";
+        });
+        // sütunlar arası ok
+        if (colIdx < roundKeys.length - 1) {
+          html +=
+            '<div style="position:absolute;right:0;top:50%;transform:translateY(-50%);color:#334155;font-size:18px;pointer-events:none;"></div>';
+        }
+        html += "</div>";
+        if (colIdx < roundKeys.length - 1) {
+          html +=
+            '<div style="display:flex;align-items:center;color:#334155;font-size:20px;padding:0 2px;flex-shrink:0;">›</div>';
+        }
+      });
+
+      html += "</div></div>";
+
+      if (data.edition.championClubId) {
+        const champ =
+          fixtures.find(
+            (f) =>
+              f.status === "finished" &&
+              f.roundLabel === "Final" &&
+              (f.homeClubId === data.edition.championClubId ||
+                f.awayClubId === data.edition.championClubId),
+          ) || null;
+        let champName = "Şampiyon";
+        if (champ) {
+          const hw =
+            Number(champ.homeGoals) > Number(champ.awayGoals) ||
+            (champ.penalties &&
+              Number(champ.homeGoals) >= Number(champ.awayGoals));
+          // basit: goals
+          if (Number(champ.homeGoals) > Number(champ.awayGoals))
+            champName = champ.homeName;
+          else if (Number(champ.awayGoals) > Number(champ.homeGoals))
+            champName = champ.awayName;
+          else champName = champ.homeName || champ.awayName || "Şampiyon";
+        }
+        html +=
+          '<div style="text-align:center;margin-top:16px;padding:14px;background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #facc15;border-radius:12px;">' +
+          '<div style="font-size:13px;color:#facc15;font-weight:800;">🏆 ŞAMPİYON</div>' +
+          '<div style="font-size:18px;color:#e2e8f0;font-weight:700;margin-top:4px;">' +
+          champName +
+          "</div></div>";
+      } else if (!fixtures.length) {
+        html +=
+          '<div style="color:#64748b;text-align:center;padding:12px;">Henüz eşleşme yok.</div>';
+      }
+
       list.innerHTML = html;
     } catch (e) {
+      console.warn("[em] cup bracket", e);
       list.innerHTML =
         '<div style="color:#f87171;text-align:center;padding:12px;">Kupa verisi alınamadı.</div>';
     }
@@ -786,7 +926,7 @@
       // için doğrudan bu bağlamayı güncelliyoruz (window._currentComp
       // FARKLI/ayrı bir şey olurdu, diğer butonlar onu görmezdi).
       _currentComp = "cup";
-      _compSub = sub || "fixture";
+      _compSub = sub || "played";
       try {
         highlightCompSubtabs("#fixturesHubTabs", _compSub);
       } catch (e) {}
