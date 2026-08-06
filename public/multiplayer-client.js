@@ -2164,24 +2164,167 @@
   // ------------------------------------------------------------
   // Milli Takım (sunucu) — gerçek çağrı / ilk 11 / TD yönetimi
   // ------------------------------------------------------------
-  const NAT_FORMATIONS = ["4-4-2", "4-3-3", "3-5-2", "4-2-3-1", "5-3-2"];
+  const NAT_FORMATIONS = [
+    "4-4-2", "4-3-3", "4-2-3-1", "3-5-2", "5-3-2", "4-1-4-1",
+    "4-5-1", "3-4-3", "4-3-2-1", "3-4-2-1", "4-4-1-1", "5-4-1",
+  ];
+  // Kulüp taktik sayfasındaki (page-tactics) FORMATION_PRESETS ile birebir
+  // aynı koordinatlar — aynı .formation-pitch-wrap / .formation-token CSS'i
+  // kullanıyoruz, sadece sağdan-soldan çevirmeye gerek yok (tek taraf).
+  const NAT_FORMATION_PRESETS = {
+    "4-4-2": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DL", x: 130, y: 50 },
+      { pos: "DC", x: 125, y: 140 }, { pos: "DC", x: 125, y: 260 },
+      { pos: "DR", x: 130, y: 350 }, { pos: "ML", x: 300, y: 55 },
+      { pos: "MC", x: 300, y: 145 }, { pos: "MC", x: 300, y: 255 },
+      { pos: "MR", x: 300, y: 345 }, { pos: "FL", x: 495, y: 55 },
+      { pos: "FR", x: 495, y: 345 },
+    ],
+    "4-3-3": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DL", x: 130, y: 50 },
+      { pos: "DC", x: 125, y: 140 }, { pos: "DC", x: 125, y: 260 },
+      { pos: "DR", x: 130, y: 350 }, { pos: "MC", x: 300, y: 100 },
+      { pos: "MC", x: 300, y: 200 }, { pos: "MC", x: 300, y: 300 },
+      { pos: "FL", x: 490, y: 55 }, { pos: "FC", x: 510, y: 200 },
+      { pos: "FR", x: 490, y: 345 },
+    ],
+    "4-2-3-1": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DL", x: 130, y: 50 },
+      { pos: "DC", x: 125, y: 140 }, { pos: "DC", x: 125, y: 260 },
+      { pos: "DR", x: 130, y: 350 }, { pos: "DM", x: 210, y: 140 },
+      { pos: "DM", x: 210, y: 260 }, { pos: "ML", x: 380, y: 60 },
+      { pos: "OMC", x: 410, y: 200 }, { pos: "MR", x: 380, y: 340 },
+      { pos: "FC", x: 510, y: 200 },
+    ],
+    "3-5-2": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DC", x: 125, y: 95 },
+      { pos: "DC", x: 120, y: 200 }, { pos: "DC", x: 125, y: 305 },
+      { pos: "ML", x: 300, y: 40 }, { pos: "MC", x: 300, y: 120 },
+      { pos: "DM", x: 220, y: 200 }, { pos: "MC", x: 300, y: 280 },
+      { pos: "MR", x: 300, y: 360 }, { pos: "FL", x: 495, y: 55 },
+      { pos: "FR", x: 495, y: 345 },
+    ],
+    "5-3-2": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DL", x: 115, y: 40 },
+      { pos: "DC", x: 110, y: 115 }, { pos: "DC", x: 105, y: 200 },
+      { pos: "DC", x: 110, y: 285 }, { pos: "DR", x: 115, y: 360 },
+      { pos: "MC", x: 300, y: 110 }, { pos: "MC", x: 300, y: 200 },
+      { pos: "MC", x: 300, y: 290 }, { pos: "FL", x: 495, y: 55 },
+      { pos: "FR", x: 495, y: 345 },
+    ],
+    "4-1-4-1": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DL", x: 130, y: 50 },
+      { pos: "DC", x: 125, y: 140 }, { pos: "DC", x: 125, y: 260 },
+      { pos: "DR", x: 130, y: 350 }, { pos: "DM", x: 210, y: 200 },
+      { pos: "ML", x: 300, y: 50 }, { pos: "MC", x: 300, y: 140 },
+      { pos: "MC", x: 300, y: 260 }, { pos: "MR", x: 300, y: 350 },
+      { pos: "FC", x: 510, y: 200 },
+    ],
+    "4-5-1": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DL", x: 130, y: 50 },
+      { pos: "DC", x: 125, y: 140 }, { pos: "DC", x: 125, y: 260 },
+      { pos: "DR", x: 130, y: 350 }, { pos: "ML", x: 300, y: 45 },
+      { pos: "MC", x: 300, y: 120 }, { pos: "DM", x: 220, y: 200 },
+      { pos: "MC", x: 300, y: 280 }, { pos: "MR", x: 300, y: 355 },
+      { pos: "FC", x: 510, y: 200 },
+    ],
+    "3-4-3": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DC", x: 125, y: 95 },
+      { pos: "DC", x: 120, y: 200 }, { pos: "DC", x: 125, y: 305 },
+      { pos: "ML", x: 300, y: 50 }, { pos: "MC", x: 300, y: 145 },
+      { pos: "MC", x: 300, y: 255 }, { pos: "MR", x: 300, y: 350 },
+      { pos: "FL", x: 490, y: 55 }, { pos: "FC", x: 510, y: 200 },
+      { pos: "FR", x: 490, y: 345 },
+    ],
+    "4-3-2-1": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DL", x: 130, y: 50 },
+      { pos: "DC", x: 125, y: 140 }, { pos: "DC", x: 125, y: 260 },
+      { pos: "DR", x: 130, y: 350 }, { pos: "MC", x: 300, y: 100 },
+      { pos: "MC", x: 300, y: 200 }, { pos: "MC", x: 300, y: 300 },
+      { pos: "OMC", x: 410, y: 140 }, { pos: "OMC", x: 410, y: 260 },
+      { pos: "FC", x: 510, y: 200 },
+    ],
+    "3-4-2-1": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DC", x: 125, y: 95 },
+      { pos: "DC", x: 120, y: 200 }, { pos: "DC", x: 125, y: 305 },
+      { pos: "ML", x: 300, y: 50 }, { pos: "MC", x: 300, y: 145 },
+      { pos: "MC", x: 300, y: 255 }, { pos: "MR", x: 300, y: 350 },
+      { pos: "OMC", x: 410, y: 130 }, { pos: "OMC", x: 410, y: 270 },
+      { pos: "FC", x: 510, y: 200 },
+    ],
+    "4-4-1-1": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DL", x: 130, y: 50 },
+      { pos: "DC", x: 125, y: 140 }, { pos: "DC", x: 125, y: 260 },
+      { pos: "DR", x: 130, y: 350 }, { pos: "ML", x: 300, y: 55 },
+      { pos: "MC", x: 300, y: 145 }, { pos: "MC", x: 300, y: 255 },
+      { pos: "MR", x: 300, y: 345 }, { pos: "OMC", x: 410, y: 200 },
+      { pos: "FC", x: 510, y: 200 },
+    ],
+    "5-4-1": [
+      { pos: "GK", x: 50, y: 200 }, { pos: "DL", x: 115, y: 40 },
+      { pos: "DC", x: 110, y: 115 }, { pos: "DC", x: 105, y: 200 },
+      { pos: "DC", x: 110, y: 285 }, { pos: "DR", x: 115, y: 360 },
+      { pos: "ML", x: 300, y: 60 }, { pos: "MC", x: 300, y: 145 },
+      { pos: "MC", x: 300, y: 255 }, { pos: "MR", x: 300, y: 340 },
+      { pos: "FC", x: 510, y: 200 },
+    ],
+  };
+
   let _natState = null;
-  let _natSelectedStarters = new Set();
+  // _natLineup: seçili formasyonun her slotu için { pos, x, y, playerId|null }
+  let _natLineup = [];
   let _natFormation = "4-4-2";
+  let _natPassStyle = "kisa";
+  let _natGameStyle = "dengeli";
+  let _natSelectedSlot = null; // sahada seçili boş/dolu slot index'i
   let _natApplications = [];
 
   function fmtNatOverall(n) {
     return Math.round(n);
   }
 
+  /** Squad'daki mevcut ilk 11'i, formasyonun slotlarına en iyi eşleşmeyle yerleştirir. */
+  function buildNationalLineupFromSquad(state, formation) {
+    const template = NAT_FORMATION_PRESETS[formation] || NAT_FORMATION_PRESETS["4-4-2"];
+    const starters = (state.squad || []).filter((p) => p.isStarter);
+    const usedIds = new Set();
+    const slots = template.map((slot) => ({ pos: slot.pos, x: slot.x, y: slot.y, playerId: null }));
+
+    // Önce doğal/mevcut mevkisi slotla birebir uyanları yerleştir.
+    slots.forEach((slot) => {
+      if (slot.playerId) return;
+      const match = starters.find(
+        (p) => !usedIds.has(p.playerId) && (p.pos === slot.pos || p.naturalPos === slot.pos),
+      );
+      if (match) {
+        slot.playerId = match.playerId;
+        usedIds.add(match.playerId);
+      }
+    });
+    // Kalan boş slotlara, kalan ilk 11 oyuncularını sırayla doldur.
+    const leftovers = starters.filter((p) => !usedIds.has(p.playerId));
+    slots.forEach((slot) => {
+      if (slot.playerId || !leftovers.length) return;
+      const p = leftovers.shift();
+      slot.playerId = p.playerId;
+      usedIds.add(p.playerId);
+    });
+    return slots;
+  }
+
+  function natSquadPlayerById(playerId) {
+    return (_natState?.squad || []).find((p) => p.playerId === playerId) || null;
+  }
+
   async function fetchNationalState() {
     try {
       const state = await apiFetch("/api/national/state");
       _natState = state;
-      _natSelectedStarters = new Set(
-        (state.squad || []).filter((p) => p.isStarter).map((p) => p.playerId),
-      );
       _natFormation = (state.team && state.team.formation) || "4-4-2";
+      _natPassStyle = (state.team && state.team.passStyle) || "kisa";
+      _natGameStyle = (state.team && state.team.gameStyle) || "dengeli";
+      _natLineup = buildNationalLineupFromSquad(state, _natFormation);
+      _natSelectedSlot = null;
       return state;
     } catch (e) {
       console.warn("[em] national state", e);
@@ -2323,30 +2466,141 @@
       "/" +
       state.maxSquad +
       " · İlk 11 seçili: " +
-      _natSelectedStarters.size +
+      _natLineup.filter((s) => s.playerId).length +
       "/11</div>";
     info.innerHTML = infoHtml;
 
     let html = "";
+
+    if (t.isMeManager) {
+      // -------- Diziliş sahası (club page-tactics ile aynı görsel dil) --------
+      html +=
+        '<div class="tactics-title" style="margin-top:4px;">Diziliş — Tıkla ve Yerleştir</div>' +
+        '<div class="formation-hint">Sahada bir bölgeye tıkla, sonra aşağıdaki kadrodan bir oyuncuya tıkla — o bölgeye yerleşir. Dolu bölgeye tıklarsan oyuncu değişir.</div>' +
+        '<div class="formation-presets-row">' +
+        NAT_FORMATIONS.map(
+          (f) =>
+            '<button class="formation-preset-btn' +
+            (f === _natFormation ? " active" : "") +
+            '" onclick="setNationalFormation(\'' +
+            f +
+            "')\">" +
+            f +
+            "</button>",
+        ).join("") +
+        "</div>" +
+        '<div class="formation-pitch-wrap">' +
+        '<div class="pitch-outer-border"></div>' +
+        '<div class="pitch-halfway-line"></div>' +
+        '<div class="pitch-center-circle"></div>' +
+        '<div class="pitch-center-dot"></div>' +
+        '<div class="pitch-box pitch-box-left"></div>' +
+        '<div class="pitch-box pitch-box-right"></div>' +
+        '<div class="pitch-tokens-layer">' +
+        _natLineup
+          .map((slot, i) => {
+            const p = slot.playerId ? natSquadPlayerById(slot.playerId) : null;
+            const left = slot.x * 0.5 - 13;
+            const top = slot.y * 0.5 - 13;
+            const labelLeft = slot.x * 0.5 - 28;
+            const labelTop = slot.y * 0.5 + 13;
+            const cls = "formation-token " + slot.pos.toLowerCase();
+            const sel = _natSelectedSlot === i ? " selected" : "";
+            const inner = p ? p.name.split(" ").slice(-1)[0][0] + (p.name.split(" ").slice(-1)[0][1] || "") : slot.pos;
+            const label = p ? p.name.split(" ").slice(-1)[0] + " · " + slot.pos : "Boş · " + slot.pos;
+            return (
+              '<div class="' +
+              cls +
+              sel +
+              '" style="left:' +
+              left +
+              "px;top:" +
+              top +
+              'px;" onclick="selectNationalSlot(' +
+              i +
+              ')" title="' +
+              (p ? p.name + " · " + slot.pos : "Boş bölge: " + slot.pos) +
+              '">' +
+              inner +
+              "</div>" +
+              '<div class="formation-token-label" style="left:' +
+              labelLeft +
+              "px;top:" +
+              labelTop +
+              'px;">' +
+              label +
+              "</div>"
+            );
+          })
+          .join("") +
+        "</div></div>";
+
+      html += '<div class="youth-section-title" style="margin-top:6px;">Özel Taktikler</div>';
+      html +=
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">' +
+        '<div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Pas Stili</div>' +
+        '<select style="width:100%;padding:6px 8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;" onchange="_natPassStyle=this.value">' +
+        ["kisa", "uzun", "hizli"]
+          .map(
+            (v) =>
+              '<option value="' +
+              v +
+              '"' +
+              (v === _natPassStyle ? " selected" : "") +
+              ">" +
+              (v === "kisa" ? "Kısa Pas" : v === "uzun" ? "Uzun Pas" : "Hızlı Pas") +
+              "</option>",
+          )
+          .join("") +
+        "</select></div>" +
+        '<div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Oyun Stili</div>' +
+        '<select style="width:100%;padding:6px 8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;" onchange="_natGameStyle=this.value">' +
+        [
+          ["dengeli", "Dengeli"],
+          ["hücumsel", "Hücum"],
+          ["defansif", "Defans"],
+        ]
+          .map(
+            ([v, label]) =>
+              '<option value="' +
+              v +
+              '"' +
+              (v === _natGameStyle ? " selected" : "") +
+              ">" +
+              label +
+              "</option>",
+          )
+          .join("") +
+        "</select></div></div>";
+    }
+
     html += (state.squad || []).length
-      ? '<div class="youth-section-title">Kadro</div>' +
+      ? '<div class="youth-section-title">Kadro' +
+        (t.isMeManager && _natSelectedSlot !== null
+          ? ' <span style="color:#facc15;font-weight:400;font-size:11px;">— yerleştirmek için bir oyuncuya tıkla</span>'
+          : "") +
+        "</div>" +
         state.squad
           .map((p) => {
-            const isSel = _natSelectedStarters.has(p.playerId);
+            const slotIdx = _natLineup.findIndex((s) => s.playerId === p.playerId);
+            const isSel = slotIdx !== -1;
             const badge = isSel
-              ? '<span style="color:#4ade80;font-size:10px;">İLK11</span>'
+              ? '<span style="color:#4ade80;font-size:10px;">İLK11 · ' + _natLineup[slotIdx].pos + "</span>"
               : '<span style="color:#64748b;font-size:10px;">YEDEK</span>';
             const controls = t.isMeManager
-              ? '<button style="font-size:10px;padding:3px 6px;" onclick="toggleNationalStarter(\'' +
-                p.playerId +
-                "')\">" +
-                (isSel ? "Yedeğe al" : "İlk11'e al") +
-                '</button><button style="font-size:10px;padding:3px 6px;color:#f87171;" onclick="dropNationalPlayer(\'' +
+              ? '<button style="font-size:10px;padding:3px 6px;color:#f87171;" onclick="dropNationalPlayer(\'' +
                 p.playerId +
                 "')\">Çıkar</button>"
               : "";
+            const rowClick = t.isMeManager
+              ? ' onclick="placeNationalPlayer(\'' + p.playerId + '\')" style="cursor:pointer;"'
+              : "";
             return (
-              '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.35);font-size:12px;color:#e2e8f0;">' +
+              '<div' +
+              rowClick +
+              ' style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.35);font-size:12px;color:#e2e8f0;' +
+              (rowClick ? "cursor:pointer;" : "") +
+              '">' +
               "<span>" +
               p.name +
               " · " +
@@ -2355,7 +2609,7 @@
               p.clubName +
               ", " +
               fmtNatOverall(p.overall) +
-              ')</span></span><span style="display:flex;gap:6px;align-items:center;white-space:nowrap;">' +
+              ')</span></span><span style="display:flex;gap:6px;align-items:center;white-space:nowrap;" onclick="event.stopPropagation()">' +
               badge +
               controls +
               "</span></div>"
@@ -2365,21 +2619,6 @@
       : '<div style="color:#64748b;font-size:12px;padding:8px;">Henüz çağrılmış oyuncu yok.</div>';
 
     if (t.isMeManager) {
-      html +=
-        '<div class="youth-section-title" style="margin-top:10px;">Formasyon</div>' +
-        '<select id="natFormationSelect" style="width:100%;padding:8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #2c3a52;margin-bottom:10px;" onchange="_natFormation=this.value">' +
-        NAT_FORMATIONS.map(
-          (f) =>
-            '<option value="' +
-            f +
-            '"' +
-            (f === _natFormation ? " selected" : "") +
-            ">" +
-            f +
-            "</option>",
-        ).join("") +
-        "</select>";
-
       html +=
         '<div class="youth-section-title">Aday Havuzu</div>' +
         (state.candidates || [])
@@ -2403,7 +2642,7 @@
           .join("");
 
       html +=
-        '<button class="sub-btn" style="width:100%;margin-top:12px;" onclick="saveNationalLineupClick()">İlk 11 &amp; Formasyonu Kaydet</button>';
+        '<button class="sub-btn" style="width:100%;margin-top:12px;" onclick="saveNationalLineupClick()">İlk 11, Taktik &amp; Formasyonu Kaydet</button>';
     }
 
     squadEl.innerHTML = html;
@@ -2501,25 +2740,72 @@
       alert(e.message || "İşlem başarısız");
     }
   };
-  window.toggleNationalStarter = function (playerId) {
-    if (_natSelectedStarters.has(playerId)) {
-      _natSelectedStarters.delete(playerId);
-    } else {
-      if (_natSelectedStarters.size >= 11) {
-        alert("İlk 11 dolu — önce birini yedeğe al.");
-        return;
+  window.setNationalFormation = function (formation) {
+    _natFormation = formation;
+    // Mevcut yerleşimi koru: aynı oyuncuları yeni formasyonun slotlarına
+    // en iyi eşleşmeyle tekrar dağıt (kulüp sayfasındaki applyFormationPreset ruhu).
+    const template = NAT_FORMATION_PRESETS[formation] || NAT_FORMATION_PRESETS["4-4-2"];
+    const currentPlayers = _natLineup.filter((s) => s.playerId).map((s) => s.playerId);
+    const usedIds = new Set();
+    const slots = template.map((slot) => ({ pos: slot.pos, x: slot.x, y: slot.y, playerId: null }));
+    slots.forEach((slot) => {
+      const pid = currentPlayers.find((id) => {
+        if (usedIds.has(id)) return false;
+        const p = natSquadPlayerById(id);
+        return p && (p.naturalPos === slot.pos);
+      });
+      if (pid) {
+        slot.playerId = pid;
+        usedIds.add(pid);
       }
-      _natSelectedStarters.add(playerId);
+    });
+    const leftovers = currentPlayers.filter((id) => !usedIds.has(id));
+    slots.forEach((slot) => {
+      if (slot.playerId || !leftovers.length) return;
+      const pid = leftovers.shift();
+      slot.playerId = pid;
+      usedIds.add(pid);
+    });
+    _natLineup = slots;
+    _natSelectedSlot = null;
+    renderNationalManage();
+  };
+  window.selectNationalSlot = function (index) {
+    _natSelectedSlot = _natSelectedSlot === index ? null : index;
+    renderNationalManage();
+  };
+  window.placeNationalPlayer = function (playerId) {
+    if (_natSelectedSlot === null) {
+      alert("Önce sahada bir bölgeye tıkla, sonra oyuncuyu seç.");
+      return;
     }
+    const targetIdx = _natSelectedSlot;
+    // Bu oyuncu zaten başka bir slottaysa, iki slotun oyuncusunu takas et.
+    const fromIdx = _natLineup.findIndex((s) => s.playerId === playerId);
+    if (fromIdx !== -1 && fromIdx !== targetIdx) {
+      const tmp = _natLineup[targetIdx].playerId;
+      _natLineup[targetIdx].playerId = playerId;
+      _natLineup[fromIdx].playerId = tmp;
+    } else if (fromIdx === -1) {
+      _natLineup[targetIdx].playerId = playerId;
+    }
+    _natSelectedSlot = null;
     renderNationalManage();
   };
   window.saveNationalLineupClick = async function () {
+    const starterPlayerIds = _natLineup.filter((s) => s.playerId).map((s) => s.playerId);
+    const assignments = _natLineup
+      .filter((s) => s.playerId)
+      .map((s) => ({ playerId: s.playerId, pos: s.pos }));
     try {
       await apiFetch("/api/national/squad/lineup", {
         method: "POST",
         body: JSON.stringify({
-          starterPlayerIds: Array.from(_natSelectedStarters),
+          starterPlayerIds,
           formation: _natFormation,
+          assignments,
+          passStyle: _natPassStyle,
+          gameStyle: _natGameStyle,
         }),
       });
       await fetchNationalState();

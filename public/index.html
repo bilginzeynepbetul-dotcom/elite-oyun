@@ -5202,6 +5202,23 @@
         showMainMenu();
       }
 
+      // Telefonun fiziksel/gesture geri tuşu (Android) veya tarayıcının geri
+      // hareketi, oyunu kapatıp Render/GitHub'a falan atmasın diye — aynı
+      // oyun içi geri tuşu (handleBackArrow) gibi davransın. Her seferinde
+      // sahte bir history state basıp gerçek geçmişe hiç düşmüyoruz.
+      (function () {
+        function pushBackGuard() {
+          try {
+            history.pushState({ emBackGuard: true }, "");
+          } catch (e) {}
+        }
+        pushBackGuard();
+        window.addEventListener("popstate", function () {
+          pushBackGuard();
+          if (typeof handleBackArrow === "function") handleBackArrow();
+        });
+      })();
+
       function switchPage(pageId) {
         if (currentPageId && currentPageId !== pageId) {
           pageHistory.push(currentPageId);
