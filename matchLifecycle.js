@@ -15,7 +15,6 @@ const clubsRepo = require("./repos/clubsRepo");
 
 let stadiumSystem = null;
 let socialSystem = null;
-let statsSystem = null;
 
 try {
   stadiumSystem = require("./stadiumSystem");
@@ -23,15 +22,20 @@ try {
 try {
   socialSystem = require("./socialSystem");
 } catch (_) {}
+let matchArchive = null;
 try {
-  statsSystem = require("./statsSystem");
+  matchArchive = require("./matchArchive");
+} catch (_) {}
+let matchRewards = null;
+try {
+  matchRewards = require("./matchRewards");
 } catch (_) {}
 
 /**
  * Match.getPublicState() şeklindeki state ile çağrılır.
  * matchEngine.Match end() → this.onEnd(state)
  */
-async function onMatchEnd(state, matchInstance) {
+async function onMatchEnd(state) {
   if (!state) return;
   const fixtureId = state.fixtureId;
   const homeGoals = state.score ? state.score.home : 0;
@@ -60,13 +64,21 @@ async function onMatchEnd(state, matchInstance) {
     console.error("[matchLifecycle] standings", e);
   }
 
-  // Gol / asist / ayın oyuncusu istatistikleri
+  // Veritabanı arşivi: skor + stats + scorers + log
   try {
-    if (statsSystem && statsSystem.recordMatchStats) {
-      await statsSystem.recordMatchStats(state, matchInstance || null);
+    if (matchArchive && fixtureId) {
+      const fixture = await leagueRepo.getFixtureById(fixtureId);
+      await matchArchive.persistMatch(state, matchInstance || null, {
+        competition: "league",
+        fixtureId,
+        homeClubId: fixture && fixture.homeClubId,
+        awayClubId: fixture && fixture.awayClubId,
+        homeName: fixture && fixture.homeName,
+        awayName: fixture && fixture.awayName,
+      });
     }
   } catch (e) {
-    console.error("[matchLifecycle] stats", e);
+    console.error("[matchLifecycle] archive", e);
   }
 
   // Bilet geliri — ev sahibi
@@ -179,9 +191,9 @@ async function startFixtureMatch(opts) {
     // Bot-bot maçlar gerçek zamanı yormadan çabuk bitsin
     tickMs: bothBot ? 120 : undefined,
     circulationMs: bothBot ? 100 : undefined,
-    onEnd: async (state, matchInst) => {
+    onEnd: async (state) => {
       try {
-        await onMatchEnd(state, matchInst);
+        await onMatchEnd(state);
       } finally {
         if (liveMatches) liveMatches.delete(fixtureId);
       }

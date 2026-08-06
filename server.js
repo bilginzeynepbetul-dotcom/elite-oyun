@@ -25,17 +25,13 @@ const { createSocialRouter } = require("./socialRoutes");
 const { createLeagueRouter } = require("./leagueRoutes");
 const { createCupRouter } = require("./cupRoutes");
 const { createBotRouter } = require("./botRoutes");
-const { createStatsRouter } = require("./statsRoutes");
-const { createAdminSeasonRouter } = require("./adminSeasonRoutes");
-const { createFriendlyRouter } = require("./friendlyRoutes");
+const { createMatchArchiveRouter } = require("./matchArchiveRoutes");
 const { createNationalRouter, COUNTRY: NATIONAL_COUNTRY } = require("./nationalRoutes");
 const { registerMatchControlHandlers } = require("./server-match-socket-handlers");
 const { startFixtureMatch } = require("./matchLifecycle");
 const { startCupFixtureMatch } = require("./cupLifecycle");
 const { startNationalFixtureMatch } = require("./nationalLifecycle");
 const nationalSystem = require("./nationalSystem");
-const friendlySystem = require("./friendlySystem");
-const clubsRepo = require("./repos/clubsRepo");
 const { Match } = require("./matchEngine");
 const leagueRepo = require("./repos/leagueRepo");
 const cupRepo = require("./repos/cupRepo");
@@ -95,9 +91,7 @@ async function main() {
   app.use("/api", authMiddleware, createLeagueRouter());
   app.use("/api", authMiddleware, createCupRouter());
   app.use("/api", authMiddleware, createBotRouter());
-  app.use("/api", authMiddleware, createStatsRouter());
-  app.use("/api", authMiddleware, createAdminSeasonRouter());
-  app.use("/api", authMiddleware, createFriendlyRouter());
+  app.use("/api", authMiddleware, createMatchArchiveRouter());
 
   const getClubId = (req) => req.user.clubId;
   const getUserId = (req) => req.user.id;
@@ -149,7 +143,6 @@ async function main() {
           let f = await leagueRepo.getFixtureById(fixtureId);
           if (!f) f = await cupRepo.getFixtureById(fixtureId);
           if (!f) f = await nationalRepo.getFixtureById(fixtureId);
-          if (!f) f = await friendlySystem.getById(fixtureId);
           socket.emit("fixture:status", {
             fixtureId,
             status: f ? f.status : "unknown",
@@ -227,22 +220,6 @@ async function main() {
       }
     } catch (e) {
       console.warn("[scheduler] national tick", e.message);
-    }
-
-    try {
-      const dueFr = await friendlySystem.listDue(10);
-      for (const f of dueFr) {
-        if (!liveMatchesByFixture.has(f.id)) {
-          try {
-            await autoStartFriendlyMatch(f.id);
-            console.log("[scheduler] friendly auto-started", f.id);
-          } catch (e) {
-            console.warn("[scheduler] friendly", f.id, e.message);
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("[scheduler] friendly tick", e.message);
     }
   }, 15_000);
 

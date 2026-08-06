@@ -17,6 +17,8 @@ try {
 try {
   socialSystem = require("./socialSystem");
 } catch (_) {}
+let matchArchive = null;
+try { matchArchive = require("./matchArchive"); } catch (_) {}
 
 async function onCupMatchEnd(state) {
   if (!state) return;
