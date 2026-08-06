@@ -699,19 +699,101 @@
   // aynı binding), bu yüzden index.html'deki "Kupa" sekme butonları
   // hiç değişmeden buraya düşer.
   // ------------------------------------------------------------
-  async function renderServerCupBracket() {
+  let _cupBracketCache = null;
+
+  async function fetchCupBracket() {
+    const data = await apiFetch("/api/cup/bracket");
+    _cupBracketCache = data;
+    return data;
+  }
+
+  function cupMatchRow(f) {
+    if (f.id) {
+      cacheFixture({
+        id: f.id,
+        homeClubId: f.homeClubId,
+        awayClubId: f.awayClubId,
+      });
+    }
+    let scoreHtml;
+    let metaHtml = "";
+    let btn = "";
+    if (f.status === "bye") {
+      scoreHtml = '<span style="color:#64748b;">BYE</span>';
+    } else if (f.status === "finished") {
+      scoreHtml =
+        '<b style="color:#facc15;">' +
+        f.homeGoals +
+        " - " +
+        f.awayGoals +
+        "</b>" +
+        (f.penalties
+          ? ' <span style="color:#94a3b8;font-size:10px;">(pen)</span>'
+          : "");
+    } else if (f.status === "live") {
+      scoreHtml = '<span style="color:#f87171;font-weight:700;">● CANLI</span>';
+      btn =
+        '<button class="sub-btn" style="width:auto;padding:3px 8px;font-size:10px;margin-left:6px;" onclick="watchFixture(\'' +
+        f.id +
+        '\')">İzle</button>';
+    } else {
+      scoreHtml = '<span style="color:#64748b;">vs</span>';
+      btn =
+        f.id
+          ? '<button class="sub-btn" style="width:auto;padding:3px 8px;font-size:10px;margin-left:6px;" onclick="watchFixture(\'' +
+            f.id +
+            '\')">İzle</button>'
+          : "";
+    }
+    if (f.kickoffAt) {
+      const when = new Date(f.kickoffAt).toLocaleString("tr-TR", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      metaHtml =
+        '<div style="font-size:10px;color:#64748b;margin-top:3px;">' +
+        when +
+        (f.roundLabel ? " · " + f.roundLabel : "") +
+        "</div>";
+    } else if (f.roundLabel) {
+      metaHtml =
+        '<div style="font-size:10px;color:#64748b;margin-top:3px;">' +
+        f.roundLabel +
+        "</div>";
+    }
+    return (
+      '<div style="padding:10px 12px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
+      "<span>" +
+      (f.homeName || "—") +
+      " " +
+      scoreHtml +
+      " " +
+      (f.awayName || "") +
+      "</span>" +
+      btn +
+      "</div>" +
+      metaHtml +
+      "</div>"
+    );
+  }
+
+  /** Eşleşme ağacı — sadece "played" sekmesi */
+  async function renderServerCupTree() {
     const list = document.getElementById("fixturesHubList");
     if (!list) return;
     list.innerHTML =
       '<div style="color:#64748b;text-align:center;padding:12px;">Yükleniyor...</div>';
     try {
-      const data = await apiFetch("/api/cup/bracket");
+      const data = await fetchCupBracket();
       if (!data.edition) {
         list.innerHTML =
           '<div style="color:#64748b;text-align:center;padding:16px;">Kupa henüz oluşmadı.</div>';
         return;
       }
-
       const fixtures = data.bracket || [];
       const rounds = {};
       fixtures.forEach((f) => {
@@ -720,38 +802,21 @@
       const roundKeys = Object.keys(rounds)
         .map(Number)
         .sort((a, b) => a - b);
-      const totalRounds =
-        (data.edition && data.edition.totalRounds) ||
-        (roundKeys.length ? Math.max.apply(null, roundKeys) : 1);
 
-      function statusBadge(f) {
-        if (f.status === "bye")
-          return '<span style="font-size:9px;color:#64748b;letter-spacing:0.04em;">BYE</span>';
-        if (f.status === "finished")
-          return '<span style="font-size:9px;color:#4ade80;">BİTTİ</span>';
-        if (f.status === "live")
-          return '<span style="font-size:9px;color:#f87171;font-weight:700;">● CANLI</span>';
-        return '<span style="font-size:9px;color:#38bdf8;">PLANLI</span>';
-      }
-
-      function teamLine(name, goals, isWinner, isBye) {
-        const nm = name || (isBye ? "—" : "TBD");
+      function teamLine(name, goals, isWinner) {
+        const nm = name || "TBD";
         const g =
           goals != null && goals !== ""
-            ? '<b style="min-width:16px;text-align:right;color:#facc15;">' +
+            ? '<b style="color:#facc15;min-width:16px;text-align:right;">' +
               goals +
               "</b>"
-            : '<span style="min-width:16px;color:#334155;">·</span>';
-        const winStyle = isWinner
-          ? "color:#4ade80;font-weight:700;"
-          : "color:#e2e8f0;font-weight:500;";
+            : '<span style="color:#334155;min-width:16px;">·</span>';
         return (
-          '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 8px;border-radius:6px;' +
-          (isWinner ? "background:rgba(74,222,128,0.08);" : "") +
-          '">' +
-          '<span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
-          winStyle +
-          '">' +
+          '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 8px;' +
+          (isWinner ? "background:rgba(74,222,128,0.08);border-radius:6px;" : "") +
+          '"><span style="font-size:12px;color:' +
+          (isWinner ? "#4ade80;font-weight:700" : "#e2e8f0") +
+          ';">' +
           nm +
           "</span>" +
           g +
@@ -759,181 +824,247 @@
         );
       }
 
-      function matchCard(f) {
-        if (f.id) {
-          cacheFixture({
-            id: f.id,
-            homeClubId: f.homeClubId,
-            awayClubId: f.awayClubId,
-          });
-        }
-        const finished = f.status === "finished";
-        const homeWin =
-          finished &&
-          f.homeGoals != null &&
-          f.awayGoals != null &&
-          Number(f.homeGoals) > Number(f.awayGoals);
-        const awayWin =
-          finished &&
-          f.homeGoals != null &&
-          f.awayGoals != null &&
-          Number(f.awayGoals) > Number(f.homeGoals);
-        // penaltılar: basit — eşitse pen notu
-        let when = "";
-        if (f.kickoffAt && f.status !== "finished" && f.status !== "bye") {
-          when = new Date(f.kickoffAt).toLocaleString("tr-TR", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-        }
-        let btn = "";
-        if (f.id && (f.status === "scheduled" || f.status === "live")) {
-          btn =
-            '<button type="button" class="sub-btn" style="width:100%;margin-top:6px;padding:4px 8px;font-size:10px;" onclick="watchFixture(\'' +
-            f.id +
-            "')\">" +
-            (f.status === "live" ? "Canlı İzle" : "İzle") +
-            "</button>";
-        }
-        const border =
-          f.status === "live"
-            ? "#f87171"
-            : finished
-              ? "#334155"
-              : "#2c3a52";
-        return (
-          '<div style="min-width:160px;max-width:200px;background:#0f172a;border:1px solid ' +
-          border +
-          ';border-radius:10px;padding:6px;box-shadow:0 4px 14px rgba(0,0,0,0.25);">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;padding:0 4px;">' +
-          statusBadge(f) +
-          (f.penalties
-            ? '<span style="font-size:9px;color:#94a3b8;">pen</span>'
-            : "") +
-          "</div>" +
-          teamLine(f.homeName, finished ? f.homeGoals : null, homeWin, false) +
-          '<div style="height:1px;background:#1e293b;margin:2px 6px;"></div>' +
-          teamLine(
-            f.awayName,
-            finished ? f.awayGoals : null,
-            awayWin,
-            f.status === "bye",
-          ) +
-          (when
-            ? '<div style="font-size:10px;color:#64748b;text-align:center;margin-top:4px;">' +
-              when +
-              "</div>"
-            : "") +
-          btn +
-          "</div>"
-        );
-      }
-
       let html =
-        '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">' +
-        '<div class="youth-section-title" style="margin:0;">🏅 Kupa ' +
+        '<div class="youth-section-title">🏅 Eşleşme Ağacı · ' +
         (data.edition.yearLabel || "") +
-        " — Eşleşme Ağacı</div>" +
-        '<div style="font-size:11px;color:#94a3b8;">Tur ' +
-        (data.edition.currentRound || "?") +
-        " / " +
-        totalRounds +
-        "</div></div>";
-
-      // Yatay kaydırılabilir ağaç
-      html +=
-        '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:12px;">' +
-        '<div style="display:flex;align-items:stretch;gap:0;min-width:min-content;">';
+        "</div>" +
+        '<div style="overflow-x:auto;padding-bottom:10px;"><div style="display:flex;align-items:stretch;gap:8px;min-width:min-content;">';
 
       roundKeys.forEach((rk, colIdx) => {
-        const roundFixtures = rounds[rk];
-        const label =
-          (roundFixtures[0] && roundFixtures[0].roundLabel) || "Tur " + rk;
+        const rf = rounds[rk];
+        const label = (rf[0] && rf[0].roundLabel) || "Tur " + rk;
         html +=
-          '<div style="display:flex;flex-direction:column;justify-content:space-around;gap:14px;padding:0 10px;position:relative;min-width:180px;">' +
-          '<div style="text-align:center;font-size:11px;font-weight:700;color:#facc15;letter-spacing:0.04em;margin-bottom:4px;text-transform:uppercase;">' +
+          '<div style="display:flex;flex-direction:column;gap:12px;min-width:168px;">' +
+          '<div style="text-align:center;font-size:11px;font-weight:700;color:#facc15;">' +
           label +
           "</div>";
-        roundFixtures.forEach((f) => {
+        rf.forEach((f) => {
+          if (f.id)
+            cacheFixture({
+              id: f.id,
+              homeClubId: f.homeClubId,
+              awayClubId: f.awayClubId,
+            });
+          const fin = f.status === "finished";
+          const hw = fin && Number(f.homeGoals) > Number(f.awayGoals);
+          const aw = fin && Number(f.awayGoals) > Number(f.homeGoals);
           html +=
-            '<div style="display:flex;align-items:center;gap:0;">' +
-            matchCard(f) +
+            '<div style="background:#0f172a;border:1px solid #2c3a52;border-radius:10px;padding:6px;">' +
+            teamLine(f.homeName, fin ? f.homeGoals : null, hw) +
+            '<div style="height:1px;background:#1e293b;margin:2px 4px;"></div>' +
+            teamLine(f.awayName, fin ? f.awayGoals : null, aw) +
+            (f.status === "scheduled" || f.status === "live"
+              ? '<button class="sub-btn" style="width:100%;margin-top:4px;padding:3px;font-size:10px;" onclick="watchFixture(\'' +
+                f.id +
+                "')\">" +
+                (f.status === "live" ? "Canlı" : "İzle") +
+                "</button>"
+              : "") +
             "</div>";
         });
-        // sütunlar arası ok
-        if (colIdx < roundKeys.length - 1) {
-          html +=
-            '<div style="position:absolute;right:0;top:50%;transform:translateY(-50%);color:#334155;font-size:18px;pointer-events:none;"></div>';
-        }
         html += "</div>";
-        if (colIdx < roundKeys.length - 1) {
+        if (colIdx < roundKeys.length - 1)
           html +=
-            '<div style="display:flex;align-items:center;color:#334155;font-size:20px;padding:0 2px;flex-shrink:0;">›</div>';
-        }
+            '<div style="display:flex;align-items:center;color:#334155;font-size:18px;">›</div>';
       });
-
       html += "</div></div>";
-
       if (data.edition.championClubId) {
-        const champ =
-          fixtures.find(
-            (f) =>
-              f.status === "finished" &&
-              f.roundLabel === "Final" &&
-              (f.homeClubId === data.edition.championClubId ||
-                f.awayClubId === data.edition.championClubId),
-          ) || null;
-        let champName = "Şampiyon";
-        if (champ) {
-          const hw =
-            Number(champ.homeGoals) > Number(champ.awayGoals) ||
-            (champ.penalties &&
-              Number(champ.homeGoals) >= Number(champ.awayGoals));
-          // basit: goals
-          if (Number(champ.homeGoals) > Number(champ.awayGoals))
-            champName = champ.homeName;
-          else if (Number(champ.awayGoals) > Number(champ.homeGoals))
-            champName = champ.awayName;
-          else champName = champ.homeName || champ.awayName || "Şampiyon";
-        }
         html +=
-          '<div style="text-align:center;margin-top:16px;padding:14px;background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #facc15;border-radius:12px;">' +
-          '<div style="font-size:13px;color:#facc15;font-weight:800;">🏆 ŞAMPİYON</div>' +
-          '<div style="font-size:18px;color:#e2e8f0;font-weight:700;margin-top:4px;">' +
-          champName +
-          "</div></div>";
-      } else if (!fixtures.length) {
-        html +=
-          '<div style="color:#64748b;text-align:center;padding:12px;">Henüz eşleşme yok.</div>';
+          '<div style="text-align:center;margin-top:14px;padding:12px;border:1px solid #facc15;border-radius:12px;color:#facc15;font-weight:800;">🏆 Şampiyon belli</div>';
       }
-
       list.innerHTML = html;
     } catch (e) {
-      console.warn("[em] cup bracket", e);
       list.innerHTML =
-        '<div style="color:#f87171;text-align:center;padding:12px;">Kupa verisi alınamadı.</div>';
+        '<div style="color:#f87171;text-align:center;padding:12px;">Kupa ağacı alınamadı.</div>';
     }
+  }
+
+  /** Fikstür — düz liste (tarihe göre) */
+  async function renderServerCupFixtureList() {
+    const list = document.getElementById("fixturesHubList");
+    if (!list) return;
+    list.innerHTML =
+      '<div style="color:#64748b;text-align:center;padding:12px;">Yükleniyor...</div>';
+    try {
+      const data = await fetchCupBracket();
+      if (!data.edition) {
+        list.innerHTML =
+          '<div style="color:#64748b;text-align:center;padding:16px;">Kupa henüz oluşmadı.</div>';
+        return;
+      }
+      const fixtures = (data.bracket || [])
+        .filter((f) => f.status !== "bye")
+        .slice()
+        .sort((a, b) => {
+          const ta = a.kickoffAt ? new Date(a.kickoffAt).getTime() : 0;
+          const tb = b.kickoffAt ? new Date(b.kickoffAt).getTime() : 0;
+          return ta - tb;
+        });
+      let html =
+        '<div class="youth-section-title">📅 Kupa Fikstürü · ' +
+        (data.edition.yearLabel || "") +
+        "</div>";
+      if (!fixtures.length) {
+        html +=
+          '<div style="color:#64748b;text-align:center;padding:12px;">Maç yok.</div>';
+      } else {
+        const finished = fixtures.filter((f) => f.status === "finished");
+        const upcoming = fixtures.filter((f) => f.status !== "finished");
+        if (upcoming.length) {
+          html +=
+            '<div style="font-size:11px;color:#94a3b8;margin:8px 0 4px;">Oynanacak / canlı</div>';
+          upcoming.forEach((f) => {
+            html += cupMatchRow(f);
+          });
+        }
+        if (finished.length) {
+          html +=
+            '<div style="font-size:11px;color:#94a3b8;margin:12px 0 4px;">Oynanan</div>';
+          finished
+            .slice()
+            .reverse()
+            .forEach((f) => {
+              html += cupMatchRow(f);
+            });
+        }
+      }
+      list.innerHTML = html;
+    } catch (e) {
+      list.innerHTML =
+        '<div style="color:#f87171;text-align:center;padding:12px;">Fikstür alınamadı.</div>';
+    }
+  }
+
+  /** Krallık — biten maçlardan takım gol sıralaması */
+  async function renderServerCupKings() {
+    const list = document.getElementById("fixturesHubList");
+    if (!list) return;
+    list.innerHTML =
+      '<div style="color:#64748b;text-align:center;padding:12px;">Yükleniyor...</div>';
+    try {
+      const data = await fetchCupBracket();
+      const goals = {};
+      (data.bracket || []).forEach((f) => {
+        if (f.status !== "finished") return;
+        if (f.homeName) {
+          goals[f.homeName] = (goals[f.homeName] || 0) + (Number(f.homeGoals) || 0);
+        }
+        if (f.awayName) {
+          goals[f.awayName] = (goals[f.awayName] || 0) + (Number(f.awayGoals) || 0);
+        }
+      });
+      const ranked = Object.keys(goals)
+        .map((n) => ({ name: n, g: goals[n] }))
+        .sort((a, b) => b.g - a.g);
+      let html =
+        '<div class="youth-section-title">👑 Kupa Gol Krallığı (takım)</div>' +
+        '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Oyuncu bazlı kupa istatistiği yakında; şimdilik takım golleri.</div>';
+      if (!ranked.length) {
+        html +=
+          '<div style="color:#64748b;text-align:center;padding:12px;">Henüz oynanmış kupa maçı yok.</div>';
+      } else {
+        ranked.forEach((r, i) => {
+          html +=
+            '<div style="display:flex;justify-content:space-between;padding:8px 10px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:8px;font-size:13px;color:#e2e8f0;">' +
+            "<span><b style=\"color:#38bdf8;\">" +
+            (i + 1) +
+            ".</b> " +
+            r.name +
+            "</span><b style=\"color:#4ade80;\">" +
+            r.g +
+            " gol</b></div>";
+        });
+      }
+      list.innerHTML = html;
+    } catch (e) {
+      list.innerHTML =
+        '<div style="color:#f87171;text-align:center;padding:12px;">Krallık alınamadı.</div>';
+    }
+  }
+
+  /** Tarihçe */
+  async function renderServerCupHistory() {
+    const list = document.getElementById("fixturesHubList");
+    if (!list) return;
+    list.innerHTML =
+      '<div style="color:#64748b;text-align:center;padding:12px;">Yükleniyor...</div>';
+    try {
+      const data = await fetchCupBracket();
+      let html = '<div class="youth-section-title">📜 Kupa Tarihçesi</div>';
+      if (data.edition && data.edition.championClubId) {
+        const finals = (data.bracket || []).filter(
+          (f) => f.status === "finished" && (f.roundLabel || "").toLowerCase().indexOf("final") >= 0,
+        );
+        let champ = "Şampiyon";
+        if (finals.length) {
+          const f = finals[finals.length - 1];
+          if (Number(f.homeGoals) > Number(f.awayGoals)) champ = f.homeName;
+          else if (Number(f.awayGoals) > Number(f.homeGoals)) champ = f.awayName;
+        }
+        html +=
+          '<div style="padding:12px;margin-bottom:8px;background:#0f172a;border:1px solid #facc15;border-radius:12px;color:#e2e8f0;">' +
+          "🏆 <b>Sezon " +
+          (data.edition.yearLabel || "") +
+          "</b><br><span style=\"color:#4ade80;font-size:15px;font-weight:700;\">" +
+          champ +
+          "</span></div>";
+      } else {
+        html +=
+          '<div style="color:#64748b;padding:12px;text-align:center;">Bu sezonun şampiyonu henüz belli değil.</div>';
+      }
+      const finished = (data.bracket || []).filter((f) => f.status === "finished");
+      if (finished.length) {
+        html +=
+          '<div style="font-size:11px;color:#94a3b8;margin:10px 0 4px;">Oynanan turlar</div>';
+        finished.forEach((f) => {
+          html +=
+            '<div style="padding:8px 10px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:8px;font-size:12px;color:#cbd5e1;">' +
+            (f.roundLabel || "Tur") +
+            ": " +
+            (f.homeName || "") +
+            " <b style=\"color:#facc15;\">" +
+            f.homeGoals +
+            "-" +
+            f.awayGoals +
+            "</b> " +
+            (f.awayName || "") +
+            "</div>";
+        });
+      }
+      list.innerHTML = html;
+    } catch (e) {
+      list.innerHTML =
+        '<div style="color:#f87171;text-align:center;padding:12px;">Tarihçe alınamadı.</div>';
+    }
+  }
+
+  async function renderServerCupPanel(sub) {
+    const s = sub || "played";
+    if (s === "played") return renderServerCupTree();
+    if (s === "fixture") return renderServerCupFixtureList();
+    if (s === "kings") return renderServerCupKings();
+    if (s === "history") return renderServerCupHistory();
+    return renderServerCupTree();
+  }
+
+  // geriye dönük isim
+  async function renderServerCupBracket() {
+    return renderServerCupPanel("played");
   }
 
   const _origShowCompSub = window.showCompSub;
   window.showCompSub = function (comp, sub) {
     if (comp === "cup") {
-      // index.html'deki inline script'te `let _currentComp/_compSub`
-      // olarak tanımlı — aynı klasik-script global kapsamını paylaştığımız
-      // için doğrudan bu bağlamayı güncelliyoruz (window._currentComp
-      // FARKLI/ayrı bir şey olurdu, diğer butonlar onu görmezdi).
       _currentComp = "cup";
       _compSub = sub || "played";
       try {
         highlightCompSubtabs("#fixturesHubTabs", _compSub);
       } catch (e) {}
-      renderServerCupBracket();
+      renderServerCupPanel(_compSub);
       return;
     }
-    if (typeof _origShowCompSub === "function") return _origShowCompSub.apply(this, arguments);
+    if (typeof _origShowCompSub === "function")
+      return _origShowCompSub.apply(this, arguments);
   };
 
   // "Haftayı Oynat" artık anlamsız — sunucu fikstürü otomatik saatinde başlatıyor
@@ -2411,6 +2542,7 @@
   };
 
   let _natState = null;
+  let _natCategory = "A"; // A | U21
   // _natLineup: seçili formasyonun her slotu için { pos, x, y, playerId|null }
   let _natLineup = [];
   let _natFormation = "4-4-2";
@@ -2456,9 +2588,12 @@
     return (_natState?.squad || []).find((p) => p.playerId === playerId) || null;
   }
 
-  async function fetchNationalState() {
+  async function fetchNationalState(category) {
+    if (category) _natCategory = category === "U21" ? "U21" : "A";
     try {
-      const state = await apiFetch("/api/national/state");
+      const state = await apiFetch(
+        "/api/national/state?category=" + encodeURIComponent(_natCategory),
+      );
       _natState = state;
       _natFormation = (state.team && state.team.formation) || "4-4-2";
       _natPassStyle = (state.team && state.team.passStyle) || "kisa";
@@ -2478,7 +2613,9 @@
       return;
     }
     try {
-      const res = await apiFetch("/api/national/applications");
+      const res = await apiFetch(
+        "/api/national/applications?category=" + encodeURIComponent(_natCategory),
+      );
       _natApplications = res.applications || [];
     } catch (e) {
       console.warn("[em] national applications", e);
@@ -2499,6 +2636,7 @@
       '<div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;margin-bottom:10px;">' +
       '<div style="font-size:15px;font-weight:700;color:#e2e8f0;">🏳️ ' +
       t.country +
+      (_natCategory === "U21" ? " U21" : " A") +
       " Milli Takımı</div>";
     html += t.isMeManager
       ? '<div style="font-size:12px;color:#4ade80;margin-top:6px;">Teknik direktör sensin</div>'
@@ -2791,27 +2929,27 @@
   window.goToNationalTeams = async function () {
     hideMainMenuAndShowBack();
     switchPage("page-national");
-    const state = await fetchNationalState();
-    renderNationalOverview(state);
-  };
-  // "A Milli" / "U21" sekmeleri: U21 henüz aktif değil, sadece "yakında" gösterir.
-  window.showNationalTab = function (which) {
+    // A sekmesi aktif görünsün
     const tabA = document.getElementById("natTabA");
     const tabU21 = document.getElementById("natTabU21");
-    if (which === "U21") {
-      if (tabA) tabA.style.background = "#334155";
-      if (tabU21) tabU21.style.background = "";
-      const list = document.getElementById("nationalTeamsList");
-      if (list) {
-        list.innerHTML =
-          '<div style="padding:24px 12px;text-align:center;color:#64748b;font-size:13px;">' +
-          "🚧 U21 Milli Takımı yakında eklenecek.</div>";
-      }
-      return;
-    }
     if (tabA) tabA.style.background = "";
     if (tabU21) tabU21.style.background = "#334155";
-    renderNationalOverview(_natState);
+    const state = await fetchNationalState("A");
+    renderNationalOverview(state);
+  };
+  window.showNationalTab = async function (which) {
+    const tabA = document.getElementById("natTabA");
+    const tabU21 = document.getElementById("natTabU21");
+    const isU21 = which === "U21";
+    if (tabA) tabA.style.background = isU21 ? "#334155" : "";
+    if (tabU21) tabU21.style.background = isU21 ? "" : "#334155";
+    const list = document.getElementById("nationalTeamsList");
+    if (list) {
+      list.innerHTML =
+        '<div style="color:#64748b;text-align:center;padding:16px;">Yükleniyor…</div>';
+    }
+    const state = await fetchNationalState(isU21 ? "U21" : "A");
+    renderNationalOverview(state);
   };
   window.showNationalSub = function () {
     renderNationalOverview(_natState);
@@ -2827,7 +2965,7 @@
 
   window.applyNationalManager = async function () {
     try {
-      await apiFetch("/api/national/apply", { method: "POST", body: JSON.stringify({}) });
+      await apiFetch("/api/national/apply", { method: "POST", body: JSON.stringify({ category: _natCategory }) });
       const state = await fetchNationalState();
       await fetchNationalApplicationsIfAdmin(state);
       renderNationalManage();
@@ -2837,7 +2975,7 @@
   };
   window.withdrawNationalApplication = async function () {
     try {
-      await apiFetch("/api/national/apply/withdraw", { method: "POST", body: JSON.stringify({}) });
+      await apiFetch("/api/national/apply/withdraw", { method: "POST", body: JSON.stringify({ category: _natCategory }) });
       const state = await fetchNationalState();
       await fetchNationalApplicationsIfAdmin(state);
       renderNationalManage();
@@ -2850,7 +2988,7 @@
     try {
       await apiFetch("/api/national/appoint", {
         method: "POST",
-        body: JSON.stringify({ applicationId: applicationId }),
+        body: JSON.stringify({ applicationId: applicationId, category: _natCategory }),
       });
       const state = await fetchNationalState();
       await fetchNationalApplicationsIfAdmin(state);
@@ -2862,7 +3000,7 @@
   window.resignNationalManager = async function () {
     if (!confirm("Teknik direktörlüğü bırakmak istediğine emin misin? Kadro sıfırlanır.")) return;
     try {
-      await apiFetch("/api/national/resign", { method: "POST", body: JSON.stringify({}) });
+      await apiFetch("/api/national/resign", { method: "POST", body: JSON.stringify({ category: _natCategory }) });
       const state = await fetchNationalState();
       await fetchNationalApplicationsIfAdmin(state);
       renderNationalManage();
@@ -2874,7 +3012,7 @@
     try {
       await apiFetch("/api/national/squad/call", {
         method: "POST",
-        body: JSON.stringify({ playerId: playerId }),
+        body: JSON.stringify({ playerId: playerId, category: _natCategory }),
       });
       await fetchNationalState();
       renderNationalManage();
@@ -2886,7 +3024,7 @@
     try {
       await apiFetch("/api/national/squad/drop", {
         method: "POST",
-        body: JSON.stringify({ playerId: playerId }),
+        body: JSON.stringify({ playerId: playerId, category: _natCategory }),
       });
       await fetchNationalState();
       renderNationalManage();
@@ -2960,6 +3098,7 @@
           assignments,
           passStyle: _natPassStyle,
           gameStyle: _natGameStyle,
+          category: _natCategory,
         }),
       });
       await fetchNationalState();

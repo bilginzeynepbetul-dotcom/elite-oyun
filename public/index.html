@@ -1609,7 +1609,6 @@
         grid-column: 1 / -1;
         display: flex;
         flex-direction: column;
-        gap: 0;
         background: linear-gradient(135deg, #182338 0%, #101a2c 100%);
         border: 1px solid #2c3a52;
         border-radius: 16px;
@@ -1623,14 +1622,11 @@
         cursor: pointer;
         color: #cbd5e1;
       }
-      .menu-item-expand > .menu-item-head:hover {
-        background: rgba(56, 189, 248, 0.06);
-      }
       .menu-item-expand .chevron {
         margin-left: auto;
         font-size: 12px;
         color: #64748b;
-        transition: transform 0.2s ease;
+        transition: transform 0.2s;
       }
       .menu-item-expand.open .chevron {
         transform: rotate(180deg);
@@ -1655,18 +1651,8 @@
         border-bottom: 1px solid rgba(44, 58, 82, 0.5);
         font-size: 13px;
       }
-      .menu-subitem:last-child {
-        border-bottom: none;
-      }
-      .menu-subitem:hover {
-        background: rgba(56, 189, 248, 0.08);
-        color: #e2e8f0;
-      }
-      .menu-subitem .sub-icon {
-        width: 28px;
-        text-align: center;
-        font-size: 16px;
-      }
+      .menu-subitem:last-child { border-bottom: none; }
+      .menu-subitem:hover { background: rgba(56, 189, 248, 0.08); }
 
       .menu-grid {
         display: grid;
@@ -2103,11 +2089,10 @@
           <div style="display: flex; align-items: center; gap: 8px">
             <button
               class="header-icon-btn"
-              onclick="openLastMatchReport(event)"
-              title="Son maç raporu"
-              id="lastMatchBtn"
+              onclick="saveCareer(true)"
+              title="Kariyeri kaydet"
             >
-              📊
+              💾
             </button>
             <button
               class="header-icon-btn"
@@ -2306,6 +2291,13 @@
             <div class="text-wrap">
               <div class="title">Forum</div>
               <div class="subtitle">Topluluk</div>
+            </div>
+          </div>
+          <div class="menu-item" onclick="saveCareer(true)">
+            <div class="icon-badge">💾</div>
+            <div class="text-wrap">
+              <div class="title">Kariyeri Kaydet</div>
+              <div class="subtitle" id="menuSaveStatus">Elle veya otomatik</div>
             </div>
           </div>
           <div class="menu-item" onclick="logoutUser()">
@@ -2811,8 +2803,9 @@
             data-sub="played"
             style="width: auto; padding: 6px 12px; font-size: 11px"
             onclick="showCompSub(_currentComp||'cup','played')"
+            id="compTabTree"
           >
-            Puan Durumu
+            Eşleşme Ağacı
           </button>
           <button
             class="sub-btn comp-subtab"
@@ -6835,116 +6828,13 @@
 
 
 
-
       function toggleMatchesMenu(e) {
         if (e) e.stopPropagation();
         const box = document.getElementById("menuMatchesExpand");
         if (box) box.classList.toggle("open");
       }
 
-      let _lastMatchReport = null;
-      try {
-        const raw = localStorage.getItem("em_last_match_report");
-        if (raw) _lastMatchReport = JSON.parse(raw);
-      } catch (e) {}
-
-      function snapshotLastMatchReport() {
-        try {
-          const scorers = (engineMatchEvents.scorers || []).slice();
-          const totalTicks =
-            (stats.home.possessionTicks || 0) + (stats.away.possessionTicks || 0);
-          const homePct =
-            totalTicks > 0
-              ? Math.round((stats.home.possessionTicks / totalTicks) * 100)
-              : 50;
-          _lastMatchReport = {
-            homeScore: homeScore,
-            awayScore: awayScore,
-            homeName: teamConfig.home.name,
-            awayName: teamConfig.away.name,
-            shotsHome: stats.home.shots,
-            shotsAway: stats.away.shots,
-            onTHome: stats.home.onTarget,
-            onTAway: stats.away.onTarget,
-            possHome: homePct,
-            possAway: 100 - homePct,
-            scorers: scorers,
-            at: Date.now(),
-          };
-          localStorage.setItem(
-            "em_last_match_report",
-            JSON.stringify(_lastMatchReport),
-          );
-        } catch (e) {
-          console.warn("last match snapshot", e);
-        }
-      }
-
-      function openLastMatchReport(e) {
-        if (e) e.stopPropagation();
-        if (!_lastMatchReport) {
-          alert("Henüz kayıtlı maç raporu yok. Bir maç bitince burada görünür.");
-          return;
-        }
-        const r = _lastMatchReport;
-        const ov = document.getElementById("matchSummaryOverlay");
-        if (!ov) return;
-        const set = (id, v) => {
-          const el = document.getElementById(id);
-          if (el) el.innerText = v;
-        };
-        set("msScore", r.homeScore + " - " + r.awayScore);
-        set("msTeams", r.homeName + "  —  " + r.awayName);
-        let resultText = "Beraberlik";
-        let resultColor = "#facc15";
-        if (r.homeScore > r.awayScore) {
-          resultText = "Galibiyet · " + r.homeName;
-          resultColor = "#4ade80";
-        } else if (r.awayScore > r.homeScore) {
-          resultText = "Mağlubiyet · " + r.awayName + " kazandı";
-          resultColor = "#f87171";
-        }
-        const res = document.getElementById("msResult");
-        if (res) {
-          res.innerText = resultText;
-          res.style.color = resultColor;
-        }
-        set("msHomeShots", r.shotsHome);
-        set("msAwayShots", r.shotsAway);
-        set("msHomeOnT", r.onTHome);
-        set("msAwayOnT", r.onTAway);
-        set("msHomePoss", r.possHome + "%");
-        set("msAwayPoss", r.possAway + "%");
-        const scEl = document.getElementById("msScorers");
-        if (scEl) {
-          const scorers = r.scorers || [];
-          if (!scorers.length) scEl.innerText = "Gol yok";
-          else {
-            scEl.innerHTML = scorers
-              .map(
-                (s) =>
-                  "<div><b style='color:#e2e8f0'>" +
-                  s.minute +
-                  "'</b> " +
-                  s.name +
-                  " <span style='color:#64748b'>(" +
-                  s.team +
-                  ")</span></div>",
-              )
-              .join("");
-          }
-        }
-        const note = document.getElementById("msLeagueNote");
-        if (note) {
-          note.innerText = r.at
-            ? "Son maç · " + new Date(r.at).toLocaleString("tr-TR")
-            : "Son maç raporu";
-        }
-        ov.classList.add("active");
-      }
-
       function showMatchSummary() {
-        snapshotLastMatchReport();
         const ov = document.getElementById("matchSummaryOverlay");
         if (!ov) return;
         const hs = homeScore,
