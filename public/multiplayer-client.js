@@ -2567,6 +2567,35 @@
 
   let _natState = null;
   let _natCategory = "A"; // A | U21
+
+  // Özel Taktikler: kulüp sayfasındaki (teamConfig.home.customTactics) ile
+  // aynı checkbox listesi — milli/U21 için de sunucuya kaydedilmiyor,
+  // sadece bu tarayıcıda saklanıyor (kulüpteki davranışla birebir aynı).
+  const NAT_CUSTOM_TACTICS_KEY = "emNatCustomTactics_v1";
+  function loadNatCustomTactics() {
+    try {
+      const raw = localStorage.getItem(NAT_CUSTOM_TACTICS_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return {
+        A: Object.assign({}, parsed.A || {}),
+        U21: Object.assign({}, parsed.U21 || {}),
+      };
+    } catch (e) {
+      return { A: {}, U21: {} };
+    }
+  }
+  let _natCustomTactics = loadNatCustomTactics();
+  function saveNatCustomTactics() {
+    try {
+      localStorage.setItem(NAT_CUSTOM_TACTICS_KEY, JSON.stringify(_natCustomTactics));
+    } catch (e) {}
+  }
+  window.setNatCustomTactic = function (key, checked) {
+    if (!_natCustomTactics[_natCategory]) _natCustomTactics[_natCategory] = {};
+    _natCustomTactics[_natCategory][key] = checked ? "aktif" : "pasif";
+    saveNatCustomTactics();
+  };
+
   // _natLineup: seçili formasyonun her slotu için { pos, x, y, playerId|null }
   let _natLineup = [];
   let _natFormation = "4-4-2";
@@ -2817,6 +2846,45 @@
     const sub = _natManageSub === "all" ? "all" : "tactic";
 
     if (sub === "all") {
+      // -------- Seçilenler: kadroya çağrılmış oyuncular, sayfanın en başında --------
+      const squad = state.squad || [];
+      html +=
+        '<div class="youth-section-title">⭐ Seçilenler (' +
+        squad.length +
+        "/" +
+        state.maxSquad +
+        ")</div>";
+      html += squad.length
+        ? '<div style="margin-bottom:14px;">' +
+          squad
+            .map(
+              (p) =>
+                '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(74,222,128,0.25);font-size:12px;color:#e2e8f0;">' +
+                "<span>⭐ " +
+                p.name +
+                " · " +
+                p.pos +
+                ' <span style="color:#94a3b8;">(' +
+                p.clubName +
+                ", " +
+                fmtNatOverall(p.overall) +
+                ")</span></span>" +
+                (t.isMeManager
+                  ? '<button style="font-size:10px;padding:3px 6px;color:#f87171;" onclick="dropNationalPlayer(\'' +
+                    p.playerId +
+                    "')\">Çıkar</button>"
+                  : "") +
+                "</div>",
+            )
+            .join("") +
+          "</div>"
+        : '<div style="color:#64748b;font-size:12px;padding:0 0 10px;">Henüz seçilen oyuncu yok — aşağıdaki listeden seç.</div>';
+
+      if (t.isMeManager && squad.length > 0) {
+        html +=
+          '<button class="sub-btn" style="width:100%;margin-bottom:14px;" onclick="showNationalManageSub(\'tactic\')">📋 Kadroyu Açıkla</button>';
+      }
+
       // -------- Tüm Oyuncular: kalite sırasına göre (en iyi üstte) tam aday havuzu --------
       const pool = state.candidates || []; // backend zaten overall DESC sıralıyor
       html +=
@@ -2846,7 +2914,7 @@
                 (t.isMeManager
                   ? '<button style="font-size:10px;padding:3px 6px;" onclick="callUpNationalPlayer(\'' +
                     p.playerId +
-                    "')\">Çağır</button>"
+                    "')\">Seç</button>"
                   : "") +
                 "</div>",
             )
@@ -2946,8 +3014,31 @@
         "</div></div>";
 
       html += '<div class="youth-section-title" style="margin-top:6px;">Özel Taktikler</div>';
+      html += (typeof TACTIC_LABELS !== "undefined" ? Object.keys(TACTIC_LABELS) : [])
+        .map((key) => {
+          const natTactics = _natCustomTactics[_natCategory] || {};
+          const isActive = natTactics[key] === "aktif";
+          return (
+            '<div class="tactic-toggle" style="justify-content:space-between;">' +
+            '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;">' +
+            '<input type="checkbox"' +
+            (isActive ? " checked" : "") +
+            ' onchange="setNatCustomTactic(\'' +
+            key +
+            "', this.checked)\">" +
+            "<span>" +
+            TACTIC_LABELS[key] +
+            "</span></label>" +
+            '<button type="button" title="Nasıl kazanılır?" onclick="showTacticInfo(\'' +
+            key +
+            '\')" style="background:transparent;border:1px solid #334155;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:13px;color:#94a3b8;">ℹ️</button>' +
+            "</div>"
+          );
+        })
+        .join("");
+
       html +=
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0 10px;padding-top:12px;border-top:1px solid #2c3a52;">' +
         '<div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Pas Stili</div>' +
         '<select style="width:100%;padding:6px 8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;" onchange="_natPassStyle=this.value">' +
         ["kisa", "uzun", "hizli"]
@@ -3131,6 +3222,8 @@
       });
       await fetchNationalState();
       renderNationalManage();
+      const body = document.getElementById("tacticsNatBody");
+      if (body && body.scrollIntoView) body.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e) {
       alert(e.message || "Çağrı başarısız");
     }
