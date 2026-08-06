@@ -226,7 +226,10 @@ class Match {
     this.broadcast("match:ended", state);
     if (typeof this.onEnd === "function") {
       try {
-        this.onEnd(state);
+        const ret = this.onEnd(state, this);
+        if (ret && typeof ret.then === "function") {
+          ret.catch((e) => console.error("[match] onEnd async", e));
+        }
       } catch (e) {
         console.error("[match] onEnd hata", e);
       }
@@ -309,8 +312,9 @@ function ensureTeamShape(team, fallbackName) {
     p.condition = p.condition != null ? p.condition : 90;
     p.sentOff = !!p.sentOff;
     p.cards = p.cards || 0;
-    p.goals = p.goals || 0;
-    p.assists = p.assists || 0;
+    // Maç içi sayaç — kariyer DB değeriyle karışmasın
+    p.goals = 0;
+    p.assists = 0;
     p.saves = p.saves || 0;
     [
       "passing",

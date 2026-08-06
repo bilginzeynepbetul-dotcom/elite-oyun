@@ -15,6 +15,7 @@ const clubsRepo = require("./repos/clubsRepo");
 
 let stadiumSystem = null;
 let socialSystem = null;
+let statsSystem = null;
 
 try {
   stadiumSystem = require("./stadiumSystem");
@@ -22,12 +23,15 @@ try {
 try {
   socialSystem = require("./socialSystem");
 } catch (_) {}
+try {
+  statsSystem = require("./statsSystem");
+} catch (_) {}
 
 /**
  * Match.getPublicState() şeklindeki state ile çağrılır.
  * matchEngine.Match end() → this.onEnd(state)
  */
-async function onMatchEnd(state) {
+async function onMatchEnd(state, matchInstance) {
   if (!state) return;
   const fixtureId = state.fixtureId;
   const homeGoals = state.score ? state.score.home : 0;
@@ -54,6 +58,15 @@ async function onMatchEnd(state) {
     }
   } catch (e) {
     console.error("[matchLifecycle] standings", e);
+  }
+
+  // Gol / asist / ayın oyuncusu istatistikleri
+  try {
+    if (statsSystem && statsSystem.recordMatchStats) {
+      await statsSystem.recordMatchStats(state, matchInstance || null);
+    }
+  } catch (e) {
+    console.error("[matchLifecycle] stats", e);
   }
 
   // Bilet geliri — ev sahibi
@@ -166,9 +179,9 @@ async function startFixtureMatch(opts) {
     // Bot-bot maçlar gerçek zamanı yormadan çabuk bitsin
     tickMs: bothBot ? 120 : undefined,
     circulationMs: bothBot ? 100 : undefined,
-    onEnd: async (state) => {
+    onEnd: async (state, matchInst) => {
       try {
-        await onMatchEnd(state);
+        await onMatchEnd(state, matchInst);
       } finally {
         if (liveMatches) liveMatches.delete(fixtureId);
       }

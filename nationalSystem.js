@@ -33,8 +33,11 @@ function nextThursday21(fromMs) {
   return target;
 }
 
-async function ensureTeam(country) {
-  let team = await nationalRepo.getTeamByCountry(country);
+async function ensureTeam(country, category) {
+  const cat = nationalRepo.normCategory
+    ? nationalRepo.normCategory(category)
+    : (String(category || "A").toUpperCase() === "U21" ? "U21" : "A");
+  let team = await nationalRepo.getTeamByCountry(country, cat);
   return team;
 }
 
@@ -44,12 +47,14 @@ function isAdmin(username) {
   return !!adminName && !!username && username.toLowerCase() === adminName.toLowerCase();
 }
 
-async function getState(country, userId, clubId, username) {
-  const team = await ensureTeam(country);
+async function getState(country, userId, clubId, username, category) {
+  const team = await ensureTeam(country, category);
   if (!team) return null;
+  const cat = team.category || (String(category || "A").toUpperCase() === "U21" ? "U21" : "A");
+  const maxAge = cat === "U21" ? 21 : null;
   const [squad, candidatesRaw, nextFixture, recent, myApplication] = await Promise.all([
     nationalRepo.getSquad(team.id),
-    nationalRepo.listCandidates(country, team.id),
+    nationalRepo.listCandidates(country, team.id, maxAge),
     nationalRepo.getUpcomingFixture(team.id),
     nationalRepo.listRecentFixtures(team.id, 5),
     nationalRepo.getMyApplication(team.id, userId),
@@ -66,6 +71,7 @@ async function getState(country, userId, clubId, username) {
     team: {
       id: team.id,
       country: team.country,
+      category: cat,
       formation: team.formation,
       passStyle: team.passStyle,
       gameStyle: team.gameStyle,
@@ -84,53 +90,86 @@ async function getState(country, userId, clubId, username) {
   };
 }
 
-async function apply(country, userId, clubId, message, username) {
+async function apply(country, userId, clubId, message, username, category) {
   if (!clubId) return { ok: false, error: "Önce kendi kulübün olmalı" };
-  const team = await ensureTeam(country);
+  const team = await ensureTeam(country, category);
   if (!team) return { ok: false, error: "Milli takım bulunamadı" };
-  // Admin hesabı başvurunca ekstra onay adımına gerek yok — direkt TD olur.
-  if (isAdmin(username) && !team.managerUserId) {
-    return nationalRepo.claimManager(team.id, userId, clubId);
+  // A + U21: herkes başvurur; atama sadece ADMIN_USERNAME (murat).
+  if (team.managerUserId) {
+    return { ok: false, error: "Bu koltuk dolu — önce mevcut TD ayrılmalı" };
   }
-  return nationalRepo.applyForManager(team.id, userId, clubId, message);
+  const result = await nationalRepo.applyForManager(
+    team.id,
+    userId,
+    clubId,
+    message,
+  );
+  try {
+    const socialSystem = require("./socialSystem");
+    const { query } = require("./db");
+    const adminName = process.env.ADMIN_USERNAME;
+    if (adminName && result && result.ok) {
+      const { rows } = await query(
+        `SELECT id FROM users WHERE LOWER(username) = LOWER($1)`,
+        [adminName],
+      );
+      if (rows[0]) {
+        const cat = team.category || category || "A";
+        await socialSystem.pushNotification(
+          rows[0].id,
+          "🏳️",
+          (username || "?") +
+            " · " +
+            (team.country || "") +
+            " " +
+            cat +
+            " milli TD başvurusu",
+          "Milli Takım",
+        );
+      }
+    }
+  } catch (e) {
+    console.warn("[national] admin notify", e.message);
+  }
+  return result;
 }
 
-async function withdrawApplication(country, userId) {
-  const team = await ensureTeam(country);
+async function withdrawApplication(country, userId, category) {
+  const team = await ensureTeam(country, category);
   if (!team) return { ok: false, error: "Milli takım bulunamadı" };
   return nationalRepo.withdrawApplication(team.id, userId);
 }
 
-async function listApplications(country, username) {
+async function listApplications(country, username, category) {
   if (!isAdmin(username)) return { ok: false, error: "Bu işlem için yetkin yok" };
-  const team = await ensureTeam(country);
+  const team = await ensureTeam(country, category);
   if (!team) return { ok: false, error: "Milli takım bulunamadı" };
   const applications = await nationalRepo.listApplications(team.id, "pending");
   return { ok: true, applications };
 }
 
-async function appoint(country, username, applicationId) {
+async function appoint(country, username, applicationId, category) {
   if (!isAdmin(username)) return { ok: false, error: "Bu işlem için yetkin yok" };
-  const team = await ensureTeam(country);
+  const team = await ensureTeam(country, category);
   if (!team) return { ok: false, error: "Milli takım bulunamadı" };
   return nationalRepo.appointFromApplication(team.id, applicationId);
 }
 
-async function claim(country, userId, clubId) {
+async function claim(country, userId, clubId, category) {
   if (!clubId) return { ok: false, error: "Önce kendi kulübün olmalı" };
-  const team = await ensureTeam(country);
+  const team = await ensureTeam(country, category);
   if (!team) return { ok: false, error: "Milli takım bulunamadı" };
   return nationalRepo.claimManager(team.id, userId, clubId);
 }
 
-async function resign(country, userId) {
-  const team = await ensureTeam(country);
+async function resign(country, userId, category) {
+  const team = await ensureTeam(country, category);
   if (!team) return { ok: false, error: "Milli takım bulunamadı" };
   return nationalRepo.resignManager(team.id, userId);
 }
 
-async function requireManager(country, userId) {
-  const team = await ensureTeam(country);
+async function requireManager(country, userId, category) {
+  const team = await ensureTeam(country, category);
   if (!team) return { ok: false, error: "Milli takım bulunamadı" };
   if (team.managerUserId !== userId) {
     return { ok: false, error: "Bu işlem için teknik direktör olman gerekiyor" };
@@ -138,23 +177,24 @@ async function requireManager(country, userId) {
   return { ok: true, team };
 }
 
-async function callUp(country, userId, playerId) {
-  const chk = await requireManager(country, userId);
+async function callUp(country, userId, playerId, category) {
+  const chk = await requireManager(country, userId, category);
   if (!chk.ok) return chk;
-  const candidates = await nationalRepo.listCandidates(country, chk.team.id);
+  const maxAge = (chk.team.category === "U21") ? 21 : null;
+  const candidates = await nationalRepo.listCandidates(country, chk.team.id, maxAge);
   const found = candidates.find((c) => c.playerId === playerId);
   if (!found) return { ok: false, error: "Oyuncu aday havuzunda değil" };
   return nationalRepo.callUpPlayer(chk.team.id, playerId, found.clubId);
 }
 
-async function drop(country, userId, playerId) {
-  const chk = await requireManager(country, userId);
+async function drop(country, userId, playerId, category) {
+  const chk = await requireManager(country, userId, category);
   if (!chk.ok) return chk;
   return nationalRepo.dropPlayer(chk.team.id, playerId);
 }
 
-async function saveLineup(country, userId, starterPlayerIds, formation, assignments, passStyle, gameStyle) {
-  const chk = await requireManager(country, userId);
+async function saveLineup(country, userId, starterPlayerIds, formation, assignments, passStyle, gameStyle, category) {
+  const chk = await requireManager(country, userId, category);
   if (!chk.ok) return chk;
   return nationalRepo.setLineup(
     chk.team.id,
@@ -167,8 +207,8 @@ async function saveLineup(country, userId, starterPlayerIds, formation, assignme
 }
 
 /** Sıradaki maç yoksa yeni bir tane açar (rastgele "dünya" rakibi). */
-async function scheduleNextFixtureIfNeeded(country) {
-  const team = await ensureTeam(country);
+async function scheduleNextFixtureIfNeeded(country, category) {
+  const team = await ensureTeam(country, category);
   if (!team) return null;
   const existing = await nationalRepo.getUpcomingFixture(team.id);
   if (existing) return existing;

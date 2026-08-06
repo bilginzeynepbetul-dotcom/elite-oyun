@@ -218,12 +218,15 @@ async function ensureLeagueFilled(opts = {}) {
     }
 
     if (generateFixtures && (need > 0 || forceFixtures)) {
+      // forceFixtures yalnızca açıkça true ise fikstürü siler/yeniler.
+      // need > 0 (yeni bot) → force YOK: fikstür yoksa üretir, varsa dokunmaz.
       const fx = await leagueRepo.generateFixturesForSeason(season.id, {
-        force: forceFixtures || need > 0,
-        intervalHours: opts.intervalHours != null ? opts.intervalHours : 3,
+        force: !!forceFixtures,
+        intervalHours: opts.intervalHours,
         intervalMinutes: opts.intervalMinutes,
         doubleRound: opts.doubleRound !== false,
-        startAt: opts.startAt || new Date(Date.now() + 2 * 60 * 1000),
+        startAt: opts.startAt, // yoksa seasonConfig (10.08.2026)
+        bumpPast: opts.bumpPast === true,
       });
       return {
         created: created.length,
