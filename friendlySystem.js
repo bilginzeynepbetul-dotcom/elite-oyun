@@ -3,8 +3,8 @@
 // ============================================================
 
 const { query } = require("./db");
-const clubsRepo = require("./clubsRepo");
-const cupRepo = require("./cupRepo");
+const clubsRepo = require("./repos/clubsRepo");
+const cupRepo = require("./repos/cupRepo");
 
 /**
  * Kulüp hâlâ aktif kupa turunda mı? (scheduled/live maçı var mı)

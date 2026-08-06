@@ -2,7 +2,7 @@
 // statsSystem.js — maç bitince istatistik + liderlik tabloları
 // ============================================================
 
-const statsRepo = require("./statsRepo");
+const statsRepo = require("./repos/statsRepo");
 const leagueRepo = require("./repos/leagueRepo");
 
 /**

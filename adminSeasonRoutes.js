@@ -6,8 +6,8 @@
 
 const express = require("express");
 const seasonConfig = require("./seasonConfig");
-const leagueRepo = require("./leagueRepo");
-const clubsRepo = require("./clubsRepo");
+const leagueRepo = require("./repos/leagueRepo");
+const clubsRepo = require("./repos/clubsRepo");
 const { isAdmin } = require("./nationalSystem");
 const { enrichClubId } = require("./authRoutes");
 
