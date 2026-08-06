@@ -324,7 +324,7 @@ async function listPlayerForSale(clubId, clubName, player, openPrice, hours) {
   if (!player || !player.id) return { ok: false, error: "Oyuncu yok" };
   if (openPrice < 1000) return { ok: false, error: "Min açılış 1.000 €" };
   if (hours < 24) return { ok: false, error: "Min süre 24 saat" };
-  if (hours > 24 * 30) hours = 24 * 30;
+  if (hours > 168) hours = 168; // max 7 gün
 
   // Zaten listede mi?
   for (const L of listings.values()) {

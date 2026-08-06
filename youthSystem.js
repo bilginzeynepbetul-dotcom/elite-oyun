@@ -243,7 +243,8 @@ function publicState(s) {
     drawsThisSeason: s.drawsThisSeason || 0,
     maxDrawsPerSeason: s.maxDrawsPerSeason || MAX_DRAWS_PER_SEASON,
     lastDrawWeekKey: s.lastDrawWeekKey || "",
-    canDrawThisWeek: (s.lastDrawWeekKey || "") !== weekKeyNow(),
+    canDrawThisWeek:
+      (s.drawsThisSeason || 0) < (s.maxDrawsPerSeason || MAX_DRAWS_PER_SEASON),
     scoutUpgradeUntil: s.scoutUpgradeUntil || 0,
     academyUpgradeUntil: s.academyUpgradeUntil || 0,
     pendingScoutLevel: s.pendingScoutLevel,
@@ -267,11 +268,9 @@ async function drawPlayer(clubId, preferredSkill) {
   const s = await loadState(clubId);
   applyPendingUpgrades(s);
 
-  if ((s.lastDrawWeekKey || "") === weekKeyNow()) {
-    return { ok: false, error: "Bu hafta altyapı hakkı kullanıldı" };
-  }
+  // Haftalık limit yok — sezon başında 12 hak; sezon bitene kadar kullanılabilir
   if ((s.drawsThisSeason || 0) >= (s.maxDrawsPerSeason || MAX_DRAWS_PER_SEASON)) {
-    return { ok: false, error: "Sezonluk keşif hakkı doldu" };
+    return { ok: false, error: "Sezonluk keşif hakkı doldu (12/12). Yeni sezonda yenilenir." };
   }
 
   const player = generateYouthPlayer(s, preferredSkill || null);
@@ -355,6 +354,7 @@ async function resetSeasonDraws(clubId) {
   const s = await loadState(clubId);
   s.drawsThisSeason = 0;
   s.lastDrawWeekKey = "";
+  s.maxDrawsPerSeason = MAX_DRAWS_PER_SEASON; // her sezona 12 hak
   await persist(clubId, s);
   return publicState(s);
 }

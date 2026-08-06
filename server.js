@@ -27,6 +27,11 @@ const { createCupRouter } = require("./cupRoutes");
 const { createBotRouter } = require("./botRoutes");
 const { createMatchArchiveRouter } = require("./matchArchiveRoutes");
 const { createNationalRouter, COUNTRY: NATIONAL_COUNTRY } = require("./nationalRoutes");
+const { createContractRouter } = require("./contractRoutes");
+const contractSystem = require("./contractSystem");
+const { createStatsRouter } = require("./statsRoutes");
+const { createFriendlyRouter } = require("./friendlyRoutes");
+const { createAdminSeasonRouter } = require("./adminSeasonRoutes");
 const { registerMatchControlHandlers } = require("./server-match-socket-handlers");
 const { startFixtureMatch } = require("./matchLifecycle");
 const { startCupFixtureMatch } = require("./cupLifecycle");
@@ -118,8 +123,23 @@ async function main() {
     authMiddleware,
     createSocialRouter({ getUserId, getUsername }),
   );
+  app.use(
+    "/api/contracts",
+    authMiddleware,
+    createContractRouter({ getClubId }),
+  );
+  app.use("/api", authMiddleware, createStatsRouter());
+  app.use("/api", authMiddleware, createFriendlyRouter());
+  app.use("/api", authMiddleware, createAdminSeasonRouter());
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
+
+  // Bordro timer (sözleşme sistemi)
+  try {
+    contractSystem.startPayrollTimer();
+  } catch (e) {
+    console.warn("[contract] payroll timer", e.message);
+  }
 
   registerMatchControlHandlers(
     io,
