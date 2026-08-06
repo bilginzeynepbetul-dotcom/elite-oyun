@@ -2654,9 +2654,23 @@
     const state = await fetchNationalState();
     renderNationalOverview(state);
   };
-  // Eski sekme/alt-sekme butonları hâlâ index.html'de duruyor olabilir —
-  // hata vermesinler diye aynı görünüme yönlendiriyoruz.
-  window.showNationalTab = function () {
+  // "A Milli" / "U21" sekmeleri: U21 henüz aktif değil, sadece "yakında" gösterir.
+  window.showNationalTab = function (which) {
+    const tabA = document.getElementById("natTabA");
+    const tabU21 = document.getElementById("natTabU21");
+    if (which === "U21") {
+      if (tabA) tabA.style.background = "#334155";
+      if (tabU21) tabU21.style.background = "";
+      const list = document.getElementById("nationalTeamsList");
+      if (list) {
+        list.innerHTML =
+          '<div style="padding:24px 12px;text-align:center;color:#64748b;font-size:13px;">' +
+          "🚧 U21 Milli Takımı yakında eklenecek.</div>";
+      }
+      return;
+    }
+    if (tabA) tabA.style.background = "";
+    if (tabU21) tabU21.style.background = "#334155";
     renderNationalOverview(_natState);
   };
   window.showNationalSub = function () {
