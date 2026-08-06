@@ -36,7 +36,7 @@ const leagueRepo = require("./repos/leagueRepo");
 const cupRepo = require("./repos/cupRepo");
 const nationalRepo = require("./repos/nationalRepo");
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
 async function main() {
   wireAll();
