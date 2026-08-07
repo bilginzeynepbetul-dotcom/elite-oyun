@@ -53,6 +53,10 @@ async function main() {
     )
   `);
 
+  const projectRoot = path.join(__dirname, "..");
+  console.log("[migrate] project root:", projectRoot);
+  console.log("[migrate] cwd:", process.cwd());
+
   for (const f of files) {
     const { rows } = await client.query(
       `SELECT 1 FROM schema_migrations WHERE id = $1`,
@@ -62,7 +66,16 @@ async function main() {
       console.log("[migrate] skip", f);
       continue;
     }
-    const sql = fs.readFileSync(path.join(__dirname, "..", f), "utf8");
+    const filePath = path.join(projectRoot, f);
+    if (!fs.existsSync(filePath)) {
+      console.error(`[migrate] DOSYA BULUNAMADI: ${filePath}`);
+      console.error(
+        "[migrate] Bu dosya repoda/deploy edilen kaynakta yok. Git'e commit/push edildiğinden ve Render Root Directory ayarının doğru olduğundan emin olun.",
+      );
+      await client.end();
+      process.exit(1);
+    }
+    const sql = fs.readFileSync(filePath, "utf8");
     console.log("[migrate] apply", f);
     await client.query(sql);
     await client.query(`INSERT INTO schema_migrations (id) VALUES ($1)`, [f]);
