@@ -99,7 +99,7 @@ function createPremiumRouter() {
   router.get("/kit", async (req, res) => {
     try {
       const clubsRepo = require("./repos/clubsRepo");
-      const { enrichClubId } = require("./authRoutes");
+      const { enrichClubId } = require("./routes/authRoutes");
       const clubId = await enrichClubId(req);
       if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
       const kit = await clubsRepo.getKitDesign(clubId);
@@ -117,7 +117,7 @@ function createPremiumRouter() {
       const elite = await premiumSystem.requireElite(req.user.id);
       if (!elite.ok) return res.status(403).json(elite);
       const clubsRepo = require("./repos/clubsRepo");
-      const { enrichClubId } = require("./authRoutes");
+      const { enrichClubId } = require("./routes/authRoutes");
       const clubId = await enrichClubId(req);
       if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
       const kit = (req.body && req.body.kit) || req.body;
@@ -141,7 +141,7 @@ function createPremiumRouter() {
   router.get("/second-team", async (req, res) => {
     try {
       const clubsRepo = require("./repos/clubsRepo");
-      const { enrichClubId } = require("./authRoutes");
+      const { enrichClubId } = require("./routes/authRoutes");
       const clubId = await enrichClubId(req);
       if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
       const status = await premiumSystem.getStatus(req.user.id);
@@ -165,7 +165,7 @@ function createPremiumRouter() {
       const elite = await premiumSystem.requireElite(req.user.id);
       if (!elite.ok) return res.status(403).json(elite);
       const clubsRepo = require("./repos/clubsRepo");
-      const { enrichClubId } = require("./authRoutes");
+      const { enrichClubId } = require("./routes/authRoutes");
       const clubId = await enrichClubId(req);
       if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
       const data = (req.body && req.body.secondTeam) || req.body;
@@ -190,7 +190,7 @@ function createPremiumRouter() {
       const userId = req.user.id;
       const clubsRepo = require("./repos/clubsRepo");
       const { query } = require("./db");
-      const { enrichClubId } = require("./authRoutes");
+      const { enrichClubId } = require("./routes/authRoutes");
       const clubId = await enrichClubId(req);
       if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
 
@@ -249,7 +249,7 @@ function createPremiumRouter() {
       const elite = await premiumSystem.requireElite(req.user.id);
       if (!elite.ok) return res.status(403).json(elite);
       const clubsRepo = require("./repos/clubsRepo");
-      const { enrichClubId } = require("./authRoutes");
+      const { enrichClubId } = require("./routes/authRoutes");
       const clubId = await enrichClubId(req);
       if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
       const name = String((req.body && req.body.name) || "").trim().slice(0, 32);

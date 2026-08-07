@@ -1,7 +1,7 @@
 // matchArchiveRoutes.js — GET /api/matches/recent, /api/matches/:id
 const express = require("express");
 const matchArchive = require("./matchArchive");
-const { enrichClubId } = require("./authRoutes");
+const { enrichClubId } = require("./routes/authRoutes");
 
 function createMatchArchiveRouter() {
   const router = express.Router();

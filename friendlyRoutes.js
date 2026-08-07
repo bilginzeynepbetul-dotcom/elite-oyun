@@ -5,7 +5,7 @@
 const express = require("express");
 const friendlySystem = require("./friendlySystem");
 const clubsRepo = require("./repos/clubsRepo");
-const { enrichClubId } = require("./authRoutes");
+const { enrichClubId } = require("./routes/authRoutes");
 
 function createFriendlyRouter() {
   const router = express.Router();

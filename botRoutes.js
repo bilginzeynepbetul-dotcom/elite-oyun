@@ -7,7 +7,7 @@
 const express = require("express");
 const botClubs = require("./botClubs");
 const clubsRepo = require("./repos/clubsRepo");
-const { enrichClubId } = require("./authRoutes");
+const { enrichClubId } = require("./routes/authRoutes");
 
 function createBotRouter() {
   const router = express.Router();

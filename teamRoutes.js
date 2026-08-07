@@ -7,7 +7,7 @@
 
 const express = require("express");
 const clubsRepo = require("./repos/clubsRepo");
-const { enrichClubId } = require("./authRoutes");
+const { enrichClubId } = require("./routes/authRoutes");
 const antiCheat = require("./antiCheat");
 
 function createTeamRouter() {

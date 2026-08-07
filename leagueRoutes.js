@@ -8,7 +8,7 @@
 const express = require("express");
 const leagueRepo = require("./repos/leagueRepo");
 const clubsRepo = require("./repos/clubsRepo");
-const { enrichClubId } = require("./authRoutes");
+const { enrichClubId } = require("./routes/authRoutes");
 
 function createLeagueRouter() {
   const router = express.Router();

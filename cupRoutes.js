@@ -9,7 +9,7 @@ const express = require("express");
 const cupRepo = require("./repos/cupRepo");
 const clubsRepo = require("./repos/clubsRepo");
 const matchArchive = require("./matchArchive");
-const { enrichClubId } = require("./authRoutes");
+const { enrichClubId } = require("./routes/authRoutes");
 
 function createCupRouter() {
   const router = express.Router();
