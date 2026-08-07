@@ -10,11 +10,11 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-const authRoutes = require('./routes/authRoutes');
+const { createAuthRouter } = require('./routes/authRoutes');
 const adminAntiCheatRoutes = require('./adminAntiCheatRoutes');
 
 // Ana route'lar
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', createAuthRouter());
 app.use('/api/admin/anti-cheat', adminAntiCheatRoutes);
 
 // Health check
