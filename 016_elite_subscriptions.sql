@@ -8,7 +8,7 @@ ALTER TABLE users
 
 CREATE TABLE IF NOT EXISTS elite_payments (
   id            BIGSERIAL PRIMARY KEY,
-  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   plan          TEXT NOT NULL,
   amount_cents  INTEGER NOT NULL DEFAULT 0,
   currency      TEXT NOT NULL DEFAULT 'try',
