@@ -13,7 +13,7 @@
 // ============================================================
 
 const express = require("express");
-const bcryptjs = require("bcryptjs");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { query, withTransaction } = require("./db");
 const clubsRepo = require("./repos/clubsRepo");
