@@ -11,7 +11,19 @@ const crypto = require("crypto");
 const MAX_SCOUT = 5;
 const MAX_ACADEMY = 5;
 const MAX_DRAWS_PER_SEASON = 12;
-const UPGRADE_DURATION_MS = 90 * 1000; // online'da da aynı tempo; istersen artır
+/** Geriye uyumluluk: varsayılan 1. seviye süresi (5 dk) */
+const UPGRADE_DURATION_MS = 5 * 60 * 1000;
+
+/**
+ * Seviye yükseltme süresi — her seviyede artar.
+ * currentLevel = yükseltme ÖNCESİ seviye (1→2, 2→3, …)
+ * 1→2: 5 dk · 2→3: 15 dk · 3→4: 45 dk · 4→5: 120 dk
+ */
+function upgradeDurationMs(currentLevel) {
+  const lv = Math.max(1, Math.min(5, parseInt(currentLevel, 10) || 1));
+  const minutesByLevel = { 1: 5, 2: 15, 3: 45, 4: 120, 5: 180 };
+  return (minutesByLevel[lv] || 180) * 60 * 1000;
+}
 
 /** clubId → youth state (bellek; kalıcılık saveYouthState ile) */
 const store = new Map();
@@ -315,7 +327,7 @@ async function startUpgrade(clubId, kind) {
       if (!ok) return { ok: false, error: "Yetersiz kasa" };
     }
     s.pendingScoutLevel = s.scoutLevel + 1;
-    s.scoutUpgradeUntil = Date.now() + UPGRADE_DURATION_MS;
+    s.scoutUpgradeUntil = Date.now() + upgradeDurationMs(s.scoutLevel);
     await persist(clubId, s);
     return {
       ok: true,
@@ -336,7 +348,7 @@ async function startUpgrade(clubId, kind) {
       if (!ok) return { ok: false, error: "Yetersiz kasa" };
     }
     s.pendingAcademyLevel = s.academyLevel + 1;
-    s.academyUpgradeUntil = Date.now() + UPGRADE_DURATION_MS;
+    s.academyUpgradeUntil = Date.now() + upgradeDurationMs(s.academyLevel);
     await persist(clubId, s);
     return {
       ok: true,
@@ -388,4 +400,5 @@ module.exports = {
   startUpgradeTimer,
   weekKeyNow,
   UPGRADE_DURATION_MS,
+  upgradeDurationMs,
 };

@@ -270,8 +270,91 @@ async function getMatchDetail(matchId) {
   return { match: rows[0], logs };
 }
 
+/**
+ * Kupa gol / asist krallığı — match_results (competition = 'cup') scorers JSON'undan.
+ * Oyuncu adı + takım adı; limit varsayılan 15.
+ */
+async function getCupKings(opts = {}) {
+  const limit = Math.min(50, Math.max(1, parseInt(opts.limit, 10) || 15));
+  const { rows } = await query(
+    `SELECT scorers, home_name AS "homeName", away_name AS "awayName"
+     FROM match_results
+     WHERE competition = 'cup'
+       AND scorers IS NOT NULL
+       AND jsonb_typeof(scorers) = 'array'
+       AND jsonb_array_length(scorers) > 0
+     ORDER BY finished_at DESC
+     LIMIT 500`,
+  );
+
+  const goalMap = Object.create(null);
+  const assistMap = Object.create(null);
+
+  function bump(map, playerName, teamName, n) {
+    if (!playerName || n <= 0) return;
+    const key = String(playerName).trim().toLowerCase() + "|" + String(teamName || "").trim().toLowerCase();
+    if (!map[key]) {
+      map[key] = {
+        playerName: String(playerName).trim(),
+        clubName: teamName || "-",
+        goals: 0,
+        assists: 0,
+      };
+    }
+    return map[key];
+  }
+
+  for (const row of rows) {
+    let scorers = row.scorers;
+    if (typeof scorers === "string") {
+      try {
+        scorers = JSON.parse(scorers);
+      } catch (_) {
+        continue;
+      }
+    }
+    if (!Array.isArray(scorers)) continue;
+    for (const s of scorers) {
+      if (!s || !s.name) continue;
+      const team =
+        s.side === "away"
+          ? row.awayName || s.team || "-"
+          : s.side === "home"
+            ? row.homeName || s.team || "-"
+            : s.team || row.homeName || "-";
+      const gEntry = bump(goalMap, s.name, team, 1);
+      if (gEntry) gEntry.goals += 1;
+      if (s.assist) {
+        const aEntry = bump(assistMap, s.assist, team, 1);
+        if (aEntry) aEntry.assists += 1;
+      }
+    }
+  }
+
+  const goalKing = Object.values(goalMap)
+    .sort((a, b) => b.goals - a.goals || a.playerName.localeCompare(b.playerName))
+    .slice(0, limit)
+    .map((r) => ({
+      playerName: r.playerName,
+      clubName: r.clubName,
+      goals: r.goals,
+    }));
+
+  const assistKing = Object.values(assistMap)
+    .sort((a, b) => b.assists - a.assists || a.playerName.localeCompare(b.playerName))
+    .slice(0, limit)
+    .map((r) => ({
+      playerName: r.playerName,
+      clubName: r.clubName,
+      assists: r.assists,
+    }));
+
+  return { goalKing, assistKing };
+}
+
 module.exports = {
   persistMatch,
   listRecentForClub,
   getMatchDetail,
+  getCupKings,
 };

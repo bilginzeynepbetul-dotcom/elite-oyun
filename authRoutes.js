@@ -39,7 +39,20 @@ function authMiddleware(req, res, next) {
       username: decoded.username,
       clubId: decoded.clubId || null,
     };
-    next();
+    // Ban kontrolü (süreli ban otomatik kalkar)
+    const { getBanStatus } = require("./adminAntiCheatRoutes");
+    getBanStatus(req.user.id)
+      .then((ban) => {
+        if (ban && ban.banned) {
+          return res.status(403).json({
+            error: ban.reason || "Hesap askıya alınmış",
+            code: "BANNED",
+            until: ban.until || null,
+          });
+        }
+        next();
+      })
+      .catch(() => next());
   } catch (e) {
     return res.status(401).json({ error: "Geçersiz veya süresi dolmuş token" });
   }
@@ -193,7 +206,7 @@ function createAuthRouter() {
       }
 
       const { rows } = await query(
-        `SELECT id, username, password_hash, is_banned
+        `SELECT id, username, password_hash, is_banned, banned_until, ban_reason
          FROM users WHERE LOWER(username) = LOWER($1)`,
         [username],
       );
@@ -202,7 +215,20 @@ function createAuthRouter() {
         return res.status(401).json({ error: "Hatalı kullanıcı adı veya şifre" });
       }
       if (user.is_banned) {
-        return res.status(403).json({ error: "Hesap askıya alınmış" });
+        // Süreli ban dolmuş mu?
+        if (user.banned_until && new Date(user.banned_until).getTime() <= Date.now()) {
+          await query(
+            `UPDATE users SET is_banned = FALSE, banned_until = NULL, ban_reason = NULL,
+               banned_at = NULL, banned_by = NULL WHERE id = $1`,
+            [user.id],
+          );
+        } else {
+          return res.status(403).json({
+            error: user.ban_reason || "Hesap askıya alınmış",
+            code: "BANNED",
+            until: user.banned_until || null,
+          });
+        }
       }
 
       const ok = await bcrypt.compare(password, user.password_hash);
@@ -338,9 +364,18 @@ async function meHandler(req, res) {
     );
     if (!rows[0]) return res.status(404).json({ error: "Kullanıcı yok" });
     const club = await clubsRepo.getClubByUserId(req.user.id);
+    let elite = { active: false, plan: null, until: null, trial: false };
+    try {
+      const premiumSystem = require("./premiumSystem");
+      await premiumSystem.ensureTrial(req.user.id);
+      elite = await premiumSystem.getStatus(req.user.id);
+    } catch (e) {
+      console.warn("[me] elite", e.message);
+    }
     res.json({
       user: publicUser(rows[0]),
       club: publicClub(club),
+      elite,
     });
   } catch (e) {
     console.error("[me]", e);

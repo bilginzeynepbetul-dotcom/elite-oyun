@@ -4,6 +4,7 @@
 // ============================================================
 
 const express = require("express");
+const antiCheat = require("./antiCheat");
 const transferSystem = require("./transferSystem");
 
 /**
@@ -30,16 +31,27 @@ function createTransferRouter(opts) {
   });
 
   // POST /api/transfer/bid  { listingId, amount }
-  router.post("/bid", async (req, res) => {
+  router.post("/bid", antiCheat.rateLimitMiddleware({ max: 20, windowMs: 60000, prefix: "bid" }), async (req, res) => {
     try {
       const clubId = getClubId(req);
       if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
       const { listingId, amount } = req.body || {};
+      const clubsRepo = require("./repos/clubsRepo");
+      let balance = null;
+      try {
+        const eco = await clubsRepo.getEconomy(clubId);
+        balance = eco && eco.balance;
+      } catch (e) {}
+      const v = antiCheat.validateBidAmount(amount, balance);
+      if (!v.ok) {
+        await antiCheat.logSuspicious(req.user && req.user.id, clubId, "bad_bid", { amount, balance });
+        return res.status(400).json(v);
+      }
       const result = await transferSystem.placeBid(
         listingId,
         clubId,
         getClubName(req),
-        amount,
+        v.amount,
       );
       if (!result.ok) return res.status(400).json(result);
       res.json(result);

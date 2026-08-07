@@ -49,6 +49,10 @@ function createStadiumRouter(opts) {
     try {
       const clubId = getClubId(req);
       if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
+      const userId = req.user && req.user.id;
+      const premiumSystem = require("./premiumSystem");
+      const elite = await premiumSystem.requireElite(userId);
+      if (!elite.ok) return res.status(403).json(elite);
       const result = await stadiumSystem.renameStadium(
         clubId,
         req.body && req.body.name,

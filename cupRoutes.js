@@ -8,10 +8,26 @@
 const express = require("express");
 const cupRepo = require("./repos/cupRepo");
 const clubsRepo = require("./repos/clubsRepo");
+const matchArchive = require("./matchArchive");
 const { enrichClubId } = require("./authRoutes");
 
 function createCupRouter() {
   const router = express.Router();
+
+  // GET /api/cup/stats — kupa gol / asist krallığı (oyuncu + takım)
+  router.get("/cup/stats", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit, 10) : 15;
+      const data = await matchArchive.getCupKings({ limit });
+      res.json({
+        goalKing: data.goalKing || [],
+        assistKing: data.assistKing || [],
+      });
+    } catch (e) {
+      console.error("[cup/stats]", e);
+      res.status(500).json({ error: "Kupa istatistikleri alınamadı" });
+    }
+  });
 
   // GET /api/cup/bracket?country=
   router.get("/cup/bracket", async (req, res) => {

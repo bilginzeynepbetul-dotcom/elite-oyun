@@ -32,6 +32,9 @@ const contractSystem = require("./contractSystem");
 const { createStatsRouter } = require("./statsRoutes");
 const { createFriendlyRouter } = require("./friendlyRoutes");
 const { createAdminSeasonRouter } = require("./adminSeasonRoutes");
+const { createPremiumRouter, stripeWebhookHandler } = require("./premiumRoutes");
+const antiCheat = require("./antiCheat");
+const { createAdminAntiCheatRouter } = require("./adminAntiCheatRoutes");
 const { registerMatchControlHandlers } = require("./server-match-socket-handlers");
 const { startFixtureMatch } = require("./matchLifecycle");
 const { startCupFixtureMatch } = require("./cupLifecycle");
@@ -49,7 +52,26 @@ async function main() {
 
   const app = express();
   app.use(cors({ origin: true, credentials: true }));
+  // Stripe webhook needs raw body (must be before express.json)
+  app.post(
+    "/api/premium/webhook",
+    express.raw({ type: "application/json" }),
+    stripeWebhookHandler,
+  );
   app.use(express.json({ limit: "1mb" }));
+  // Global API rate limit (auth sonrası user id, öncesi IP)
+  app.use("/api", (req, res, next) => {
+    const uid = (req.user && req.user.id) || req.ip || "anon";
+    const r = antiCheat.rateLimit("global:" + uid, 120, 60_000);
+    if (!r.ok) {
+      res.setHeader(
+        "Retry-After",
+        String(Math.ceil((r.retryAfterMs || 1000) / 1000)),
+      );
+      return res.status(429).json(r);
+    }
+    next();
+  });
   app.use(express.static("public"));
 
   const server = http.createServer(app);
@@ -131,6 +153,8 @@ async function main() {
   app.use("/api", authMiddleware, createStatsRouter());
   app.use("/api", authMiddleware, createFriendlyRouter());
   app.use("/api", authMiddleware, createAdminSeasonRouter());
+  app.use("/api/premium", authMiddleware, createPremiumRouter());
+  app.use("/api/admin", authMiddleware, createAdminAntiCheatRouter());
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
 
