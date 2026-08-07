@@ -93,6 +93,66 @@
         min-height: 100vh;
       }
 
+      /* ===== TEMA: AÇIK / KOYU ===== */
+      body.theme-light {
+        background: radial-gradient(circle at 50% 0%, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+        color: #0f172a;
+        color-scheme: light;
+      }
+      body.theme-light .main-menu-overlay {
+        background: radial-gradient(circle at 50% 0%, #f8fafc 0%, #e2e8f0 55%, #cbd5e1 100%);
+      }
+      body.theme-light .main-menu-container,
+      body.theme-light .report-container,
+      body.theme-light .menu-item,
+      body.theme-light .login-box {
+        background: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        color: #0f172a;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      }
+      body.theme-light .tactics-title,
+      body.theme-light .menu-item .title,
+      body.theme-light .main-menu-user .info .name {
+        color: #0f172a !important;
+      }
+      body.theme-light .formation-hint,
+      body.theme-light .menu-item .subtitle,
+      body.theme-light .main-menu-user .info .rank {
+        color: #64748b !important;
+      }
+      body.theme-light .sub-btn {
+        background: #e2e8f0;
+        color: #0f172a;
+        border-color: #cbd5e1;
+      }
+      body.theme-light input,
+      body.theme-light select,
+      body.theme-light textarea {
+        background: #f8fafc !important;
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+      }
+      body.theme-light .header-icon-btn,
+      body.theme-light .back-arrow,
+      body.theme-light .home-arrow,
+      body.theme-light .sound-toggle {
+        background: rgba(255, 255, 255, 0.9);
+        border-color: #cbd5e1;
+        color: #475569;
+      }
+      body.theme-light .header-icon-btn:hover,
+      body.theme-light .back-arrow:hover,
+      body.theme-light .home-arrow:hover {
+        background: #f1f5f9;
+        border-color: #38bdf8;
+        color: #0f172a;
+      }
+      body.theme-dark {
+        color-scheme: dark;
+      }
+
+
       /* ===== SES KONTROL BUTONU ===== */
       .sound-toggle {
         position: fixed;
@@ -1540,12 +1600,33 @@
         border-bottom: 1px solid #2c3a52;
       }
       .main-menu-header h1 {
-        font-size: 24px;
-        font-weight: 800;
-        background: linear-gradient(90deg, #38bdf8, #818cf8);
+        font-family: "Segoe UI", "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        background: linear-gradient(105deg, #7dd3fc 0%, #38bdf8 35%, #818cf8 70%, #a78bfa 100%);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
+        text-shadow: 0 0 40px rgba(56, 189, 248, 0.15);
+      }
+      .main-menu-header h1 .em-brand-mark {
+        display: inline-block;
+        margin-right: 6px;
+        font-size: 20px;
+        filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.45));
+        vertical-align: -1px;
+      }
+      .main-menu-header h1 .em-brand-text {
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+      .main-menu-header h1 .em-brand-sub {
+        font-weight: 500;
+        font-size: 0.72em;
+        letter-spacing: 0.04em;
+        opacity: 0.85;
+        margin-left: 2px;
       }
       .main-menu-header .user-badge {
         font-size: 12px;
@@ -1576,17 +1657,23 @@
       }
       .header-icon-dot {
         position: absolute;
-        top: 4px;
-        right: 5px;
-        width: 7px;
-        height: 7px;
+        top: 3px;
+        right: 3px;
+        width: 9px;
+        height: 9px;
         border-radius: 50%;
-        background: #ef4444;
-        border: 1.5px solid #0f172a;
+        background: radial-gradient(circle at 35% 30%, #7dd3fc, #3b82f6 55%, #1d4ed8);
+        box-shadow: 0 0 0 2px #0f172a, 0 0 10px rgba(56, 189, 248, 0.85), 0 0 18px rgba(59, 130, 246, 0.45);
+        border: none;
         display: none;
+        animation: emDotPulse 1.8s ease-in-out infinite;
       }
       .header-icon-dot.active {
         display: block;
+      }
+      @keyframes emDotPulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.15); opacity: 0.85; }
       }
       .main-menu-user {
         display: flex;
@@ -2095,8 +2182,15 @@
     <div class="main-menu-overlay hidden" id="mainMenu">
       <div class="main-menu-container">
         <div class="main-menu-header">
-          <h1>⚽ Elite Manager</h1>
+          <h1><span class="em-brand-mark">⚽</span><span class="em-brand-text">Elite</span><span class="em-brand-sub">Manager</span></h1>
           <div style="display: flex; align-items: center; gap: 8px">
+            <button
+              class="header-icon-btn"
+              onclick="goToSearch()"
+              title="Ara"
+            >
+              🔍
+            </button>
             <button
               class="header-icon-btn"
               onclick="openLastMatch()"
@@ -2240,18 +2334,18 @@
               <div class="subtitle">Takım oyuncuları</div>
             </div>
           </div>
-          <div class="menu-item" onclick="goToYouth()">
-            <div class="icon-badge">🌱</div>
-            <div class="text-wrap">
-              <div class="title">Altyapı</div>
-              <div class="subtitle">Oyuncu çek</div>
-            </div>
-          </div>
           <div class="menu-item" onclick="goToTraining()">
             <div class="icon-badge">💪</div>
             <div class="text-wrap">
               <div class="title">Antrenman</div>
               <div class="subtitle">Kondisyon &amp; gelişim</div>
+            </div>
+          </div>
+          <div class="menu-item" onclick="goToClubStaff()">
+            <div class="icon-badge">👔</div>
+            <div class="text-wrap">
+              <div class="title">Çalışanlar</div>
+              <div class="subtitle">Antrenör · Doktor</div>
             </div>
           </div>
           <div class="menu-item" onclick="goToTransfer()">
@@ -2272,7 +2366,7 @@
             <div class="icon-badge">🏟️</div>
             <div class="text-wrap">
               <div class="title">Stadyum</div>
-              <div class="subtitle">Koltuk &amp; bilet</div>
+              <div class="subtitle">Koltuk · Bilet · Altyapı</div>
             </div>
           </div>
           <div class="menu-item" onclick="goToForum()">
@@ -2311,10 +2405,11 @@
       <div class="report-container">
         <div class="tactics-title">⭐ Elite Üyelik</div>
         <div class="formation-hint">
-          Tüm kullanıcılar 14 gün ücretsiz Elite dener. Sonra haftalık / aylık / yıllık plan.
-          Forma &amp; logo, ikinci takım, transfer önceliği ve günlük ödül x2.
+          Tüm kullanıcılar 14 gün ücretsiz Elite dener (forma, 2. takım, takım/stadyum adı). Sonra haftalık / aylık / yıllık plan.
+          Ödeme sunucu üzerinden doğrulanır (Stripe veya demo onay). Forma &amp; logo, ikinci takım, transfer önceliği ve günlük ödül x2.
         </div>
         <div id="premiumStatusBox" style="margin-bottom:14px;"></div>
+        <div id="premiumPayNote" style="font-size:12px;color:#94a3b8;margin-bottom:10px;text-align:center;"></div>
         <div id="premiumPlans" style="display:grid;gap:12px;"></div>
         <div style="margin-top:18px;padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;font-size:12px;color:#94a3b8;">
           <b style="color:#e2e8f0;">Günlük giriş ödülü</b><br/>
@@ -2356,7 +2451,80 @@
               <option value="es">Español</option>
               <option value="fr">Français</option>
               <option value="it">Italiano</option>
+              <option value="pt">Português</option>
+              <option value="nl">Nederlands</option>
+              <option value="pl">Polski</option>
+              <option value="ru">Русский</option>
             </select>
+          </div>
+          <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-weight:700;color:#e2e8f0;">Varsayılan maç hızı</div>
+              <div style="font-size:12px;color:#94a3b8;">Yeni maçlarda 1x veya 2x</div>
+            </div>
+            <button type="button" class="sub-btn" id="settingsMatchSpeedBtn" style="width:auto;padding:8px 14px;" onclick="toggleDefaultMatchSpeed()">1x</button>
+          </div>
+          <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-weight:700;color:#e2e8f0;">Maç öncesi onay</div>
+              <div style="font-size:12px;color:#94a3b8;">Maça başlamadan önce sor</div>
+            </div>
+            <button type="button" class="sub-btn" id="settingsConfirmMatchBtn" style="width:auto;padding:8px 14px;" onclick="toggleConfirmBeforeMatch()">Kapalı</button>
+          </div>
+          <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-weight:700;color:#e2e8f0;">Otomatik kariyer kaydı</div>
+              <div style="font-size:12px;color:#94a3b8;">Her önemli işlemden sonra kaydet</div>
+            </div>
+            <button type="button" class="sub-btn" id="settingsAutoSaveBtn" style="width:auto;padding:8px 14px;" onclick="toggleAutoSave()">Açık</button>
+          </div>
+          <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-weight:700;color:#e2e8f0;">Tema</div>
+              <div style="font-size:12px;color:#94a3b8;">Açık / koyu arayüz</div>
+            </div>
+            <button type="button" class="sub-btn" id="settingsThemeBtn" style="width:auto;padding:8px 14px;" onclick="toggleTheme()">Koyu</button>
+          </div>
+          <div id="staffRolesPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:none;">
+            <div style="font-weight:700;color:#e2e8f0;margin-bottom:6px;">👤 Personel / Görevlendirme</div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:10px;line-height:1.45;">
+              Forum moderatörü ve diğer görevleri sen atarsın. Kullanıcı adı + rol seç → Ata.
+              Roller: <b style="color:#e2e8f0;">admin</b> (tam yetki), <b style="color:#e2e8f0;">forum_mod</b> (forum silme/düzenleme).
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+              <input id="staffAssignUser" type="text" placeholder="Kullanıcı adı" style="flex:1;min-width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+              <select id="staffAssignRole" style="padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;">
+                <option value="forum_mod">Forum moderatörü</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#059669,#10b981);" onclick="assignStaffRole()">Ata</button>
+            </div>
+            <div id="staffRolesList" style="font-size:12px;color:#cbd5e1;"></div>
+          </div>
+          <div id="adminAntiCheatPanel" style="padding:14px;background:linear-gradient(135deg,#0f172a,#1c1917);border:1px solid #f59e0b;border-radius:12px;display:none;">
+            <div style="font-weight:800;color:#fbbf24;margin-bottom:6px;">🛡️ Admin · Anti-Cheat</div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;line-height:1.45;">
+              Sunucu logları ve hesap banı. Sadece <b style="color:#e2e8f0;">ADMIN_USERNAME</b> hesabı görür.
+            </div>
+            <div id="adminAcSummary" style="font-size:12px;color:#cbd5e1;margin-bottom:12px;padding:10px;background:#0f172a;border-radius:8px;border:1px solid #334155;">
+              Özet yükleniyor…
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;" onclick="adminAcRefresh()">Yenile</button>
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#334155;" onclick="adminAcLoadBanned()">Banlı listesi</button>
+            </div>
+            <div style="font-weight:700;color:#e2e8f0;font-size:13px;margin:10px 0 6px;">Ban / Unban</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+              <input id="adminBanUser" type="text" placeholder="Kullanıcı adı veya id" style="flex:1;min-width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+              <input id="adminBanHours" type="number" placeholder="Saat (boş=süresiz)" min="0" style="width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+              <input id="adminBanReason" type="text" placeholder="Sebep" style="flex:1;min-width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#b91c1c,#ef4444);" onclick="adminAcBan()">Ban</button>
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#059669,#10b981);" onclick="adminAcUnban()">Unban</button>
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#334155;" onclick="adminAcLookup()">Sorgula</button>
+            </div>
+            <div id="adminAcUserBox" style="font-size:12px;color:#94a3b8;margin-bottom:10px;min-height:18px;"></div>
+            <div style="font-weight:700;color:#e2e8f0;font-size:13px;margin:8px 0 6px;">Son loglar</div>
+            <div id="adminAcLogs" style="max-height:280px;overflow:auto;font-size:11px;color:#cbd5e1;border:1px solid #334155;border-radius:8px;background:#020617;"></div>
           </div>
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
             <div style="font-weight:700;color:#e2e8f0;margin-bottom:8px;">Hakkında</div>
@@ -2389,8 +2557,8 @@
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
             <div style="font-weight:800;color:#facc15;margin-bottom:6px;">💪 Antrenman</div>
             <div style="font-size:13px;color:#cbd5e1;line-height:1.55;">
-              Oyuncuları tek tek çalıştırabilir veya üstteki <b>toplu seç</b> ile birden fazla oyuncuya aynı skill antrenmanını uygulayabilirsin. "Tümünü seç" işaretlenince, seçtiğin antrenman türü otomatik olarak listedeki her oyuncunun kendi antrenman kutusuna da yansır.
-              Kondisyon düşükse gelişim azalır; yorgun oyuncuları maç öncesi dinlendirmek antrenman verimini de artırır.
+              Manuel antrenman yoktur. Maç oynanınca oyunculara otomatik skill artışı verilir.
+              Antrenör uzmanlığı ve seviyesi bu artışı güçlendirir. Kondisyon düşükse gelişim azalır.
             </div>
           </div>
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
@@ -2467,11 +2635,82 @@
     </div>
 
     <!-- ===== SAYFA: ANTRENMAN ===== -->
+    <!-- ===== KULÜP ÇALIŞANLARI ===== -->
+    <div id="page-staff" class="page">
+      <div class="report-container">
+        <div class="tactics-title">👔 Kulüp Çalışanları</div>
+        <div class="formation-hint">
+          Antrenör ve doktor alımı · İsme tıklayarak sözleşme feshi · Maaşlar haftalık kasadan düşer
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="background:#0f172a;border:1px solid #2c3a52;border-radius:12px;padding:12px;">
+            <div style="font-size:11px;color:#94a3b8;">Kulüp Kasası</div>
+            <div style="font-size:18px;font-weight:800;color:#4ade80;" id="staffBudgetDisplay">—</div>
+          </div>
+          <div style="background:#0f172a;border:1px solid #2c3a52;border-radius:12px;padding:12px;">
+            <div style="font-size:11px;color:#94a3b8;">Kadro özeti</div>
+            <div style="font-size:13px;color:#e2e8f0;margin-top:4px;">
+              Antrenör <b id="staffCoachCount">0</b>/8 · Doktor <b id="staffDoctorCount">0</b>/3
+            </div>
+          </div>
+        </div>
+
+        <div class="youth-section-title">🏋️ Antrenörler</div>
+        <div class="formation-hint" style="margin-bottom:8px;">Uzmanlık skill’i maç sonu gelişimi etkiler. Max 8 · farklı skill.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div>
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Uzmanlık</div>
+            <select id="staffCoachSkillSelect" style="width:100%;padding:8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;"></select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Seviye</div>
+            <select id="staffCoachLevelSelect" style="width:100%;padding:8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;">
+              <option value="1">Sv.1 · 2.500 €/hf</option>
+              <option value="2">Sv.2 · 5.000 €/hf</option>
+              <option value="3">Sv.3 · 9.000 €/hf</option>
+              <option value="4">Sv.4 · 15.000 €/hf</option>
+              <option value="5">Sv.5 · 25.000 €/hf</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" class="sub-btn" style="width:100%;margin-bottom:10px;background:linear-gradient(90deg,#059669,#10b981);font-weight:700;" onclick="hireStaffCoach()">➕ Antrenör Al</button>
+        <div id="staffCoachesList"></div>
+
+        <div class="youth-section-title" style="margin-top:18px;">🩺 Doktorlar</div>
+        <div class="formation-hint" style="margin-bottom:8px;">Sakatlık iyileşme süresini kısaltır. Max 3 · seviye yükseldikçe etki artar.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div>
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Uzmanlık</div>
+            <select id="staffDoctorSpecSelect" style="width:100%;padding:8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;">
+              <option value="genel">Genel pratisyen</option>
+              <option value="ortopedi">Ortopedi</option>
+              <option value="fizik">Fizik tedavi</option>
+              <option value="spor">Spor hekimi</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Seviye</div>
+            <select id="staffDoctorLevelSelect" style="width:100%;padding:8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;">
+              <option value="1">Sv.1 · 3.000 €/hf · -1 maç</option>
+              <option value="2">Sv.2 · 6.000 €/hf · -2 maç</option>
+              <option value="3">Sv.3 · 12.000 €/hf · -3 maç</option>
+              <option value="4">Sv.4 · 20.000 €/hf · -4 maç</option>
+              <option value="5">Sv.5 · 35.000 €/hf · -5 maç</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" class="sub-btn" style="width:100%;margin-bottom:10px;background:linear-gradient(90deg,#0284c7,#6366f1);font-weight:700;" onclick="hireStaffDoctor()">➕ Doktor Al</button>
+        <div id="staffDoctorsList"></div>
+        <div id="staffPageNote" style="text-align:center;font-size:12px;color:#94a3b8;margin-top:12px;"></div>
+      </div>
+    </div>
+
     <div id="page-training" class="page">
       <div class="report-container">
         <div class="tactics-title">💪 Antrenman Merkezi</div>
         <div class="formation-hint">
-          Antrenör seviyesi skill artışını etkiler (Sv.5 = %100, Sv.1 = %35).
+          Manuel antrenman yok — skill artışı maç oynanınca otomatik verilir.
+          Antrenör seviyesi ve uzmanlığı maç sonu gelişimi etkiler (Sv.5 = %100, Sv.1 ≈ %35).
           Kondisyon 70 altı = daha az gelişim.
         </div>
         <div
@@ -2576,7 +2815,7 @@
           Antrenör Ekle / Güncelle
         </button>
         <div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px; text-align: center">
-          En fazla 3 antrenör · Farklı skill · Maaş haftalık (ödemeye uygun düzey)
+          En fazla 8 antrenör · Farklı skill · İsme tıklayarak sözleşmeyi feshedebilirsin · Maaş haftalık
         </div>
         <div id="clubCoachesList" style="margin-bottom: 10px"></div>
         <select id="coachHireSelect" style="display: none"></select>
@@ -2604,56 +2843,27 @@
             border: 1px solid #2c3a52;
           "
         ></div>
-        <div class="youth-section-title">Kadro — Antrenman</div>
+        <div class="youth-section-title">Kadro — Durum</div>
         <div
           style="
-            display: flex;
-            gap: 8px;
-            align-items: center;
             margin-bottom: 10px;
-            flex-wrap: wrap;
             padding: 10px;
             background: #0f172a;
             border: 1px solid #2c3a52;
             border-radius: 10px;
+            font-size: 12px;
+            color: #94a3b8;
           "
         >
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#cbd5e1;cursor:pointer;">
-            <input type="checkbox" id="trainSelectAll" onchange="toggleTrainSelectAll(this.checked)" style="width:16px;height:16px;" />
-            Tümünü seç
-          </label>
-          <select
-            id="bulkTrainSkillSelect"
-            style="
-              flex: 1;
-              min-width: 120px;
-              padding: 8px;
-              border-radius: 8px;
-              background: #1e293b;
-              color: #e2e8f0;
-              border: 1px solid #334155;
-              font-size: 12px;
-            "
-          ></select>
-          <button
-            class="sub-btn"
-            style="
-              width: auto;
-              padding: 8px 14px;
-              background: linear-gradient(90deg, #059669, #10b981);
-              font-weight: 700;
-            "
-            onclick="trainSelectedPlayers()"
-          >
-            Seçilenlere Uygula
-          </button>
+          Skill puanları maç bitince otomatik artar. Aşağıdaki liste kondisyon ve
+          skill özetidir; antrenör uzmanlık skill’i ilgili gelişimi güçlendirir.
         </div>
         <div id="trainingSquadList"></div>
         <div class="youth-section-title" style="margin-top: 12px">
-          📈 Oyuncu gelişim kaydı
+          📈 Maç sonu gelişim kaydı
         </div>
         <div class="formation-hint" style="margin-bottom:8px;">
-          Her antrenmanda oyuncu adı ve artan skill değerleri burada listelenir.
+          Her maçtan sonra artan skill değerleri burada listelenir.
         </div>
         <div id="trainingResultList" style="max-height:280px;overflow-y:auto;"></div>
         <select id="trainingPlayerSelect" style="display: none"></select>
@@ -2893,9 +3103,32 @@
     </div>
 
     <!-- ===== SAYFA: STADYUM (yer tutucu) ===== -->
+    <!-- ===== ARAMA ===== -->
+    <div id="page-search" class="page">
+      <div class="report-container">
+        <div class="tactics-title">🔍 Arama</div>
+        <div class="formation-hint">Oyuncu veya kullanıcı ara · İsim ya da kullanıcı no</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <input id="globalSearchInput" type="text" placeholder="İsim veya no..." style="flex:1;min-width:160px;padding:10px 12px;border-radius:10px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:14px;" onkeydown="if(event.key==='Enter')runGlobalSearch()" />
+          <button class="sub-btn" style="width:auto;padding:10px 16px;background:linear-gradient(90deg,#38bdf8,#6366f1);font-weight:700;" onclick="runGlobalSearch()">Ara</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+          <button class="sub-btn search-tab active" data-stab="all" style="width:auto;padding:6px 12px;font-size:11px;" onclick="setSearchTab('all')">Tümü</button>
+          <button class="sub-btn search-tab" data-stab="players" style="width:auto;padding:6px 12px;font-size:11px;background:#334155;" onclick="setSearchTab('players')">Oyuncular</button>
+          <button class="sub-btn search-tab" data-stab="users" style="width:auto;padding:6px 12px;font-size:11px;background:#334155;" onclick="setSearchTab('users')">Kullanıcılar</button>
+        </div>
+        <div id="globalSearchResults"></div>
+      </div>
+    </div>
+
     <div id="page-stadium" class="page">
       <div class="report-container">
-        <div class="tactics-title">🏟️ Stadyum</div>
+        <div class="tactics-title" id="stadiumPageTitle">🏟️ Stadyum</div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;" id="stadiumMainTabs">
+          <button type="button" class="sub-btn stadium-main-tab active" data-stab="facility" style="width:auto;padding:7px 14px;font-size:12px;" onclick="showStadiumTab('facility')">🏟️ Tesis</button>
+          <button type="button" class="sub-btn stadium-main-tab" data-stab="youth" style="width:auto;padding:7px 14px;font-size:12px;background:#334155;" onclick="showStadiumTab('youth')">🌱 Altyapı</button>
+        </div>
+        <div id="stadiumTabFacility">
         <div class="modal-stats" style="margin-top: 6px">
           <div class="modal-stat">
             <span class="label">Stadyum Adı</span
@@ -2934,10 +3167,37 @@
             ➕ Koltuk Ekle (+1.000)
           </button>
         </div>
+        <div id="eliteRenameBox" style="margin-top:14px;padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
+          <div style="font-weight:800;color:#facc15;margin-bottom:8px;">⭐ Elite · İsim Değiştir</div>
+          <div id="eliteRenameHint" style="font-size:12px;color:#94a3b8;margin-bottom:10px;">Takım ve stadyum adını değiştirmek Elite üyeliğe özeldir.</div>
+          <div style="display:grid;gap:8px;">
+            <div>
+              <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Takım adı</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input id="eliteTeamNameInput" type="text" maxlength="32" placeholder="Yeni takım adı" style="flex:1;min-width:140px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+                <button class="sub-btn" style="width:auto;padding:8px 12px;" onclick="renameTeamNameElite()">Kaydet</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Stadyum adı</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input id="eliteStadiumNameInput" type="text" maxlength="40" placeholder="Yeni stadyum adı" style="flex:1;min-width:140px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+                <button class="sub-btn" style="width:auto;padding:8px 12px;" onclick="renameStadiumNameElite()">Kaydet</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <div
           id="stadiumNote"
           style="text-align: center; font-size: 12px; color: #94a3b8"
         ></div>
+        </div><!-- /stadiumTabFacility -->
+        <div id="stadiumTabYouth" style="display:none;">
+          <div class="formation-hint" style="margin-bottom:10px;">
+            Akademi, scout ve genç oyuncu çekimi — stadyum tesisleriyle aynı menü altında.
+          </div>
+          <div id="stadiumYouthHost"></div>
+        </div>
       </div>
     </div>
 
@@ -2948,6 +3208,7 @@
     <div id="page-forum" class="page">
       <div class="report-container">
         <div class="tactics-title">💬 Forum</div>
+        <div id="forumModHint" class="formation-hint" style="display:none;margin-bottom:8px;">Moderasyon: gönderilere tıklayarak silebilirsin.</div>
         <div style="display: flex; gap: 8px; margin-bottom: 10px">
           <input
             id="forumPostInput"
@@ -3079,6 +3340,19 @@
             onclick="showNationalSub('history')"
           >
             Tarihçe
+          </button>
+          <button
+            class="sub-btn nat-subtab"
+            data-sub="stats"
+            style="
+              width: auto;
+              padding: 6px 12px;
+              font-size: 11px;
+              background: #334155;
+            "
+            onclick="showNationalSub('stats')"
+          >
+            📊 İstatistik
           </button>
           <button
             class="sub-btn nat-subtab"
@@ -3498,7 +3772,7 @@
     <div id="page-squad" class="page">
       <div class="report-container">
         <div class="tactics-title">Takım Kadrosu — Murat SK</div>
-        <div style="display:flex;gap:6px;margin-bottom:12px;" id="squadMainTabs">
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;" id="squadMainTabs">
           <button
             type="button"
             class="sub-btn squad-main-tab active"
@@ -3507,6 +3781,15 @@
             onclick="showSquadTab('roster')"
           >
             Kadro
+          </button>
+          <button
+            type="button"
+            class="sub-btn squad-main-tab"
+            data-stab="contracts"
+            style="width:auto;padding:7px 14px;font-size:12px;background:#334155;"
+            onclick="showSquadTab('contracts')"
+          >
+            📄 Kontratlar
           </button>
           <button
             type="button"
@@ -3520,10 +3803,16 @@
         </div>
         <div id="squadTabRoster">
           <div class="formation-hint">
-            Forma numarasını değiştirmek için # kutusunu kullan. İsim satırına tıklayınca
-            profil açılır. Kontrat: süre ve haftalık maaş.
+            Forma numarasını değiştirmek için # kutusunu kullan. İsme tıklayınca profil açılır.
+            Kontrat bilgileri <b>Kontratlar</b> sekmesindedir.
           </div>
           <div id="squadRosterList"></div>
+        </div>
+        <div id="squadTabContracts" style="display:none;">
+          <div class="formation-hint">
+            Oyuncu kontrat süreleri ve haftalık maaşlar. Satıra tıklayınca oyuncu profili açılır.
+          </div>
+          <div id="squadContractsList"></div>
         </div>
         <div id="squadTabKit" style="display:none;">
           <div class="formation-hint" id="kitAccessHint">
@@ -3591,9 +3880,9 @@
       <div class="report-container">
         <div class="tactics-title">🌱 Akademi — Genç Yetenek Merkezi</div>
         <div class="formation-hint">
-          Haftada 1 oyuncu çekme hakkı. Scout/akademi yükseltmesi ücretli ve ~90
-          sn sürer. Yüksek potansiyelli oyuncular yavaş ama uzun vadede güçlü
-          gelişir.
+          Sezonluk 12 oyuncu çekme hakkı. Scout/akademi yükseltmesi ücretli;
+          süre seviyeye göre artar (1→2: 5 dk · 2→3: 15 dk · 3→4: 45 dk · 4→5: 2 sa).
+          Yüksek potansiyelli oyuncular uzun vadede daha güçlü gelişir.
         </div>
 
         <div
@@ -3938,6 +4227,17 @@
           style="margin-top: 6px"
         ></div>
 
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button
+            type="button"
+            class="sub-btn"
+            style="width:auto;padding:10px 16px;background:linear-gradient(90deg,#059669,#10b981);font-weight:800;"
+            onclick="saveClubLineupAndTactics()"
+          >
+            💾 Diziliş &amp; Taktik Kaydet
+          </button>
+          <span id="clubTacticsSaveNote" style="font-size:12px;color:#94a3b8;"></span>
+        </div>
         <div class="tactics-title" style="margin-top: 18px">Özel Taktikler</div>
         <div id="homeTacticsList"></div>
         <div
@@ -4194,23 +4494,15 @@
               margin-bottom: 12px;
             "
           ></div>
-          <div style="display: flex; gap: 8px; margin-bottom: 12px" id="tacticsNatSubTabs">
-            <button
-              class="sub-btn nat-manage-subtab active"
-              data-sub="tactic"
-              style="flex: 1"
-              onclick="showNationalManageSub('tactic')"
-            >
-              🎯 Taktik
-            </button>
-            <button
-              class="sub-btn nat-manage-subtab"
-              data-sub="all"
-              style="flex: 1; background: #334155"
-              onclick="showNationalManageSub('all')"
-            >
-              👥 Tüm Oyuncular
-            </button>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px" id="tacticsNatSubTabs">
+            <button class="sub-btn nat-manage-subtab active" data-sub="tactic" style="width: auto; padding: 6px 12px; font-size: 11px" onclick="showNationalManageSub('tactic')">🎯 Taktik</button>
+            <button class="sub-btn nat-manage-subtab" data-sub="all" style="width: auto; padding: 6px 12px; font-size: 11px; background: #334155" onclick="showNationalManageSub('all')">👥 Kadro</button>
+            <button class="sub-btn nat-manage-subtab" data-sub="groups" style="width: auto; padding: 6px 12px; font-size: 11px; background: #334155" onclick="showNationalManageSub('groups')">Gruplar</button>
+            <button class="sub-btn nat-manage-subtab" data-sub="rank" style="width: auto; padding: 6px 12px; font-size: 11px; background: #334155" onclick="showNationalManageSub('rank')">Sıralama</button>
+            <button class="sub-btn nat-manage-subtab" data-sub="fixtures" style="width: auto; padding: 6px 12px; font-size: 11px; background: #334155" onclick="showNationalManageSub('fixtures')">Fikstür</button>
+            <button class="sub-btn nat-manage-subtab" data-sub="kings" style="width: auto; padding: 6px 12px; font-size: 11px; background: #334155" onclick="showNationalManageSub('kings')">Krallık</button>
+            <button class="sub-btn nat-manage-subtab" data-sub="history" style="width: auto; padding: 6px 12px; font-size: 11px; background: #334155" onclick="showNationalManageSub('history')">Tarihçe</button>
+            <button class="sub-btn nat-manage-subtab" data-sub="stats" style="width: auto; padding: 6px 12px; font-size: 11px; background: #334155" onclick="showNationalManageSub('stats')">📊 İstatistik</button>
           </div>
           <div id="tacticsNatBody"></div>
         </div>
@@ -4370,6 +4662,14 @@
         <button class="modal-close" id="modalCloseBtn">&times;</button>
         <div class="modal-title" id="modalPlayerName">Oyuncu Adı</div>
         <div class="modal-subtitle" id="modalPlayerSub">#99 · ST · 25 yaş</div>
+        <div id="modalKitWrap" style="display:flex;align-items:center;gap:14px;margin:12px 0 16px;padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
+          <canvas id="modalKitCanvas" width="72" height="90" style="border-radius:8px;background:#1e293b;flex-shrink:0;"></canvas>
+          <div>
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Forma &amp; numara</div>
+            <div id="modalKitNumber" style="font-size:32px;font-weight:900;line-height:1;color:#facc15;">99</div>
+            <div id="modalKitMeta" style="font-size:11px;color:#94a3b8;margin-top:4px;">Kulüp forması</div>
+          </div>
+        </div>
         <div class="modal-section-title">📊 Maç Performansı</div>
         <div class="modal-stats" id="modalMatchStats">
           <div class="modal-stat">
@@ -4812,11 +5112,47 @@
         Belçika: "🇧🇪",
         Brezilya: "🇧🇷",
         Arjantin: "🇦🇷",
+        Meksika: "🇲🇽",
+        ABD: "🇺🇸",
+        Japonya: "🇯🇵",
+        Avustralya: "🇦🇺",
+        Mısır: "🇪🇬",
+        Fas: "🇲🇦",
+        Nijerya: "🇳🇬",
+        Rusya: "🇷🇺",
+        Polonya: "🇵🇱",
+        Ukrayna: "🇺🇦",
+        Yunanistan: "🇬🇷",
+        İsveç: "🇸🇪",
+        Norveç: "🇳🇴",
+        Danimarka: "🇩🇰",
+        İsviçre: "🇨🇭",
+        Avusturya: "🇦🇹",
         Hırvatistan: "🇭🇷",
+        Çin: "🇨🇳",
+        Hindistan: "🇮🇳",
+        Sırbistan: "🇷🇸",
+        Romanya: "🇷🇴",
+        Çekya: "🇨🇿",
+        Macaristan: "🇭🇺",
+        İskoçya: "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+        Galler: "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+        İrlanda: "🇮🇪",
+        Kolombiya: "🇨🇴",
+        Şili: "🇨🇱",
+        Uruguay: "🇺🇾",
+        "Güney Kore": "🇰🇷",
+        "Suudi Arabistan": "🇸🇦",
       };
       function countryFlag(c) {
-        return COUNTRY_FLAGS[c] || "🏳️";
+        if (!c) return "🏳️";
+        if (COUNTRY_FLAGS[c]) return COUNTRY_FLAGS[c];
+        const key = Object.keys(COUNTRY_FLAGS).find(function (k) {
+          return String(c).indexOf(k) >= 0;
+        });
+        return key ? COUNTRY_FLAGS[key] : "🏳️";
       }
+      window.countryFlag = countryFlag;
 
       // Antrenör: seviye 1–5, maaş seviyeye göre
       const COACH_CATALOG = [
@@ -4918,7 +5254,33 @@
         },
       ];
       let clubCoach = { ...COACH_CATALOG[9] }; // geriye uyumluluk: birincil
-      let clubCoaches = [{ ...COACH_CATALOG[9] }]; // birden fazla antrenör (max 3)
+      let clubCoaches = [{ ...COACH_CATALOG[9] }]; // birden fazla antrenör (max 8)
+      let clubDoctors = []; // max 3 doktor
+      const DOCTOR_SPEC_LABELS = {
+        genel: "Genel pratisyen",
+        ortopedi: "Ortopedi",
+        fizik: "Fizik tedavi",
+        spor: "Spor hekimi",
+      };
+      const DOCTOR_NAMES = {
+        genel: "Dr. Yılmaz",
+        ortopedi: "Dr. Kaya",
+        fizik: "Dr. Demir",
+        spor: "Dr. Çelik",
+      };
+      function doctorSalaryForLevel(level) {
+        const map = { 1: 3000, 2: 6000, 3: 12000, 4: 20000, 5: 35000 };
+        return map[level] || 3000;
+      }
+      function doctorRecoveryBonus() {
+        // Toplam iyileşme kısaltması (maç cinsinden)
+        let b = 0;
+        (clubDoctors || []).forEach(function (d) {
+          b += Math.min(5, Math.max(1, Number(d.level) || 1));
+        });
+        return Math.min(8, b); // üst sınır
+      }
+      window.doctorRecoveryBonus = doctorRecoveryBonus;
 
       function formatMoney(n) {
         n = Math.round(Number(n) || 0);
@@ -5050,7 +5412,7 @@
         );
         const salary = coachSalaryForLevel(level);
         if (!Array.isArray(clubCoaches)) clubCoaches = clubCoach ? [clubCoach] : [];
-        // Aynı skill varsa güncelle, yoksa ekle (max 3)
+        // Aynı skill varsa güncelle, yoksa ekle (max 8)
         const existing = clubCoaches.findIndex((c) => c.skill === skill);
         const coach = {
           id: "user_coach_" + skill + "_" + level,
@@ -5063,11 +5425,11 @@
         if (existing >= 0) {
           clubCoaches[existing] = coach;
         } else {
-          if (clubCoaches.length >= 3) {
+          if (clubCoaches.length >= 8) {
             const note = document.getElementById("trainingResultNote");
             if (note)
               note.innerText =
-                "En fazla 3 antrenör. Önce birini çıkar veya mevcut skill'i güncelle.";
+                "En fazla 8 antrenör. Önce birini çıkar veya mevcut skill'i güncelle.";
             return;
           }
           clubCoaches.push(coach);
@@ -5086,7 +5448,7 @@
             formatMoney(salary) +
             "/hf · Antrenör sayısı: " +
             clubCoaches.length +
-            "/3";
+            "/8";
         if (typeof pushNotification === "function")
           pushNotification(
             "👔",
@@ -5100,11 +5462,29 @@
       }
       function removeClubCoach(skill) {
         if (!Array.isArray(clubCoaches)) return;
+        const coach = clubCoaches.find((c) => c.skill === skill);
+        const label = coach
+          ? coach.name || coach.skillLabel || skill
+          : skill;
+        if (
+          !confirm(
+            '"' +
+              label +
+              '" antrenörünün sözleşmesini feshetmek istediğine emin misin?',
+          )
+        )
+          return;
         clubCoaches = clubCoaches.filter((c) => c.skill !== skill);
         clubCoach = clubCoaches[0] || null;
         renderClubCoachesList();
         populateCoachHireSelect();
         updateBudgetUI();
+        const note = document.getElementById("trainingResultNote");
+        if (note)
+          note.innerText =
+            label + " sözleşmesi feshedildi. Antrenör sayısı: " + clubCoaches.length + "/8";
+        if (typeof pushNotification === "function")
+          pushNotification("📄", label + " sözleşmesi feshedildi", "Antrenman");
       }
       function renderClubCoachesList() {
         const el = document.getElementById("clubCoachesList");
@@ -5118,29 +5498,48 @@
           .map(
             (c) =>
               '<div style="display:flex;align-items:center;gap:8px;padding:8px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:8px;font-size:12px;">' +
-              '<div style="flex:1;color:#e2e8f0;"><b>' +
+              '<div style="flex:1;color:#e2e8f0;">' +
+              '<a href="javascript:void(0)" onclick="removeClubCoach(\'' +
+              c.skill +
+              '\')" style="color:#38bdf8;font-weight:700;text-decoration:underline;cursor:pointer;" title="Sözleşmeyi feshet">' +
+              (c.name || c.skillLabel || c.skill) +
+              "</a>" +
+              " · <b>" +
               (c.skillLabel || c.skill) +
               "</b> · Sv." +
               c.level +
               ' · <span style="color:#facc15;">' +
               formatMoney(c.salary) +
               "/hf</span></div>" +
-              '<button class="sub-btn" style="width:auto;padding:4px 8px;font-size:11px;background:#334155;" onclick="removeClubCoach(\'' +
+              '<button class="sub-btn" style="width:auto;padding:4px 8px;font-size:11px;background:#7f1d1d;color:#fecaca;" onclick="removeClubCoach(\'' +
               c.skill +
-              '\')">Çıkar</button></div>',
+              '\')">Sözleşmeyi Feshet</button></div>',
           )
           .join("");
       }
 
       function payWeeklyCoachSalary() {
-        if (!Array.isArray(clubCoaches) || !clubCoaches.length) return;
         let total = 0;
-        clubCoaches.forEach((c) => {
-          total += c.salary || 0;
-        });
+        let parts = [];
+        if (Array.isArray(clubCoaches) && clubCoaches.length) {
+          clubCoaches.forEach((c) => {
+            total += c.salary || 0;
+          });
+          parts.push(clubCoaches.length + " antrenör");
+        }
+        if (Array.isArray(clubDoctors) && clubDoctors.length) {
+          clubDoctors.forEach((d) => {
+            total += d.salary || 0;
+          });
+          parts.push(clubDoctors.length + " doktor");
+        }
         if (total <= 0) return;
         clubBudget -= total;
-        addFinanceEntry("gider", "Antrenör maaşları (" + clubCoaches.length + " kişi)", -total);
+        addFinanceEntry(
+          "gider",
+          "Personel maaşları (" + parts.join(", ") + ")",
+          -total,
+        );
         updateBudgetUI();
       }
 
@@ -5354,7 +5753,8 @@
           advancedTactics: t.advancedTactics ? { ...t.advancedTactics } : {},
           players: JSON.parse(JSON.stringify(t.players || [])),
           bench: JSON.parse(JSON.stringify(t.bench || [])),
-          formation: t.formation || null,
+          formation: t.currentFormation || t.formation || null,
+          currentFormation: t.currentFormation || t.formation || null,
         };
       }
       function applyTeamSide(side, data) {
@@ -5370,6 +5770,8 @@
         if (Array.isArray(data.players)) t.players = data.players;
         if (Array.isArray(data.bench)) t.bench = data.bench;
         if (data.formation) t.formation = data.formation;
+        if (data.currentFormation || data.formation)
+          t.currentFormation = data.currentFormation || data.formation;
       }
       function buildCareerSave() {
         let leagueRow = null;
@@ -5424,6 +5826,7 @@
           youthAcademy: { ...youthAcademy },
           clubCoach: clubCoach ? { ...clubCoach } : null,
           clubCoaches: Array.isArray(clubCoaches) ? clubCoaches.map((c) => ({ ...c })) : [],
+          clubDoctors: Array.isArray(clubDoctors) ? clubDoctors.map((d) => ({ ...d })) : [],
           currentSeasonYear: typeof currentSeasonYear !== "undefined" ? currentSeasonYear : 2026,
           home: serializeTeamSide("home"),
           leagueRow,
@@ -5433,6 +5836,12 @@
       }
       function saveCareer(showNote) {
         try {
+          if (
+            !showNote &&
+            localStorage.getItem("em_autosave") === "off"
+          ) {
+            return;
+          }
           const user =
             managerName ||
             (document.getElementById("menuUsername") || {}).innerText ||
@@ -5490,6 +5899,7 @@
           if (data.youthAcademy) Object.assign(youthAcademy, data.youthAcademy);
           if (data.clubCoach) clubCoach = data.clubCoach;
           if (Array.isArray(data.clubCoaches)) clubCoaches = data.clubCoaches;
+          if (Array.isArray(data.clubDoctors)) clubDoctors = data.clubDoctors;
           if (typeof data.currentSeasonYear === "number") currentSeasonYear = data.currentSeasonYear;
           if (data.home) applyTeamSide("home", data.home);
           try {
@@ -6006,33 +6416,65 @@
             '<div class="youth-section-title">Elemeler — Gruplar' +
             suffix +
             "</div>";
+          html +=
+            '<div class="formation-hint" style="margin-bottom:8px;">Torba sistemi: sıralamaya göre 4 torba · her gruba her torbadan 1 takım.</div>';
+          const sorted = rows.slice().sort(function (a, b) {
+            return (b.pts || 0) - (a.pts || 0);
+          });
+          const pots = [[], [], [], []];
+          sorted.forEach(function (r, idx) {
+            pots[Math.min(3, Math.floor(idx / 4))].push(r);
+          });
+          html +=
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
+          pots.forEach(function (pot, pi) {
+            html +=
+              '<div style="background:#0f172a;border:1px solid #2c3a52;border-radius:10px;padding:8px;"><div style="font-size:11px;font-weight:800;color:#facc15;margin-bottom:4px;">Torba ' +
+              (pi + 1) +
+              "</div>";
+            pot.forEach(function (r) {
+              html +=
+                '<div style="font-size:12px;color:#e2e8f0;padding:2px 0;">' +
+                (r.flag || "") +
+                " " +
+                r.c +
+                "</div>";
+            });
+            html += "</div>";
+          });
+          html += "</div>";
+          let drawn = null;
+          try {
+            if (typeof getNationalGroupDraw === "function")
+              drawn = getNationalGroupDraw(rows);
+          } catch (e) {}
           const groups = ["A", "B", "C", "D"];
           for (let g = 0; g < 4; g++) {
             html +=
               '<div style="font-size:12px;font-weight:700;color:#38bdf8;margin:10px 0 4px;">Grup ' +
               groups[g] +
               "</div>";
-            const slice = rows.slice(g * 4, g * 4 + 4);
-            slice.forEach((r, i) => {
-              const p = [9, 7, 4, 1][i] || 0;
+            const slice = drawn
+              ? drawn[g] || []
+              : rows.slice(g * 4, g * 4 + 4);
+            slice.forEach(function (r, ii) {
+              const p = [9, 7, 4, 1][ii] || 0;
               html +=
-                '<div class="clickable-player" onclick="openCountryProfile(\'' +
+                '<div class="clickable-player" onclick="openCountryProfile && openCountryProfile(\'' +
                 r.c +
                 '\')" style="padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;cursor:pointer;">' +
-                (i + 1) +
+                (ii + 1) +
                 ". " +
-                countryFlag(r.c) +
+                (r.flag || "") +
                 " " +
                 r.c +
                 suffix +
                 " · <b>" +
                 p +
-                "</b> puan" +
-                "</div>";
+                "</b> puan</div>";
             });
           }
-          list.innerHTML = html;
-        } else if (sub === "fixtures") {
+          } else if (sub === "fixtures") {
           let html =
             '<div class="youth-section-title">Milli Maç Fikstürü' +
             suffix +
@@ -6943,6 +7385,11 @@
           setTimeout(function () {
             loadRealLeagueKings();
           }, 0);
+        } else if (comp === "cup") {
+          html += '<div id="realCupKingsBox">Yükleniyor...</div>';
+          setTimeout(function () {
+            loadRealCupKings();
+          }, 0);
         } else {
           html += renderLeagueScorersHTML();
         }
@@ -7025,6 +7472,80 @@
         }
       }
 
+      // Kupa gol/asist krallığı — gerçek oyuncu + takım (sunucu match_results)
+      async function loadRealCupKings() {
+        const box = document.getElementById("realCupKingsBox");
+        if (!box) return;
+        function row(s, i, key, color) {
+          const player = (s && s.playerName) || "Oyuncu";
+          const team = (s && s.clubName) || "-";
+          const value = (s && s[key]) || 0;
+          const teamSafe = String(team).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+          return (
+            '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);font-size:12px;"><span>' +
+            (i + 1) +
+            '. <span class="clickable-player" style="cursor:pointer;text-decoration:underline;color:#e2e8f0;">' +
+            player +
+            '</span> <span class="clickable-team" style="color:#64748b;cursor:pointer;text-decoration:underline;" onclick="event.stopPropagation();typeof openClubProfileByName===\'function\'&&openClubProfileByName(\'' +
+            teamSafe +
+            '\')">( ' +
+            team +
+            ' )</span></span><b style="color:' +
+            color +
+            ';">' +
+            value +
+            "</b></div>"
+          );
+        }
+        function renderEmpty() {
+          return (
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+            '<div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">⚽ Gol Krallığı</div>' +
+            '<div style="color:#64748b;text-align:center;padding:8px;">Henüz kupa golü yok.</div></div>' +
+            '<div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">🎯 Asist Krallığı</div>' +
+            '<div style="color:#64748b;text-align:center;padding:8px;">Henüz kupa asisti yok.</div></div></div>'
+          );
+        }
+        try {
+          const headers = { "Content-Type": "application/json" };
+          const token = localStorage.getItem("em_jwt_token");
+          if (token) headers["Authorization"] = "Bearer " + token;
+          const res = await fetch(
+            (window.EM_API_BASE || "") + "/api/cup/stats?limit=15",
+            { headers },
+          );
+          const data = await res.json();
+          const goals = (data && data.goalKing) || [];
+          const assists = (data && data.assistKing) || [];
+          if (!goals.length && !assists.length) {
+            box.innerHTML = renderEmpty();
+            return;
+          }
+          let html =
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+          html +=
+            '<div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">⚽ Gol Krallığı</div>';
+          goals
+            .slice(0, 15)
+            .forEach((s, i) => (html += row(s, i, "goals", "#4ade80")));
+          if (!goals.length)
+            html +=
+              '<div style="color:#64748b;text-align:center;padding:8px;">Henüz kupa golü yok.</div>';
+          html +=
+            '</div><div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">🎯 Asist Krallığı</div>';
+          assists
+            .slice(0, 15)
+            .forEach((s, i) => (html += row(s, i, "assists", "#38bdf8")));
+          if (!assists.length)
+            html +=
+              '<div style="color:#64748b;text-align:center;padding:8px;">Henüz kupa asisti yok.</div>';
+          html += "</div></div>";
+          box.innerHTML = html;
+        } catch (e) {
+          box.innerHTML = renderEmpty();
+        }
+      }
+
       function buildHistoryHTML(comp) {
         let html = '<div class="youth-section-title">Tarihçe</div>';
         // Tarihler yerine "Sezon N" gösterilir; listedeki en eski kayıt Sezon 1'dir.
@@ -7100,6 +7621,66 @@
         return html;
       }
 
+      function openClubProfileByName(name) {
+        try {
+          if (!name) return;
+          if (
+            teamConfig &&
+            teamConfig.home &&
+            teamConfig.home.name === name
+          ) {
+            openUserTeamProfile("home");
+            return;
+          }
+          if (
+            teamConfig &&
+            teamConfig.away &&
+            teamConfig.away.name === name
+          ) {
+            openUserTeamProfile("away");
+            return;
+          }
+          // Lig satırından hafif profil
+          const row =
+            typeof findLeagueTeamByName === "function"
+              ? findLeagueTeamByName(name)
+              : null;
+          const modal = document.getElementById("teamModal");
+          if (!modal) return;
+          document.getElementById("teamModalName").innerText = name;
+          document.getElementById("teamModalSub").innerText =
+            (row && row.country ? countryFlag(row.country) + " " + row.country : "") +
+            (row && row.strength ? " · Güç " + row.strength : "") +
+            (row && row.pts != null ? " · " + row.pts + " puan" : "");
+          const squadEl = document.getElementById("teamSquadList");
+          if (squadEl) {
+            if (row && row.players && row.players.length) {
+              squadEl.innerHTML = row.players
+                .map(function (p) {
+                  return (
+                    '<div class="clickable-player" style="padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.3);font-size:12px;cursor:pointer;" onclick="typeof showPlayerProfile===\'function\'&&showPlayerProfile(' +
+                    "window.__tmpCupPlayer||null" +
+                    ')">' +
+                    (p.number ? "#" + p.number + " " : "") +
+                    (p.name || "Oyuncu") +
+                    " · " +
+                    (p.pos || "") +
+                    "</div>"
+                  );
+                })
+                .join("");
+            } else {
+              squadEl.innerHTML =
+                '<div style="color:#64748b;padding:10px;text-align:center;">Kadro detayı yok.</div>';
+            }
+          }
+          modal.classList.add("active");
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+      window.openClubProfileByName = openClubProfileByName;
+
       function buildCupFixtureHTML() {
         const teams = [...(worldLeagues[USER_COUNTRY][1] || [])].map(
           (t) => t.name,
@@ -7108,20 +7689,45 @@
         const my = teamConfig.home.name;
         const round16 = teams.slice(0, 8);
         let html =
-          '<div class="youth-section-title">Kupa — Eleme Fikstürü</div><div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Kupa günü ligden ayrı (ör. TR: Cuma) · Kıtalar/Milli ile çakışmaz</div>';
+          '<div class="youth-section-title">Kupa — Eleme Fikstürü</div><div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Kupa günü ligden ayrı (ör. TR: Cuma) · Takım / skor tıklanabilir</div>';
         html +=
           '<div style="font-size:12px;font-weight:700;color:#facc15;margin:8px 0 4px;">Çeyrek Final</div>';
+        function teamSpan(n) {
+          const safe = String(n).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+          return (
+            '<span class="clickable-team" style="cursor:pointer;text-decoration:underline;" onclick="event.stopPropagation();openClubProfileByName(\'' +
+            safe +
+            "')\">" +
+            n +
+            "</span>"
+          );
+        }
         for (let i = 0; i < 4; i++) {
           const h = round16[i * 2],
             a = round16[i * 2 + 1];
+          const played = i < 1;
+          const score = played ? "2-1" : "vs";
+          const scoreHtml = played
+            ? ' <b style="color:#facc15;cursor:pointer;text-decoration:underline;" onclick="event.stopPropagation();openMatchReportByScore(' +
+              JSON.stringify(h) +
+              "," +
+              JSON.stringify(a) +
+              "," +
+              JSON.stringify(score) +
+              ')">' +
+              score +
+              "</b> "
+            : ' <span style="color:#64748b;">vs</span> ';
           html += cardBox(
             (h === my || a === my
               ? '<span style="color:#4ade80;">● </span>'
               : "") +
-              h +
-              " vs " +
-              a +
-              ' <span style="color:#38bdf8;font-size:11px;">(Bekliyor)</span>',
+              teamSpan(h) +
+              scoreHtml +
+              teamSpan(a) +
+              (played
+                ? ' <span style="color:#64748b;font-size:11px;">(Oynandı)</span>'
+                : ' <span style="color:#38bdf8;font-size:11px;">(Bekliyor)</span>'),
           );
         }
         html +=
@@ -7340,9 +7946,14 @@
         const c = document.getElementById("stadiumCapacity");
         const cost = document.getElementById("seatUpgradeCost");
         const tp = document.getElementById("stadiumTicketPrice");
+        const sn = document.getElementById("stadiumName");
         if (c) c.innerText = stadium.capacity.toLocaleString("tr-TR");
         if (cost) cost.innerText = formatMoney(stadium.seatUpgradeCost);
         if (tp) tp.innerText = stadium.ticketPrice + " €";
+        if (sn) sn.innerText = stadium.name || sn.innerText;
+        try {
+          if (typeof refreshEliteRenameUI === "function") refreshEliteRenameUI();
+        } catch (e) {}
       }
       function addForumPost() {
         const inp = document.getElementById("forumPostInput");
@@ -7358,8 +7969,12 @@
       function renderForum() {
         const list = document.getElementById("forumPostsList");
         if (!list) return;
+        const canMod =
+          typeof canModerateForum === "function" && canModerateForum();
+        const hint = document.getElementById("forumModHint");
+        if (hint) hint.style.display = canMod ? "block" : "none";
         list.innerHTML = forumPosts
-          .map(function (p) {
+          .map(function (p, idx) {
             const un = String(p.user || "Menajer").replace(/'/g, "\\'");
             return (
               '<div style="padding:12px;margin-bottom:8px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">' +
@@ -7369,7 +7984,12 @@
               "')\" title=\"Menajer profili\">" +
               p.user +
               '</b><span style="color:#64748b;font-size:11px;">' +
-              p.time +
+              (p.time || "") +
+              (canMod
+                ? ' <button type="button" class="sub-btn" style="width:auto;padding:2px 8px;font-size:10px;background:#7f1d1d;" onclick="deleteForumPostAt(' +
+                  idx +
+                  ')">Sil</button>'
+                : "") +
               "</span></div>" +
               '<div style="color:#e2e8f0;font-size:13px;">' +
               p.text +
@@ -8393,11 +9013,62 @@
         hideMainMenuAndShowBack();
         switchPage("page-tactics");
         setTacticsMode("club");
+        try {
+          var cb = document.getElementById("tacticsModeClub");
+          if (cb) cb.style.display = "";
+        } catch (e) {}
         setFormationSide("home");
         populatePlanSubSelects();
         updatePlanFormUI();
         renderPlannedInstructions();
+        try {
+          if (typeof renderCustomTacticsList === "function")
+            renderCustomTacticsList();
+        } catch (e) {}
       }
+
+      function saveClubLineupAndTactics() {
+        const team = teamConfig.home;
+        if (!team) return;
+        // UI'dan pas/oyun stili oku
+        try {
+          const passEl = document.getElementById("passStyleSelect");
+          const gameEl = document.getElementById("gameStyleSelect");
+          const atkEl = document.getElementById("attackDirSelect");
+          if (passEl) team.passStyle = passEl.value;
+          if (gameEl) team.gameStyle = gameEl.value;
+          if (atkEl) team.attackDir = atkEl.value;
+        } catch (e) {}
+        // Elle seçilen oyuncu x/y/pos ve formasyon korunur
+        team.currentFormation = team.currentFormation || "4-4-2";
+        team.formation = team.currentFormation;
+        try {
+          if (typeof saveCareer === "function") saveCareer(false);
+        } catch (e) {}
+        // Sunucuya da yaz (varsa)
+        if (typeof window.__emSaveClubTeamServer === "function") {
+          window.__emSaveClubTeamServer(team);
+        }
+        const note = document.getElementById("clubTacticsSaveNote");
+        if (note) {
+          note.style.color = "#4ade80";
+          note.innerText =
+            "✓ Diziliş korundu · " +
+            (team.currentFormation || "") +
+            " · " +
+            (team.players || []).length +
+            " oyuncu";
+        }
+        try {
+          if (typeof pushNotification === "function")
+            pushNotification(
+              "💾",
+              "Taktik ve saha dizilimi kaydedildi",
+              "Taktik",
+            );
+        } catch (e) {}
+      }
+      window.saveClubLineupAndTactics = saveClubLineupAndTactics;
       let currentSquadSide = "home";
       function setSquadSide(side) {
         currentSquadSide = side || "home";
@@ -8591,33 +9262,12 @@
                   : "#94a3b8");
             potCell.innerText = potential;
 
-            const contractCell = document.createElement("div");
-            contractCell.style.cssText =
-              "font-size:10px;color:#94a3b8;line-height:1.25;cursor:pointer;";
-            contractCell.title = "Kontrat detayı";
-            contractCell.innerHTML =
-              "<div style='color:#e2e8f0;font-weight:600;'>" +
-              (p.contractYears || 1) +
-              " yıl</div>" +
-              "<div>" +
-              (typeof formatMoney === "function"
-                ? formatMoney(p.wage || 0)
-                : p.wage + " €") +
-              "/hf</div>" +
-              "<div style='color:#64748b;'>" +
-              (p.contractEnd || "—") +
-              "</div>";
-            contractCell.onclick = function () {
-              showPlayerProfile(p, team.name);
-            };
-
             row.appendChild(numCell);
             row.appendChild(nameCell);
             row.appendChild(posCell);
             row.appendChild(ageCell);
             row.appendChild(qCell);
             row.appendChild(potCell);
-            row.appendChild(contractCell);
             container.appendChild(row);
 
             // ---- Tüm yetenekler; maçta etkili olanlar (mevkiye göre) öne çıkar ----
@@ -8683,7 +9333,50 @@
       function goToStadium() {
         hideMainMenuAndShowBack();
         switchPage("page-stadium");
+        showStadiumTab("facility");
         updateStadiumUI();
+        try {
+          if (typeof refreshEliteRenameUI === "function") refreshEliteRenameUI();
+        } catch (e) {}
+      }
+
+      function showStadiumTab(tab) {
+        const t = tab === "youth" ? "youth" : "facility";
+        document.querySelectorAll("#stadiumMainTabs .stadium-main-tab").forEach(function (btn) {
+          const on = btn.getAttribute("data-stab") === t;
+          btn.classList.toggle("active", on);
+          btn.style.background = on ? "" : "#334155";
+        });
+        const fac = document.getElementById("stadiumTabFacility");
+        const you = document.getElementById("stadiumTabYouth");
+        if (fac) fac.style.display = t === "facility" ? "block" : "none";
+        if (you) you.style.display = t === "youth" ? "block" : "none";
+        const title = document.getElementById("stadiumPageTitle");
+        if (title)
+          title.innerText =
+            t === "youth" ? "🌱 Altyapı · Akademi" : "🏟️ Stadyum";
+        if (t === "youth") {
+          ensureYouthHostedInStadium();
+          try {
+            if (typeof updateYouthUI === "function") updateYouthUI("home");
+            if (typeof updateYouthAcademyUI === "function") updateYouthAcademyUI();
+            if (typeof renderYouthRoster === "function") renderYouthRoster("home");
+          } catch (e) {}
+        }
+      }
+      window.showStadiumTab = showStadiumTab;
+
+      function ensureYouthHostedInStadium() {
+        const host = document.getElementById("stadiumYouthHost");
+        const page = document.getElementById("page-youth");
+        if (!host || !page) return;
+        if (host.dataset.ready === "1") return;
+        const box = page.querySelector(".report-container");
+        if (!box) return;
+        // Başlık tekrar etmesin diye sadece içeriği taşı
+        while (box.firstChild) host.appendChild(box.firstChild);
+        host.dataset.ready = "1";
+        page.style.display = "none";
       }
 
       // ---- Forma & Logo (Elite / Milli Takım) — jenerik, prefix tabanlı ----
@@ -8978,6 +9671,14 @@
             teamConfig.home.logo = kit.logo;
           }
         } catch (e) {}
+        // Online: sunucu Elite doğrulaması ile kaydet
+        if (target === "club" && typeof window.__emSaveKitServer === "function") {
+          window.__emSaveKitServer(kit).then(function (ok) {
+            const n = document.getElementById(prefix + "Note");
+            if (ok === false && n)
+              n.innerText = "Sunucu: Elite gerekli veya kayıt başarısız";
+          });
+        }
         const n = document.getElementById(prefix + "Note");
         if (n)
           n.innerText =
@@ -9454,7 +10155,8 @@
         renderSquadRosterPage("home");
       }
       function showSquadTab(tab) {
-        const t = tab === "kit" ? "kit" : "roster";
+        const t =
+          tab === "kit" ? "kit" : tab === "contracts" ? "contracts" : "roster";
         document.querySelectorAll("#squadMainTabs .squad-main-tab").forEach(function (btn) {
           const on = btn.getAttribute("data-stab") === t;
           btn.classList.toggle("active", on);
@@ -9462,17 +10164,68 @@
         });
         const rosterEl = document.getElementById("squadTabRoster");
         const kitEl = document.getElementById("squadTabKit");
+        const contractsEl = document.getElementById("squadTabContracts");
         if (rosterEl) rosterEl.style.display = t === "roster" ? "block" : "none";
         if (kitEl) kitEl.style.display = t === "kit" ? "block" : "none";
+        if (contractsEl)
+          contractsEl.style.display = t === "contracts" ? "block" : "none";
         if (t === "kit") refreshKitAccessFor("kit", "club");
+        if (t === "contracts") renderSquadContractsPage("home");
       }
+
+      function renderSquadContractsPage(side) {
+        const container = document.getElementById("squadContractsList");
+        if (!container) return;
+        const team = side === "away" ? teamConfig.away : teamConfig.home;
+        const all = []
+          .concat(team.players || [])
+          .concat(team.bench || []);
+        all.forEach(function (p) {
+          if (typeof ensurePlayerContract === "function") ensurePlayerContract(p);
+        });
+        all.sort(function (a, b) {
+          return (b.wage || 0) - (a.wage || 0);
+        });
+        if (!all.length) {
+          container.innerHTML =
+            '<div style="color:#64748b;text-align:center;padding:16px;">Kadro boş.</div>';
+          return;
+        }
+        let html =
+          '<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px 10px;font-size:11px;color:#94a3b8;padding:0 4px 6px;border-bottom:1px solid #2c3a52;margin-bottom:6px;"><span>Oyuncu</span><span>Süre</span><span>Maaş/hf</span><span>Bitiş</span></div>';
+        all.forEach(function (p) {
+          const safeId = String(p.id != null ? p.id : "").replace(/'/g, "");
+          html +=
+            '<div class="clickable-player" style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px 10px;align-items:center;padding:10px 8px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:12px;color:#e2e8f0;cursor:pointer;" onclick="(function(){var t=teamConfig.home;var all=[].concat(t.players||[],t.bench||[]);var pl=all.find(function(x){return String(x.id)===\'' +
+            safeId +
+            "\';});if(pl&&typeof showPlayerProfile===\'function\')showPlayerProfile(pl,t.name);})()">" +
+            "<span><b>#" +
+            (p.number || "?") +
+            " " +
+            (p.name || "?") +
+            '</b> <span style="color:#64748b;">' +
+            (p.pos || "") +
+            "</span></span>" +
+            "<span style="color:#e2e8f0;font-weight:600;">" +
+            (p.contractYears || 1) +
+            " yıl</span>" +
+            '<span style="color:#facc15;">' +
+            (typeof formatMoney === "function"
+              ? formatMoney(p.wage || 0)
+              : (p.wage || 0) + " €") +
+            "</span>" +
+            '<span style="color:#94a3b8;">' +
+            (p.contractEnd || "—") +
+            "</span></div>";
+        });
+        container.innerHTML = html;
+      }
+      window.renderSquadContractsPage = renderSquadContractsPage;
       window.showSquadTab = showSquadTab;
       function goToYouth() {
         hideMainMenuAndShowBack();
-        switchPage("page-youth");
-        updateYouthUI("home");
-        updateYouthAcademyUI();
-        renderYouthRoster("home");
+        switchPage("page-stadium");
+        showStadiumTab("youth");
       }
       function goToLeagues() {
         goToLeagueHub();
@@ -9482,6 +10235,209 @@
         switchPage("page-match");
         openUserTeamProfile("home");
       }
+
+      function goToClubStaff() {
+        hideMainMenuAndShowBack();
+        switchPage("page-staff");
+        renderClubStaffPage();
+      }
+      window.goToClubStaff = goToClubStaff;
+
+      function renderClubStaffPage() {
+        try {
+          const bd = document.getElementById("staffBudgetDisplay");
+          if (bd && typeof formatMoney === "function")
+            bd.innerText = formatMoney(clubBudget);
+          else if (bd) bd.innerText = (clubBudget || 0) + " €";
+        } catch (e) {}
+        const cc = document.getElementById("staffCoachCount");
+        const dc = document.getElementById("staffDoctorCount");
+        if (cc) cc.innerText = (clubCoaches || []).length;
+        if (dc) dc.innerText = (clubDoctors || []).length;
+        // skill select
+        const skillSel = document.getElementById("staffCoachSkillSelect");
+        if (skillSel && skillSel.options.length === 0) {
+          const skills = [
+            ["pace", "Hız"],
+            ["passing", "Pas"],
+            ["finishing", "Bitiricilik"],
+            ["tackle", "Müdahale"],
+            ["vision", "Görüş"],
+            ["stamina", "Dayanıklılık"],
+            ["strength", "Güç"],
+            ["technique", "Teknik"],
+            ["agility", "Çeviklik"],
+            ["positioning", "Pozisyon"],
+            ["reflex", "Refleks"],
+            ["handling", "Top Tutma"],
+            ["dribbling", "Top Sürme"],
+          ];
+          skillSel.innerHTML = skills
+            .map(function (x) {
+              return '<option value="' + x[0] + '">' + x[1] + "</option>";
+            })
+            .join("");
+        }
+        // coaches list
+        const cl = document.getElementById("staffCoachesList");
+        if (cl) {
+          if (!(clubCoaches || []).length) {
+            cl.innerHTML =
+              '<div style="color:#64748b;font-size:12px;padding:8px;">Antrenör yok.</div>';
+          } else {
+            cl.innerHTML = clubCoaches
+              .map(function (c) {
+                const name = c.name || c.skillLabel || c.skill || "Antrenör";
+                const sk = c.skill || "";
+                return (
+                  '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;">' +
+                  "<div><b style=\"cursor:pointer;color:#38bdf8;\" onclick=\"removeClubCoach('" +
+                  sk +
+                  "');renderClubStaffPage();\" title=\"Sözleşme feshi\">" +
+                  name +
+                  "</b><div style=\"font-size:11px;color:#94a3b8;\">" +
+                  (c.skillLabel || sk) +
+                  " · Sv." +
+                  (c.level || 1) +
+                  " · " +
+                  (typeof formatMoney === "function"
+                    ? formatMoney(c.salary || 0)
+                    : c.salary || 0) +
+                  "/hf</div></div>" +
+                  '<button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;background:#7f1d1d;" onclick="removeClubCoach(\'' +
+                  sk +
+                  "');renderClubStaffPage();\">Feshet</button></div>"
+                );
+              })
+              .join("");
+          }
+        }
+        // doctors list
+        const dl = document.getElementById("staffDoctorsList");
+        if (dl) {
+          if (!(clubDoctors || []).length) {
+            dl.innerHTML =
+              '<div style="color:#64748b;font-size:12px;padding:8px;">Doktor yok.</div>';
+          } else {
+            dl.innerHTML = clubDoctors
+              .map(function (d, idx) {
+                return (
+                  '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;">' +
+                  "<div><b style=\"cursor:pointer;color:#38bdf8;\" onclick=\"fireStaffDoctor(" +
+                  idx +
+                  ")\" title=\"Sözleşme feshi\">" +
+                  (d.name || "Doktor") +
+                  "</b><div style=\"font-size:11px;color:#94a3b8;\">" +
+                  (d.specLabel || d.spec || "") +
+                  " · Sv." +
+                  (d.level || 1) +
+                  " · " +
+                  (typeof formatMoney === "function"
+                    ? formatMoney(d.salary || 0)
+                    : d.salary || 0) +
+                  "/hf · −" +
+                  (d.level || 1) +
+                  " maç iyileşme</div></div>" +
+                  '<button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;background:#7f1d1d;" onclick="fireStaffDoctor(' +
+                  idx +
+                  ')">Feshet</button></div>'
+                );
+              })
+              .join("");
+          }
+        }
+      }
+      window.renderClubStaffPage = renderClubStaffPage;
+
+      function hireStaffCoach() {
+        const skillSel = document.getElementById("staffCoachSkillSelect");
+        const lvSel = document.getElementById("staffCoachLevelSelect");
+        // sync to training selects if present
+        const tSkill = document.getElementById("coachSkillSelect");
+        const tLv = document.getElementById("coachLevelSelect");
+        if (tSkill && skillSel) tSkill.value = skillSel.value;
+        if (tLv && lvSel) tLv.value = lvSel.value;
+        if (skillSel && tSkill) {
+          // ensure training select has option
+        }
+        if (typeof applyCoachSettings === "function") applyCoachSettings();
+        else if (typeof hireSelectedCoach === "function") hireSelectedCoach();
+        renderClubStaffPage();
+        const note = document.getElementById("staffPageNote");
+        if (note) note.innerText = "Antrenör işlemi uygulandı.";
+      }
+      window.hireStaffCoach = hireStaffCoach;
+
+      function hireStaffDoctor() {
+        const specSel = document.getElementById("staffDoctorSpecSelect");
+        const lvSel = document.getElementById("staffDoctorLevelSelect");
+        const spec = (specSel && specSel.value) || "genel";
+        const level = Math.min(5, Math.max(1, parseInt((lvSel && lvSel.value) || "1", 10)));
+        if ((clubDoctors || []).length >= 3) {
+          alert("En fazla 3 doktor. Önce birinin sözleşmesini feshet.");
+          return;
+        }
+        if ((clubDoctors || []).some(function (d) { return d.spec === spec; })) {
+          alert("Bu uzmanlıkta zaten doktor var. Önce feshet veya başka uzmanlık seç.");
+          return;
+        }
+        const salary = doctorSalaryForLevel(level);
+        const signing = salary * 2;
+        if (typeof clubBudget === "number" && clubBudget < signing) {
+          alert("Yetersiz bütçe. İmza bedeli: " + signing + " €");
+          return;
+        }
+        if (typeof clubBudget === "number") {
+          clubBudget -= signing;
+          try {
+            if (typeof addFinanceEntry === "function")
+              addFinanceEntry("gider", "Doktor imza · " + (DOCTOR_SPEC_LABELS[spec] || spec), -signing);
+          } catch (e) {}
+        }
+        clubDoctors.push({
+          id: "doc_" + spec + "_" + level + "_" + Date.now(),
+          name: DOCTOR_NAMES[spec] || "Dr. Uzman",
+          spec: spec,
+          specLabel: DOCTOR_SPEC_LABELS[spec] || spec,
+          level: level,
+          salary: salary,
+        });
+        try {
+          if (typeof updateBudgetUI === "function") updateBudgetUI();
+          if (typeof saveCareer === "function") saveCareer(false);
+        } catch (e) {}
+        renderClubStaffPage();
+        const note = document.getElementById("staffPageNote");
+        if (note)
+          note.innerText =
+            "Doktor alındı · Sv." + level + " · Maaş " + salary + " €/hf";
+        if (typeof pushNotification === "function")
+          pushNotification("🩺", "Doktor kadroda · Sv." + level, "Çalışanlar");
+      }
+      window.hireStaffDoctor = hireStaffDoctor;
+
+      function fireStaffDoctor(idx) {
+        const d = (clubDoctors || [])[idx];
+        if (!d) return;
+        if (
+          !confirm(
+            '"' +
+              (d.name || "Doktor") +
+              '" sözleşmesini feshetmek istediğine emin misin?',
+          )
+        )
+          return;
+        clubDoctors.splice(idx, 1);
+        renderClubStaffPage();
+        try {
+          if (typeof saveCareer === "function") saveCareer(false);
+        } catch (e) {}
+        if (typeof pushNotification === "function")
+          pushNotification("📄", (d.name || "Doktor") + " sözleşmesi feshedildi", "Çalışanlar");
+      }
+      window.fireStaffDoctor = fireStaffDoctor;
+
+
       function goToTraining() {
         hideMainMenuAndShowBack();
         switchPage("page-training");
@@ -9780,48 +10736,16 @@
       window.toggleTrainSelectAll = toggleTrainSelectAll;
       window.trainSelectedPlayers = trainSelectedPlayers;
       function trainSelectedPlayers() {
-        const bulk = document.getElementById("bulkTrainSkillSelect");
-        const skill =
-          (bulk && bulk.value) || (clubCoach && clubCoach.skill) || "stamina";
-        const team = teamConfig.home;
-        const all = [...(team.players || []), ...(team.bench || [])];
-        const selectedIds = [];
-        document.querySelectorAll(".train-player-cb:checked").forEach(function (cb) {
-          selectedIds.push(String(cb.dataset.playerId));
-        });
-        if (!selectedIds.length) {
-          const note = document.getElementById("trainingResultNote");
-          if (note) note.innerText = "Önce oyuncu seç (soldaki kutular).";
-          return;
-        }
-        let count = 0;
-        all.forEach(function (p) {
-          if (selectedIds.indexOf(String(p.id)) >= 0) {
-            runSkillTrainingForPlayer(p, skill);
-            count++;
-          }
-        });
-        const label =
-          typeof SKILL_LABELS_TR !== "undefined" && SKILL_LABELS_TR[skill]
-            ? SKILL_LABELS_TR[skill]
-            : typeof SKILL_LABELS_FOR_COACH !== "undefined" &&
-                SKILL_LABELS_FOR_COACH[skill]
-              ? SKILL_LABELS_FOR_COACH[skill]
-              : skill;
         const note = document.getElementById("trainingResultNote");
         if (note)
           note.innerText =
-            count +
-            " oyuncuya · " +
-            label +
-            " antrenmanı uygulandı.";
+            "Manuel antrenman kapalı. Skill artışı maç oynanınca otomatik verilir.";
         if (typeof pushNotification === "function")
           pushNotification(
-            "🏋️",
-            count + " oyuncu: " + label + " antrenmanı",
+            "ℹ️",
+            "Antrenman otomatik: maç sonu skill artışı",
             "Antrenman",
           );
-        renderTrainingSquadList();
       }
 
       function populateTrainingPlayerSelect() {
@@ -10019,6 +10943,43 @@
         return "em_daily_" + String(managerName || "guest").toLowerCase();
       }
       function checkDailyReward() {
+        // Online: sunucu doğrular (Elite x2 orada hesaplanır)
+        if (typeof window.__emClaimDailyRewardServer === "function") {
+          window
+            .__emClaimDailyRewardServer()
+            .then(function (res) {
+              if (!res || !res.ok) return;
+              try {
+                localStorage.setItem(
+                  dailyRewardKey(),
+                  JSON.stringify({
+                    last: new Date().toISOString().slice(0, 10),
+                    streak: res.streak || 1,
+                  }),
+                );
+              } catch (e) {}
+              pushNotification(
+                "🎁",
+                "Günlük ödül: +" +
+                  (typeof formatMoney === "function"
+                    ? formatMoney(res.amount)
+                    : res.amount + " €") +
+                  " · Seri " +
+                  (res.streak || 1) +
+                  " gün" +
+                  (res.elite ? " (Elite x2)" : ""),
+                "Ödül",
+              );
+              try {
+                if (typeof updateMenuBudget === "function") updateMenuBudget();
+                if (typeof updateBudgetUI === "function") updateBudgetUI();
+              } catch (e) {}
+            })
+            .catch(function () {
+              /* bugün alınmış veya offline fallback */
+            });
+          return;
+        }
         try {
           const key = dailyRewardKey();
           const raw = localStorage.getItem(key);
@@ -10131,12 +11092,57 @@
         } catch (e) {}
         return { active: false, plan: null, until: null, trial: false };
       }
+      function applyPremiumFromServer(status) {
+        if (!status) return;
+        try {
+          if (status.active && status.until) {
+            localStorage.setItem(
+              premiumKey(),
+              JSON.stringify({
+                plan: status.plan || "monthly",
+                until: status.until,
+                source: "server",
+              }),
+            );
+            if (status.trial) {
+              localStorage.setItem(
+                trialKey(),
+                JSON.stringify({
+                  startedAt: Date.now(),
+                  until: status.until,
+                }),
+              );
+            }
+          } else {
+            // Sunucu inaktif diyorsa yerel ücretli kaydı temizle (trial hariç lokal kalabilir)
+            const raw = localStorage.getItem(premiumKey());
+            if (raw) {
+              try {
+                const d = JSON.parse(raw);
+                if (d && d.source === "server") localStorage.removeItem(premiumKey());
+              } catch (e) {}
+            }
+          }
+        } catch (e) {}
+      }
+      window.applyPremiumFromServer = applyPremiumFromServer;
+
+      /**
+       * Elite satın alma — online: Stripe Checkout veya mock onay.
+       * Offline: eski localStorage davranışı (geliştirme).
+       */
       function activatePremium(plan) {
+        plan = plan || "monthly";
+        if (typeof window.__emPurchaseElite === "function") {
+          window.__emPurchaseElite(plan);
+          return;
+        }
+        // Offline / demo fallback
         const days = plan === "weekly" ? 7 : plan === "yearly" ? 365 : 30;
         const until = Date.now() + days * 24 * 60 * 60 * 1000;
         localStorage.setItem(
           premiumKey(),
-          JSON.stringify({ plan: plan, until: until }),
+          JSON.stringify({ plan: plan, until: until, source: "local" }),
         );
         pushNotification(
           "⭐",
@@ -10216,6 +11222,9 @@
           }
         } catch (e) {}
         persistSecondTeam();
+        if (typeof window.__emSaveSecondTeamServer === "function") {
+          window.__emSaveSecondTeamServer(secondTeamState);
+        }
         pushNotification(
           "🏟️",
           "İkinci takım hakkı açıldı: " + secondTeamState.name,
@@ -10318,6 +11327,13 @@
         hideMainMenuAndShowBack();
         switchPage("page-premium");
         renderPremiumPage();
+        if (typeof window.__emSyncEliteFromServer === "function") {
+          window.__emSyncEliteFromServer().then(function () {
+            try {
+              renderPremiumPage();
+            } catch (e) {}
+          });
+        }
       }
       function goToMatchesHub() {
         hideMainMenuAndShowBack();
@@ -10336,119 +11352,466 @@
           const lang = localStorage.getItem("em_lang") || "tr";
           const ls = document.getElementById("settingsLangSelect");
           if (ls) ls.value = lang;
+          const sp = document.getElementById("settingsMatchSpeedBtn");
+          if (sp)
+            sp.innerText =
+              localStorage.getItem("em_match_speed") === "2" ? "2x" : "1x";
+          const cm = document.getElementById("settingsConfirmMatchBtn");
+          if (cm)
+            cm.innerText =
+              localStorage.getItem("em_confirm_match") === "1"
+                ? "Açık"
+                : "Kapalı";
+          const as = document.getElementById("settingsAutoSaveBtn");
+          if (as)
+            as.innerText =
+              localStorage.getItem("em_autosave") === "off" ? "Kapalı" : "Açık";
+          const th = document.getElementById("settingsThemeBtn");
+          if (th)
+            th.innerText =
+              (localStorage.getItem("em_theme") || "dark") === "light"
+                ? "Açık"
+                : "Koyu";
+          const panel = document.getElementById("staffRolesPanel");
+          if (panel) {
+            const show = typeof canManageStaff === "function" && canManageStaff();
+            panel.style.display = show ? "block" : "none";
+            if (show && typeof renderStaffRolesList === "function")
+              renderStaffRolesList();
+          }
+          const ac = document.getElementById("adminAntiCheatPanel");
+          if (ac) {
+            const isAd =
+              (typeof window.__emIsServerAdmin === "function" &&
+                window.__emIsServerAdmin()) ||
+              (typeof canManageStaff === "function" && canManageStaff());
+            ac.style.display = isAd ? "block" : "none";
+            if (isAd && typeof adminAcRefresh === "function") adminAcRefresh();
+          }
         } catch (e) {}
       }
+
+      function toggleDefaultMatchSpeed() {
+        try {
+          const cur = localStorage.getItem("em_match_speed") === "2" ? 2 : 1;
+          const next = cur === 1 ? 2 : 1;
+          localStorage.setItem("em_match_speed", String(next));
+          try {
+            matchSpeedMultiplier = next;
+          } catch (e) {}
+          const b = document.getElementById("settingsMatchSpeedBtn");
+          if (b) b.innerText = next + "x";
+        } catch (e) {}
+      }
+      function toggleConfirmBeforeMatch() {
+        try {
+          const on = localStorage.getItem("em_confirm_match") === "1";
+          localStorage.setItem("em_confirm_match", on ? "0" : "1");
+          const b = document.getElementById("settingsConfirmMatchBtn");
+          if (b) b.innerText = on ? "Kapalı" : "Açık";
+        } catch (e) {}
+      }
+      function toggleAutoSave() {
+        try {
+          const on = localStorage.getItem("em_autosave") !== "off";
+          localStorage.setItem("em_autosave", on ? "off" : "on");
+          const b = document.getElementById("settingsAutoSaveBtn");
+          if (b) b.innerText = on ? "Kapalı" : "Açık";
+        } catch (e) {}
+      }
+      window.toggleDefaultMatchSpeed = toggleDefaultMatchSpeed;
+      window.toggleConfirmBeforeMatch = toggleConfirmBeforeMatch;
+      window.toggleAutoSave = toggleAutoSave;
+
+      // ---- Tema ----
+      function applyTheme(theme) {
+        const t = theme === "light" ? "light" : "dark";
+        document.body.classList.remove("theme-light", "theme-dark");
+        document.body.classList.add(t === "light" ? "theme-light" : "theme-dark");
+        try {
+          localStorage.setItem("em_theme", t);
+        } catch (e) {}
+        const b = document.getElementById("settingsThemeBtn");
+        if (b) b.innerText = t === "light" ? "Açık" : "Koyu";
+      }
+      function toggleTheme() {
+        const cur =
+          (localStorage.getItem("em_theme") || "dark") === "light"
+            ? "light"
+            : "dark";
+        applyTheme(cur === "light" ? "dark" : "light");
+      }
+      window.toggleTheme = toggleTheme;
+      window.applyTheme = applyTheme;
+      try {
+        applyTheme(localStorage.getItem("em_theme") || "dark");
+      } catch (e) {}
+
+      // ---- Personel / görevlendirme (sen atarsın) ----
+      const STAFF_ROLES_KEY = "em_staff_roles_v1";
+      const DEFAULT_STAFF_OWNERS = ["admin", "murat"];
+
+      function loadStaffRoles() {
+        try {
+          const raw = localStorage.getItem(STAFF_ROLES_KEY);
+          const d = raw ? JSON.parse(raw) : {};
+          DEFAULT_STAFF_OWNERS.forEach(function (u) {
+            const k = String(u).toLowerCase();
+            if (!d[k]) d[k] = ["admin"];
+            else if (d[k].indexOf("admin") < 0) d[k].push("admin");
+          });
+          return d;
+        } catch (e) {
+          return { admin: ["admin"], murat: ["admin"] };
+        }
+      }
+      function saveStaffRoles(map) {
+        try {
+          localStorage.setItem(STAFF_ROLES_KEY, JSON.stringify(map || {}));
+        } catch (e) {}
+      }
+      function getUserStaffRoles(username) {
+        const map = loadStaffRoles();
+        const k = String(username || "").toLowerCase();
+        return map[k] || [];
+      }
+      function hasStaffRole(role, username) {
+        const user =
+          username ||
+          (typeof managerName !== "undefined" ? managerName : "") ||
+          "";
+        const roles = getUserStaffRoles(user);
+        if (roles.indexOf("admin") >= 0) return true;
+        return roles.indexOf(role) >= 0;
+      }
+      
+      // ---- Admin Anti-Cheat panel (UI) ----
+      function adminAcEscape(t) {
+        return String(t == null ? "" : t)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+      function adminAcRefresh() {
+        if (typeof window.__emAdminAcRefresh === "function") {
+          window.__emAdminAcRefresh();
+          return;
+        }
+        const sum = document.getElementById("adminAcSummary");
+        if (sum) sum.innerText = "Sunucu bağlantısı gerekli (online admin).";
+      }
+      function adminAcLoadBanned() {
+        if (typeof window.__emAdminAcBanned === "function")
+          window.__emAdminAcBanned();
+      }
+      function adminAcBan() {
+        if (typeof window.__emAdminAcBan === "function") window.__emAdminAcBan();
+      }
+      function adminAcUnban() {
+        if (typeof window.__emAdminAcUnban === "function")
+          window.__emAdminAcUnban();
+      }
+      function adminAcLookup() {
+        if (typeof window.__emAdminAcLookup === "function")
+          window.__emAdminAcLookup();
+      }
+      window.adminAcRefresh = adminAcRefresh;
+      window.adminAcLoadBanned = adminAcLoadBanned;
+      window.adminAcBan = adminAcBan;
+      window.adminAcUnban = adminAcUnban;
+      window.adminAcLookup = adminAcLookup;
+      window.adminAcEscape = adminAcEscape;
+
+function canManageStaff() {
+        return hasStaffRole("admin");
+      }
+      function canModerateForum() {
+        return hasStaffRole("forum_mod") || hasStaffRole("admin");
+      }
+      window.hasStaffRole = hasStaffRole;
+      window.canModerateForum = canModerateForum;
+
+      function assignStaffRole() {
+        if (!canManageStaff()) {
+          alert("Görev atamak için admin yetkisi gerekir.");
+          return;
+        }
+        const inp = document.getElementById("staffAssignUser");
+        const sel = document.getElementById("staffAssignRole");
+        const user = String((inp && inp.value) || "")
+          .trim()
+          .toLowerCase();
+        const role = (sel && sel.value) || "forum_mod";
+        if (!user || user.length < 2) {
+          alert("Geçerli bir kullanıcı adı gir.");
+          return;
+        }
+        const map = loadStaffRoles();
+        if (!map[user]) map[user] = [];
+        if (map[user].indexOf(role) < 0) map[user].push(role);
+        saveStaffRoles(map);
+        if (inp) inp.value = "";
+        renderStaffRolesList();
+        try {
+          if (typeof pushNotification === "function")
+            pushNotification("👤", user + " → " + role, "Personel");
+        } catch (e) {}
+      }
+      window.assignStaffRole = assignStaffRole;
+
+      function revokeStaffRole(username, role) {
+        if (!canManageStaff()) return;
+        const map = loadStaffRoles();
+        const k = String(username || "").toLowerCase();
+        if (DEFAULT_STAFF_OWNERS.indexOf(k) >= 0 && role === "admin") {
+          alert("Kurucu admin rolü kaldırılamaz.");
+          return;
+        }
+        if (!map[k]) return;
+        map[k] = map[k].filter(function (r) {
+          return r !== role;
+        });
+        if (!map[k].length) delete map[k];
+        saveStaffRoles(map);
+        renderStaffRolesList();
+      }
+      window.revokeStaffRole = revokeStaffRole;
+
+      function renderStaffRolesList() {
+        const box = document.getElementById("staffRolesList");
+        if (!box) return;
+        const map = loadStaffRoles();
+        const keys = Object.keys(map).sort();
+        if (!keys.length) {
+          box.innerHTML =
+            '<div style="color:#64748b;">Henüz görevlendirilmiş kullanıcı yok.</div>';
+          return;
+        }
+        box.innerHTML = keys
+          .map(function (u) {
+            const roles = map[u] || [];
+            return (
+              '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(51,65,85,0.35);gap:8px;flex-wrap:wrap;">' +
+              "<span><b style=\"color:#e2e8f0;\">" +
+              u +
+              "</b> · " +
+              roles
+                .map(function (r) {
+                  return (
+                    '<span style="display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border-radius:999px;background:#1e293b;border:1px solid #334155;font-size:11px;">' +
+                    r +
+                    ' <a href="#" style="color:#f87171;text-decoration:none;margin-left:4px;" onclick="revokeStaffRole(\\'' +
+                    u +
+                    "\\',\\'" +
+                    r +
+                    "\\');return false;\">✕</a></span>"
+                  );
+                })
+                .join("") +
+              "</span></div>"
+            );
+          })
+          .join("");
+      }
+      window.renderStaffRolesList = renderStaffRolesList;
+
+      function deleteForumPostAt(idx) {
+        if (!canModerateForum()) {
+          alert("Forum moderasyonu için yetkin yok.");
+          return;
+        }
+        if (!confirm("Bu gönderi silinsin mi?")) return;
+        try {
+          if (typeof forumPosts !== "undefined" && forumPosts[idx]) {
+            forumPosts.splice(idx, 1);
+            if (typeof renderForum === "function") renderForum();
+          }
+        } catch (e) {}
+        if (typeof window.__emDeleteForumPost === "function")
+          window.__emDeleteForumPost(idx);
+      }
+      window.deleteForumPostAt = deleteForumPostAt;
+
       function goToHelp() {
         hideMainMenuAndShowBack();
         switchPage("page-help");
+        try {
+          renderHelpContent();
+        } catch (e) {}
       }
       window.goToHelp = goToHelp;
 
-      // ---- Basit dil tercihi (TR / EN / DE) ----
-      const EM_I18N = {
-        tr: {
-          menu_matches: "Maçlar",
-          menu_tactics: "Taktikler",
-          menu_squad: "Kadro",
-          menu_youth: "Altyapı",
-          menu_training: "Antrenman",
-          menu_transfer: "Transfer",
-          menu_economy: "Ekonomi",
-          menu_stadium: "Stadyum",
-          menu_forum: "Forum",
-          menu_premium: "Elite Üyelik",
-          menu_help: "Yardım",
-          menu_logout: "Çıkış",
-          settings_title: "Ayarlar",
-          help_title: "Yardım — Oyunu Öğren",
-          lang_saved: "Dil kaydedildi",
-        },
-        en: {
-          menu_matches: "Matches",
-          menu_tactics: "Tactics",
-          menu_squad: "Squad",
-          menu_youth: "Youth",
-          menu_training: "Training",
-          menu_transfer: "Transfer",
-          menu_economy: "Economy",
-          menu_stadium: "Stadium",
-          menu_forum: "Forum",
-          menu_premium: "Elite Membership",
-          menu_help: "Help",
-          menu_logout: "Log out",
-          settings_title: "Settings",
-          help_title: "Help — Learn the game",
-          lang_saved: "Language saved",
-        },
-        de: {
-          menu_matches: "Spiele",
-          menu_tactics: "Taktik",
-          menu_squad: "Kader",
-          menu_youth: "Jugend",
-          menu_training: "Training",
-          menu_transfer: "Transfer",
-          menu_economy: "Finanzen",
-          menu_stadium: "Stadion",
-          menu_forum: "Forum",
-          menu_premium: "Elite Mitgliedschaft",
-          menu_help: "Hilfe",
-          menu_logout: "Abmelden",
-          settings_title: "Einstellungen",
-          help_title: "Hilfe — Spiel lernen",
-          lang_saved: "Sprache gespeichert",
-        },
-        es: {
-          menu_matches: "Partidos",
-          menu_tactics: "Táctica",
-          menu_squad: "Plantilla",
-          menu_youth: "Cantera",
-          menu_training: "Entrenamiento",
-          menu_transfer: "Transferencias",
-          menu_economy: "Economía",
-          menu_stadium: "Estadio",
-          menu_forum: "Foro",
-          menu_premium: "Membresía Elite",
-          menu_help: "Ayuda",
-          menu_logout: "Cerrar sesión",
-          settings_title: "Ajustes",
-          help_title: "Ayuda — Aprende el juego",
-          lang_saved: "Idioma guardado",
-        },
-        fr: {
-          menu_matches: "Matchs",
-          menu_tactics: "Tactiques",
-          menu_squad: "Effectif",
-          menu_youth: "Centre de formation",
-          menu_training: "Entraînement",
-          menu_transfer: "Transferts",
-          menu_economy: "Finances",
-          menu_stadium: "Stade",
-          menu_forum: "Forum",
-          menu_premium: "Adhésion Elite",
-          menu_help: "Aide",
-          menu_logout: "Déconnexion",
-          settings_title: "Paramètres",
-          help_title: "Aide — Apprendre le jeu",
-          lang_saved: "Langue enregistrée",
-        },
-        it: {
-          menu_matches: "Partite",
-          menu_tactics: "Tattiche",
-          menu_squad: "Rosa",
-          menu_youth: "Settore giovanile",
-          menu_training: "Allenamento",
-          menu_transfer: "Trasferimenti",
-          menu_economy: "Economia",
-          menu_stadium: "Stadio",
-          menu_forum: "Forum",
-          menu_premium: "Abbonamento Elite",
-          menu_help: "Aiuto",
-          menu_logout: "Esci",
-          settings_title: "Impostazioni",
-          help_title: "Aiuto — Impara il gioco",
-          lang_saved: "Lingua salvata",
-        },
+      // ---- Dil sistemi (genişletilmiş) ----
+      const EM_I18N_BASE = {
+        menu_matches: ["Maçlar", "Matches", "Spiele", "Partidos", "Matchs", "Partite", "Jogos", "Wedstrijden", "Mecze", "Матчи"],
+        menu_tactics: ["Taktikler", "Tactics", "Taktik", "Táctica", "Tactiques", "Tattiche", "Táticas", "Tactiek", "Taktyka", "Тактика"],
+        menu_squad: ["Kadro", "Squad", "Kader", "Plantilla", "Effectif", "Rosa", "Elenco", "Selectie", "Kadra", "Состав"],
+        menu_youth: ["Altyapı", "Youth", "Jugend", "Cantera", "Formation", "Giovanili", "Base", "Jeugd", "Młodzież", "Академия"],
+        menu_training: ["Antrenman", "Training", "Training", "Entrenamiento", "Entraînement", "Allenamento", "Treino", "Training", "Trening", "Тренировка"],
+        menu_transfer: ["Transfer", "Transfer", "Transfer", "Transferencias", "Transferts", "Trasferimenti", "Transferências", "Transfers", "Transfery", "Трансферы"],
+        menu_economy: ["Ekonomi", "Economy", "Finanzen", "Economía", "Finances", "Economia", "Economia", "Economie", "Finanse", "Финансы"],
+        menu_stadium: ["Stadyum", "Stadium", "Stadion", "Estadio", "Stade", "Stadio", "Estádio", "Stadion", "Stadion", "Стадион"],
+        menu_forum: ["Forum", "Forum", "Forum", "Foro", "Forum", "Forum", "Fórum", "Forum", "Forum", "Форум"],
+        menu_premium: ["Elite Üyelik", "Elite Membership", "Elite Mitgliedschaft", "Membresía Elite", "Adhésion Elite", "Abbonamento Elite", "Assinatura Elite", "Elite-lidmaatschap", "Subskrypcja Elite", "Elite подписка"],
+        menu_help: ["Yardım", "Help", "Hilfe", "Ayuda", "Aide", "Aiuto", "Ajuda", "Help", "Pomoc", "Справка"],
+        menu_logout: ["Çıkış", "Log out", "Abmelden", "Cerrar sesión", "Déconnexion", "Esci", "Sair", "Uitloggen", "Wyloguj", "Выход"],
+        menu_national: ["Milli Takımlar", "National Teams", "Nationalmannschaften", "Selecciones", "Équipes nationales", "Nazionali", "Seleções", "Nationale teams", "Reprezentacje", "Сборные"],
+        menu_settings: ["Ayarlar", "Settings", "Einstellungen", "Ajustes", "Paramètres", "Impostazioni", "Definições", "Instellingen", "Ustawienia", "Настройки"],
+        settings_title: ["Ayarlar", "Settings", "Einstellungen", "Ajustes", "Paramètres", "Impostazioni", "Definições", "Instellingen", "Ustawienia", "Настройки"],
+        help_title: ["Yardım — Oyunu Öğren", "Help — Learn the game", "Hilfe — Spiel lernen", "Ayuda — Aprende el juego", "Aide — Apprendre le jeu", "Aiuto — Impara il gioco", "Ajuda — Aprende o jogo", "Help — Leer het spel", "Pomoc — Poznaj grę", "Справка — Изучите игру"],
+        help_hint: ["Detaylı rehber · Tüm sistemler", "Detailed guide · All systems", "Ausführlicher Leitfaden", "Guía detallada", "Guide détaillé", "Guida dettagliata", "Guia detalhado", "Gedetailleerde gids", "Szczegółowy przewodnik", "Подробный гид"],
+        lang_saved: ["Dil kaydedildi", "Language saved", "Sprache gespeichert", "Idioma guardado", "Langue enregistrée", "Lingua salvata", "Idioma guardado", "Taal opgeslagen", "Język zapisany", "Язык сохранён"],
+        on: ["Açık", "On", "An", "Activado", "Activé", "Attivo", "Ligado", "Aan", "Włączone", "Вкл"],
+        off: ["Kapalı", "Off", "Aus", "Desactivado", "Désactivé", "Disattivo", "Desligado", "Uit", "Wyłączone", "Выкл"],
+        tab_groups: ["Gruplar", "Groups", "Gruppen", "Grupos", "Groupes", "Gironi", "Grupos", "Groepen", "Grupy", "Группы"],
+        tab_rank: ["Sıralama", "Ranking", "Rangliste", "Clasificación", "Classement", "Classifica", "Classificação", "Ranglijst", "Ranking", "Рейтинг"],
+        tab_fixtures: ["Fikstür", "Fixtures", "Spielplan", "Calendario", "Calendrier", "Calendario", "Calendário", "Programma", "Terminarz", "Календарь"],
+        tab_kings: ["Krallık", "Top scorers", "Torschützen", "Goleadores", "Buteurs", "Marcatori", "Artilheiros", "Topscoorders", "Strzelcy", "Бомбардиры"],
+        tab_history: ["Tarihçe", "History", "Historie", "Historial", "Historique", "Storia", "História", "Geschiedenis", "Historia", "История"],
+        tab_stats: ["İstatistik", "Stats", "Statistik", "Estadísticas", "Stats", "Statistiche", "Estatísticas", "Statistieken", "Statystyki", "Статистика"],
+        nat_a: ["A Milli", "Senior", "A-Team", "Absoluta", "A", "Maggiore", "Principal", "A-ploeg", "A", "Основная"],
+        nat_u21: ["U21", "U21", "U21", "Sub-21", "U21", "U21", "Sub-21", "U21", "U21", "U21"],
+        help_start_t: ["Başlangıç", "Getting started", "Start", "Inicio", "Début", "Inizio", "Início", "Start", "Start", "Старт"],
+        help_start: [
+          "Kulübünü seç, kadroyu incele, taktiği ayarla. İlk maçını oynamadan önce diziliş ve oyun stilini belirle. Geri tuşu her zaman bir önceki sayfaya döner; kariyer cihazına otomatik kaydedilir.",
+          "Pick your club, review the squad, set tactics before the first match. Back always returns to the previous page; career auto-saves on device.",
+          "Wähle deinen Klub, prüfe den Kader, stelle die Taktik ein. Zurück führt immer zur vorherigen Seite; der Karrierestand wird lokal gespeichert.",
+          "Elige club, revisa plantilla y táctica. Atrás vuelve a la página anterior; la carrera se guarda en el dispositivo.",
+          "Choisis ton club, regarde l'effectif, règle la tactique. Retour = page précédente ; carrière sauvegardée localement.",
+          "Scegli club, rosa e tattica. Indietro torna alla pagina precedente; carriera salvata sul dispositivo.",
+          "Escolhe o clube, vê o elenco e a tática. Voltar regressa à página anterior; carreira guardada no dispositivo.",
+          "Kies club, selectie en tactiek. Terug gaat naar de vorige pagina; carrière wordt lokaal opgeslagen.",
+          "Wybierz klub, kadrę i taktykę. Wstecz wraca do poprzedniej strony; kariera zapisuje się lokalnie.",
+          "Выберите клуб, состав и тактику. Назад — предыдущая страница; карьера сохраняется на устройстве.",
+        ],
+        help_match_t: ["Maçlar", "Matches", "Spiele", "Partidos", "Matchs", "Partite", "Jogos", "Wedstrijden", "Mecze", "Матчи"],
+        help_match: [
+          "Lig, Kupa, Kıtalar Ligi, Milli ve Canlı maçlar menüden açılır. Maç bitince oyuncular otomatik skill kazanır; antrenör uzmanlığı bu artışı güçlendirir. Skora tıklayınca maç raporu açılır. Kupada takım adı ve skor tıklanabilirdir.",
+          "League, Cup, Continental, National and Live matches are under Matches. After full-time, players gain skills automatically; coaches boost growth. Tap a score for the match report. In the cup, teams and scores are clickable.",
+          "Liga, Pokal, Kontinental, National und Live unter Spiele. Nach Abpfiff steigen Skills automatisch. Tippe auf den Spielstand für den Bericht. Im Pokal sind Teams und Spielstände klickbar.",
+          "Liga, Copa, Continental, Selección y En vivo. Tras el silbato suben habilidades. Toca el marcador para el informe. En la copa, equipos y marcadores son clicables.",
+          "Championnat, Coupe, Continental, National et Live. Après le match, skills auto. Touche le score pour le rapport. En coupe, clubs et scores sont cliquables.",
+          "Campionato, Coppa, Continentale, Nazionale e Live. Dopo il fischio skill automatiche. Tocca il punteggio per il report. In coppa squadre e punteggi sono cliccabili.",
+          "Liga, Taça, Continental, Seleção e Ao vivo. Após o apito, skills automáticas. Toca no resultado para o relatório. Na taça, clubes e resultados são clicáveis.",
+          "Competitie, Beker, Continentaal, Nationaal en Live. Na afloop automatische skills. Tik op de score voor het rapport. In de beker zijn clubs en scores klikbaar.",
+          "Liga, Puchar, Kontynentalna, Reprezentacja i Live. Po meczu skill automatycznie. Kliknij wynik po raport. W pucharze kluby i wyniki są klikalne.",
+          "Лига, Кубок, Континент, Сборная и Live. После матча навыки растут автоматически. Нажмите счёт для отчёта. В кубке клубы и счёт кликабельны.",
+        ],
+        help_train_t: ["Antrenman & Antrenör", "Training & coaches", "Training & Trainer", "Entrenamiento", "Entraînement", "Allenamento", "Treino", "Training", "Trening", "Тренировка"],
+        help_train: [
+          "Manuel antrenman yoktur. Skill artışı maç sonunda verilir. Antrenör ekle/güncelle: uzmanlık skill'i ve seviye (1–5) maç sonu gelişimini etkiler. Kondisyon düşükse gelişim azalır.",
+          "No manual training. Skill gains happen after matches. Hire coaches (skill + level 1–5) to boost post-match growth. Low condition reduces gains.",
+          "Kein manuelles Training. Skill-Gewinne nach Spielen. Trainer (Skill + Stufe 1–5) boosten das Wachstum. Niedrige Kondition mindert den Effekt.",
+          "Sin entrenamiento manual. Ganancias tras partidos. Entrenadores (habilidad + nivel 1–5). Baja condición reduce el efecto.",
+          "Pas d'entraînement manuel. Gains après matchs. Coachs (skill + niveau 1–5). Condition basse = moins de gains.",
+          "Niente allenamento manuale. Guadagni dopo le partite. Allenatori (skill + livello 1–5).",
+          "Sem treino manual. Ganhos após jogos. Treinadores (skill + nível 1–5).",
+          "Geen handmatige training. Winst na wedstrijden. Trainers (skill + niveau 1–5).",
+          "Bez ręcznego treningu. Wzrost po meczach. Trenerzy (skill + poziom 1–5).",
+          "Без ручной тренировки. Рост после матчей. Тренеры (скилл + уровень 1–5).",
+        ],
+        help_youth_t: ["Altyapı / Akademi", "Youth / Academy", "Jugend / Akademie", "Cantera", "Formation", "Giovanili", "Base", "Jeugd", "Młodzież", "Академия"],
+        help_youth: [
+          "Sezonluk 12 oyuncu çekme hakkın vardır. Scout ve akademi seviyesi oyuncu kalitesini artırır. Yükseltme süreleri seviyeye göre uzar (1→2: 5 dk, 2→3: 15 dk, 3→4: 45 dk, 4→5: 2 saat).",
+          "12 youth draws per season. Scout and academy levels raise talent quality. Upgrade times grow by level (5 min → 15 → 45 → 2 hours).",
+          "12 Jugendzüge pro Saison. Scout- und Akademiestufe erhöhen die Qualität. Upgrade-Zeiten steigen mit der Stufe (5 Min → 15 → 45 → 2 Std).",
+          "12 fichajes juveniles por temporada. Niveles de ojeador y academia mejoran la calidad. Tiempos: 5 min → 15 → 45 → 2 h.",
+          "12 tirages jeunes par saison. Niveaux scout/académie. Durées : 5 min → 15 → 45 → 2 h.",
+          "12 pescaggi a stagione. Livelli scout/accademia. Tempi: 5 min → 15 → 45 → 2 ore.",
+          "12 sorteios por época. Níveis de olheiro/academia. Tempos: 5 min → 15 → 45 → 2 h.",
+          "12 trekkingen per seizoen. Scout-/academieniveau. Tijden: 5 min → 15 → 45 → 2 u.",
+          "12 losowań na sezon. Poziomy skauta/akademii. Czasy: 5 min → 15 → 45 → 2 godz.",
+          "12 юношеских наборов за сезон. Уровни скаута/академии. Время: 5 мин → 15 → 45 → 2 ч.",
+        ],
+        help_transfer_t: ["Transfer", "Transfers", "Transfers", "Transferencias", "Transferts", "Trasferimenti", "Transferências", "Transfers", "Transfery", "Трансферы"],
+        help_transfer: [
+          "Açık artırmadan oyuncu al, kadrodan sat (en az 24 saat listede). Tekliflerim ile tekliflerini izle. Süre dolunca en yüksek teklif kazanır.",
+          "Buy via auction, list players to sell (min 24h). Track bids under My offers. Highest bid wins when time ends.",
+          "Auktion kaufen, Spieler verkaufen (min. 24h). Gebote unter Meine Angebote. Höchstgebot gewinnt.",
+          "Compra en subasta, vende (mín. 24 h). Sigue ofertas. Gana la más alta al finalizar.",
+          "Enchères, vente (min 24 h). Offres suivies. Meilleure offre gagne.",
+          "Aste, vendita (min 24 ore). Offerte in Le mie offerte.",
+          "Leilão, venda (mín. 24 h). Ofertas em As minhas ofertas.",
+          "Veiling, verkopen (min 24 u). Bod onder Mijn biedingen.",
+          "Aukcja, sprzedaż (min. 24 h). Oferty w Moje oferty.",
+          "Аукцион, продажа (мин. 24 ч). Ставки в Мои предложения.",
+        ],
+        help_nat_t: ["Milli Takımlar", "National teams", "Nationalmannschaften", "Selecciones", "Équipes nationales", "Nazionali", "Seleções", "Nationale teams", "Reprezentacje", "Сборные"],
+        help_nat: [
+          "A Milli ve U21 sekmeleri: Gruplar, Sıralama, Fikstür, Krallık, Tarihçe, İstatistik, Forma. Milli Takımı Yönet ile kadro ve taktik ayarlarsın; yönet ekranında da aynı bilgi sekmeleri açıktır. Ülke bayrakları isimlerin yanında görünür.",
+          "Senior and U21 tabs: Groups, Ranking, Fixtures, Scorers, History, Stats, Kit. Manage National Team for squad/tactics; info tabs stay available. Country flags appear next to names.",
+          "A und U21: Gruppen, Rangliste, Spielplan, Torschützen, Historie, Statistik, Trikot. Nationalteam verwalten für Kader/Taktik. Flaggen neben Ländernamen.",
+          "Absoluta y Sub-21: grupos, ranking, calendario, goleadores, historial, stats, equipación. Banderas junto a los países.",
+          "A et U21 : groupes, classement, calendrier, buteurs, historique, stats, maillot. Drapeaux visibles.",
+          "A e U21: gironi, classifica, calendario, marcatori, storia, stats, kit. Bandiere accanto ai paesi.",
+          "Principal e Sub-21: grupos, ranking, calendário, artilheiros, história, stats, equipamento. Bandeiras junto aos países.",
+          "A en U21: groepen, ranglijst, programma, scorers, geschiedenis, stats, shirt. Vlaggen bij landen.",
+          "A i U21: grupy, ranking, terminarz, strzelcy, historia, stats, strój. Flagi przy krajach.",
+          "A и U21: группы, рейтинг, календарь, бомбардиры, история, stats, форма. Флаги у стран.",
+        ],
+        help_cup_t: ["Kupa", "Cup", "Pokal", "Copa", "Coupe", "Coppa", "Taça", "Beker", "Puchar", "Кубок"],
+        help_cup: [
+          "Eleme usulü kupa. Takım adına tıkla → kulüp profili. Skora tıkla → maç raporu. Krallıkta oyuncu + takım listelenir.",
+          "Knockout cup. Tap a team for club profile, tap a score for the report. Kings list players and clubs.",
+          "K.o.-Pokal. Team antippen → Klubprofil, Spielstand → Bericht. Torschützenliste mit Spielern und Klubs.",
+          "Eliminatorias. Toca equipo → perfil; marcador → informe. Goleadores con jugadores y clubes.",
+          "Élimination directe. Club cliquable, score → rapport. Buteurs joueurs + clubs.",
+          "Eliminazione diretta. Club e punteggio cliccabili. Marcatori con giocatori e club.",
+          "Eliminatórias. Clube e resultado clicáveis. Artilheiros com jogadores e clubes.",
+          "Knock-out. Club en score klikbaar. Scorers met spelers en clubs.",
+          "Puchar pucharowy. Klub i wynik klikalne. Strzelcy z graczami i klubami.",
+          "На вылет. Клуб и счёт кликабельны. Бомбардиры с игроками и клубами.",
+        ],
+        help_daily_t: ["Günlük ödül", "Daily reward", "Tagesbonus", "Recompensa diaria", "Récompense quotidienne", "Ricompensa giornaliera", "Recompensa diária", "Dagelijkse beloning", "Codzienna nagroda", "Ежедневная награда"],
+        help_daily: [
+          "Her gün bir kez bütçe ödülü. Seri günlerde ödül artar; bir gün kaçırırsan seri sıfırlanır. Elite üyede x2.",
+          "One budget reward per day. Streaks increase the amount; missing a day resets. Elite members get x2.",
+          "Ein Budgetbonus pro Tag. Serie erhöht den Betrag; ein verpasster Tag setzt zurück. Elite x2.",
+          "Una recompensa al día. Rachas aumentan; fallar un día reinicia. Elite x2.",
+          "Une récompense/jour. Séries augmentent ; un jour manqué remet à zéro. Elite x2.",
+          "Una al giorno. Serie aumenta; giorno perso azzera. Elite x2.",
+          "Uma por dia. Sequências aumentam; falhar um dia reinicia. Elite x2.",
+          "Eén per dag. Reeks verhoogt; gemiste dag reset. Elite x2.",
+          "Jedna dziennie. Serie rosną; pominięty dzień zeruje. Elite x2.",
+          "Одна в день. Серия растёт; пропуск сбрасывает. Elite x2.",
+        ],
+        help_elite_t: ["Elite Üyelik", "Elite Membership", "Elite Mitgliedschaft", "Membresía Elite", "Adhésion Elite", "Abbonamento Elite", "Assinatura Elite", "Elite-lidmaatschap", "Subskrypcja Elite", "Elite подписка"],
+        help_elite: [
+          "Kulüp forma/logo, ikinci takım, transfer önceliği, günlük ödül x2. Durumu Ayarlar'dan kontrol edebilirsin.",
+          "Club kit/logo, second team, transfer priority, daily reward x2. Check status in Settings.",
+          "Klubtrikot/Logo, zweites Team, Transferpriorität, Tagesbonus x2.",
+          "Kit/logo, segundo equipo, prioridad de traspasos, recompensa x2.",
+          "Maillot/logo, 2e équipe, priorité transferts, récompense x2.",
+          "Kit/logo, seconda squadra, priorità trasferimenti, ricompensa x2.",
+          "Kit/logo, segunda equipa, prioridade de transferências, recompensa x2.",
+          "Shirt/logo, tweede team, transferprioriteit, beloning x2.",
+          "Strój/logo, druga drużyna, priorytet transferów, nagroda x2.",
+          "Форма/лого, вторая команда, приоритет трансферов, награда x2.",
+        ],
+        help_tips_t: ["İpuçları", "Tips", "Tipps", "Consejos", "Astuces", "Consigli", "Dicas", "Tips", "Wskazówki", "Советы"],
+        help_tips: [
+          "Kondisyonu yüksek tut; doğru mevkiye diz. Ev sahibi hafif avantajlıdır. Kupa ve milli maçlar lig günlerinden ayrıdır. Dil seçimi Ayarlar'dan tüm arayüze yansır.",
+          "Keep condition high; play players in natural roles. Home side has a slight edge. Cup and national days differ from league days. Language in Settings applies across the UI.",
+          "Kondition hoch halten; natürliche Positionen. Heimvorteil. Sprache in den Einstellungen gilt für die UI.",
+          "Mantén la condición; posiciones naturales. Ligera ventaja local. Idioma en Ajustes.",
+          "Bonne condition ; postes naturels. Léger avantage domicile. Langue dans Paramètres.",
+          "Condizione alta; ruoli naturali. Vantaggio casa. Lingua nelle Impostazioni.",
+          "Condição alta; posições naturais. Vantagem de casa. Idioma nas Definições.",
+          "Conditie hoog; natuurlijke posities. Thuisvoordeel. Taal in Instellingen.",
+          "Wysoka kondycja; naturalne pozycje. Lekka przewaga gospodarzy. Język w Ustawieniach.",
+          "Высокая кондиция; родные позиции. Домашнее преимущество. Язык в Настройках.",
+        ],
       };
+      const EM_LANG_ORDER = ["tr", "en", "de", "es", "fr", "it", "pt", "nl", "pl", "ru"];
+      const EM_I18N = {};
+      EM_LANG_ORDER.forEach(function (lang, idx) {
+        EM_I18N[lang] = {};
+        Object.keys(EM_I18N_BASE).forEach(function (key) {
+          const arr = EM_I18N_BASE[key];
+          EM_I18N[lang][key] = arr[idx] != null ? arr[idx] : arr[0];
+        });
+      });
       function getGameLang() {
         return localStorage.getItem("em_lang") || "tr";
       }
@@ -10463,9 +11826,47 @@
         document.documentElement.lang = lang;
         applyMenuLanguage();
         try {
+          renderHelpContent();
+        } catch (e) {}
+        try {
           if (typeof pushNotification === "function")
             pushNotification("🌐", t("lang_saved"), "Sistem");
         } catch (e) {}
+      }
+      function renderHelpContent() {
+        const box = document.getElementById("helpContent");
+        if (!box) return;
+        const sections = [
+          ["help_start_t", "help_start", "#38bdf8"],
+          ["help_match_t", "help_match", "#a78bfa"],
+          ["help_train_t", "help_train", "#facc15"],
+          ["help_youth_t", "help_youth", "#4ade80"],
+          ["help_transfer_t", "help_transfer", "#f59e0b"],
+          ["help_nat_t", "help_nat", "#f472b6"],
+          ["help_cup_t", "help_cup", "#fb923c"],
+          ["help_daily_t", "help_daily", "#34d399"],
+          ["help_elite_t", "help_elite", "#e879f9"],
+          ["help_tips_t", "help_tips", "#94a3b8"],
+        ];
+        box.innerHTML = sections
+          .map(function (sec) {
+            return (
+              '<div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">' +
+              '<div style="font-weight:800;color:' +
+              sec[2] +
+              ';margin-bottom:6px;">' +
+              t(sec[0]) +
+              "</div>" +
+              '<div style="font-size:13px;color:#cbd5e1;line-height:1.55;">' +
+              t(sec[1]) +
+              "</div></div>"
+            );
+          })
+          .join("");
+        const hint = document.querySelector("#page-help .formation-hint");
+        if (hint) hint.innerText = t("help_hint");
+        const ht = document.querySelector("#page-help .tactics-title");
+        if (ht) ht.innerText = "❓ " + t("help_title");
       }
       function applyMenuLanguage() {
         try {
@@ -10482,6 +11883,8 @@
             ["goToPremium()", "menu_premium"],
             ["goToHelp()", "menu_help"],
             ["logoutUser()", "menu_logout"],
+            ["goToNationalTeams()", "menu_national"],
+            ["goToSettings()", "menu_settings"],
           ];
           map.forEach(function (pair) {
             const el = document.querySelector(
@@ -10489,17 +11892,51 @@
             );
             if (el) el.innerText = t(pair[1]);
           });
+          document.querySelectorAll("[data-i18n]").forEach(function (el) {
+            const key = el.getAttribute("data-i18n");
+            if (key) el.innerText = t(key);
+          });
           const st = document.querySelector("#page-settings .tactics-title");
           if (st) st.innerText = "⚙️ " + t("settings_title");
           const ht = document.querySelector("#page-help .tactics-title");
           if (ht) ht.innerText = "❓ " + t("help_title");
+          const sb = document.getElementById("settingsSoundBtn");
+          const nb = document.getElementById("settingsNotifBtn");
+          if (sb) {
+            const soundOn = localStorage.getItem("em_sound") !== "off";
+            sb.innerText = soundOn ? t("on") : t("off");
+          }
+          if (nb) {
+            const notifOn = localStorage.getItem("em_notif") !== "off";
+            nb.innerText = notifOn ? t("on") : t("off");
+          }
+          document.querySelectorAll("#nationalSubTabs .nat-subtab").forEach(function (b) {
+            const sub = b.getAttribute("data-sub");
+            const keyMap = {
+              groups: "tab_groups",
+              rank: "tab_rank",
+              fixtures: "tab_fixtures",
+              kings: "tab_kings",
+              history: "tab_history",
+              stats: "tab_stats",
+            };
+            if (keyMap[sub]) b.innerText = t(keyMap[sub]);
+          });
+          const natA = document.getElementById("natTabA");
+          const natU = document.getElementById("natTabU21");
+          if (natA) natA.innerText = t("nat_a");
+          if (natU) natU.innerText = t("nat_u21");
         } catch (e) {}
       }
       window.setGameLanguage = setGameLanguage;
       window.t = t;
+      window.renderHelpContent = renderHelpContent;
       try {
         document.documentElement.lang = getGameLang();
-        setTimeout(applyMenuLanguage, 0);
+        setTimeout(function () {
+          applyMenuLanguage();
+          renderHelpContent();
+        }, 0);
       } catch (e) {}
       function toggleSoundFromSettings() {
         try {
@@ -10575,7 +12012,7 @@
               "</div></div>";
           } else {
             box.innerHTML =
-              '<div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;color:#94a3b8;font-size:13px;">Deneme süren bitti. Elite ile forma &amp; logo (kulüp), ikinci takım, transfer önceliği ve günlük ödül x2 devam eder.</div>';
+              '<div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;color:#94a3b8;font-size:13px;">Deneme süren bitti. Elite ile forma &amp; logo (kulüp), ikinci takım, takım/stadyum adı değiştirme, transfer önceliği ve günlük ödül x2 devam eder.</div>';
           }
         }
         if (!plans) return;
@@ -10636,7 +12073,306 @@
           .join("");
       }
       window.goToPremium = goToPremium;
+
       window.activatePremium = activatePremium;
+
+      // ---- Global arama (oyuncu / kullanıcı) ----
+      let _searchTab = "all";
+      function goToSearch() {
+        hideMainMenuAndShowBack();
+        switchPage("page-search");
+        const box = document.getElementById("globalSearchResults");
+        if (box && !box.innerHTML)
+          box.innerHTML =
+            '<div style="color:#64748b;text-align:center;padding:16px;">İsim veya kullanıcı no yazıp Ara’ya bas.</div>';
+        setTimeout(function () {
+          const inp = document.getElementById("globalSearchInput");
+          if (inp) inp.focus();
+        }, 50);
+      }
+      window.goToSearch = goToSearch;
+      function setSearchTab(tab) {
+        _searchTab = tab || "all";
+        document.querySelectorAll(".search-tab").forEach(function (b) {
+          const on = b.getAttribute("data-stab") === _searchTab;
+          b.style.background = on ? "" : "#334155";
+          b.classList.toggle("active", on);
+        });
+        runGlobalSearch();
+      }
+      window.setSearchTab = setSearchTab;
+      function collectSearchablePlayers() {
+        const out = [];
+        try {
+          const teams = [teamConfig.home, teamConfig.away];
+          teams.forEach(function (team) {
+            if (!team) return;
+            const all = []
+              .concat(team.players || [])
+              .concat(team.bench || []);
+            all.forEach(function (p) {
+              if (!p) return;
+              out.push({
+                type: "player",
+                id: String(p.id != null ? p.id : p.number || ""),
+                name: p.name || "",
+                number: p.number,
+                pos: p.pos,
+                team: team.name,
+                player: p,
+              });
+            });
+          });
+        } catch (e) {}
+        try {
+          if (typeof youthRoster !== "undefined" && youthRoster.home) {
+            youthRoster.home.forEach(function (p) {
+              out.push({
+                type: "player",
+                id: String(p.id != null ? p.id : ""),
+                name: p.name || "",
+                number: p.number,
+                pos: p.pos,
+                team: "Altyapı",
+                player: p,
+              });
+            });
+          }
+        } catch (e) {}
+        return out;
+      }
+      function collectSearchableUsers() {
+        const out = [];
+        const seen = {};
+        function add(name, no) {
+          const key = String(name || "").toLowerCase();
+          if (!key || seen[key]) return;
+          seen[key] = 1;
+          out.push({
+            type: "user",
+            name: name,
+            no: no != null ? String(no) : "",
+          });
+        }
+        try {
+          if (typeof managerName !== "undefined" && managerName)
+            add(managerName, typeof managerPublicNo !== "undefined" ? managerPublicNo : "");
+        } catch (e) {}
+        try {
+          if (typeof OTHER_MANAGERS !== "undefined")
+            OTHER_MANAGERS.forEach(function (n, i) {
+              add(n, String(1000 + i));
+            });
+        } catch (e) {}
+        try {
+          // localStorage kariyer anahtarlarından kullanıcı adları
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.indexOf("eliteManager_career_v") === 0) {
+              const parts = k.split("_");
+              const uname = parts[parts.length - 1];
+              if (uname && uname !== "guest") add(uname, "");
+            }
+          }
+        } catch (e) {}
+        return out;
+      }
+      function runGlobalSearch() {
+        const inp = document.getElementById("globalSearchInput");
+        const q = ((inp && inp.value) || "").trim().toLowerCase();
+        const box = document.getElementById("globalSearchResults");
+        if (!box) return;
+        if (!q) {
+          box.innerHTML =
+            '<div style="color:#64748b;text-align:center;padding:16px;">Aramak için en az 1 karakter yaz.</div>';
+          return;
+        }
+        let html = "";
+        if (_searchTab === "all" || _searchTab === "players") {
+          const players = collectSearchablePlayers().filter(function (p) {
+            return (
+              (p.name && p.name.toLowerCase().indexOf(q) >= 0) ||
+              (p.id && String(p.id).toLowerCase().indexOf(q) >= 0) ||
+              (p.number != null && String(p.number) === q)
+            );
+          });
+          html +=
+            '<div class="youth-section-title">Oyuncular (' +
+            players.length +
+            ")</div>";
+          if (!players.length)
+            html +=
+              '<div style="color:#64748b;padding:8px;">Eşleşen oyuncu yok.</div>';
+          else
+            players.slice(0, 40).forEach(function (p, idx) {
+              html +=
+                '<div class="clickable-player" style="padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;cursor:pointer;" data-sidx="' +
+                idx +
+                '">' +
+                "<b>" +
+                (p.name || "?") +
+                "</b> · #" +
+                (p.number != null ? p.number : "?") +
+                " · " +
+                (p.pos || "") +
+                ' <span style="color:#64748b;">(' +
+                (p.team || "") +
+                (p.id ? " · id:" + p.id : "") +
+                ")</span></div>";
+            });
+          window.__searchPlayerHits = players.slice(0, 40);
+        }
+        if (_searchTab === "all" || _searchTab === "users") {
+          const users = collectSearchableUsers().filter(function (u) {
+            return (
+              (u.name && u.name.toLowerCase().indexOf(q) >= 0) ||
+              (u.no && String(u.no).indexOf(q) >= 0)
+            );
+          });
+          html +=
+            '<div class="youth-section-title" style="margin-top:12px;">Kullanıcılar (' +
+            users.length +
+            ")</div>";
+          if (!users.length)
+            html +=
+              '<div style="color:#64748b;padding:8px;">Eşleşen kullanıcı yok.</div>';
+          else
+            users.slice(0, 40).forEach(function (u) {
+              html +=
+                '<div style="padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;">👤 <b>' +
+                u.name +
+                "</b>" +
+                (u.no
+                  ? ' <span style="color:#64748b;">· No: ' + u.no + "</span>"
+                  : "") +
+                "</div>";
+            });
+        }
+        box.innerHTML = html;
+        box.querySelectorAll("[data-sidx]").forEach(function (el) {
+          el.addEventListener("click", function () {
+            const i = parseInt(el.getAttribute("data-sidx"), 10);
+            const hit =
+              window.__searchPlayerHits && window.__searchPlayerHits[i];
+            if (hit && hit.player && typeof showPlayerProfile === "function")
+              showPlayerProfile(hit.player, hit.team);
+          });
+        });
+        // Sunucu araması (varsa)
+        if (typeof window.__emServerSearch === "function") {
+          window.__emServerSearch(q, _searchTab).then(function (extraHtml) {
+            if (extraHtml) box.innerHTML += extraHtml;
+          }).catch(function () {});
+        }
+      }
+      window.runGlobalSearch = runGlobalSearch;
+
+      function isEliteMember() {
+        try {
+          return !!(getPremiumStatus() && getPremiumStatus().active);
+        } catch (e) {
+          return false;
+        }
+      }
+      window.isEliteMember = isEliteMember;
+
+      function refreshEliteRenameUI() {
+        const hint = document.getElementById("eliteRenameHint");
+        const teamInp = document.getElementById("eliteTeamNameInput");
+        const stadInp = document.getElementById("eliteStadiumNameInput");
+        const elite = isEliteMember();
+        if (hint)
+          hint.innerText = elite
+            ? "Elite aktif · Takım ve stadyum adını değiştirebilirsin."
+            : "Takım ve stadyum adını değiştirmek Elite üyeliğe özeldir.";
+        if (teamInp) {
+          teamInp.disabled = !elite;
+          try {
+            teamInp.value = (teamConfig.home && teamConfig.home.name) || "";
+          } catch (e) {}
+        }
+        if (stadInp) {
+          stadInp.disabled = !elite;
+          try {
+            stadInp.value =
+              (typeof stadium !== "undefined" && stadium.name) || "";
+          } catch (e) {}
+        }
+      }
+      window.refreshEliteRenameUI = refreshEliteRenameUI;
+
+      function renameTeamNameElite() {
+        if (!isEliteMember()) {
+          alert("Takım adı değiştirmek Elite üyeliğe özeldir.");
+          try {
+            goToPremium();
+          } catch (e) {}
+          return;
+        }
+        const inp = document.getElementById("eliteTeamNameInput");
+        const name = String((inp && inp.value) || "").trim().slice(0, 32);
+        if (name.length < 3) {
+          alert("Takım adı en az 3 karakter olmalı.");
+          return;
+        }
+        const old = teamConfig.home.name;
+        teamConfig.home.name = name;
+        try {
+          if (typeof userHomeLeagueEntry !== "undefined")
+            userHomeLeagueEntry.name = name;
+        } catch (e) {}
+        try {
+          const row =
+            typeof findLeagueTeamByName === "function"
+              ? findLeagueTeamByName(old)
+              : null;
+          if (row) row.name = name;
+        } catch (e) {}
+        try {
+          document.querySelectorAll("#scoreBoard").forEach(function () {});
+          if (typeof updateBudgetUI === "function") updateBudgetUI();
+        } catch (e) {}
+        try {
+          if (typeof saveCareer === "function") saveCareer();
+        } catch (e) {}
+        if (typeof pushNotification === "function")
+          pushNotification("🏷️", "Takım adı: " + name, "Elite");
+        const note = document.getElementById("stadiumNote");
+        if (note) note.innerText = "Takım adı güncellendi: " + name;
+        if (typeof window.__emRenameTeamServer === "function")
+          window.__emRenameTeamServer(name);
+      }
+      window.renameTeamNameElite = renameTeamNameElite;
+
+      function renameStadiumNameElite() {
+        if (!isEliteMember()) {
+          alert("Stadyum adı değiştirmek Elite üyeliğe özeldir.");
+          try {
+            goToPremium();
+          } catch (e) {}
+          return;
+        }
+        const inp = document.getElementById("eliteStadiumNameInput");
+        const name = String((inp && inp.value) || "").trim().slice(0, 40);
+        if (name.length < 3) {
+          alert("Stadyum adı en az 3 karakter olmalı.");
+          return;
+        }
+        if (typeof stadium !== "undefined") stadium.name = name;
+        const el = document.getElementById("stadiumName");
+        if (el) el.innerText = name;
+        try {
+          if (typeof saveCareer === "function") saveCareer();
+        } catch (e) {}
+        if (typeof pushNotification === "function")
+          pushNotification("🏟️", "Stadyum: " + name, "Elite");
+        const note = document.getElementById("stadiumNote");
+        if (note) note.innerText = "Stadyum adı güncellendi: " + name;
+        if (typeof window.__emRenameStadiumServer === "function")
+          window.__emRenameStadiumServer(name);
+      }
+      window.renameStadiumNameElite = renameStadiumNameElite;
+
 
       // ---- Global duyurular (tüm oyuncular) ----
       const GLOBAL_ANNOUNCEMENTS = [
@@ -10796,11 +12532,25 @@
         else if (cond < 80) developmentAmount *= 0.75;
 
         const skillKeys = getSkillsForPos(player);
+        // Antrenör uzmanlık skill'i de adaylara eklensin (maç sonrası otomatik)
+        const coachSkills = [];
+        try {
+          if (isHome && typeof clubCoaches !== "undefined" && Array.isArray(clubCoaches)) {
+            clubCoaches.forEach((c) => {
+              if (c && c.skill && coachSkills.indexOf(c.skill) < 0)
+                coachSkills.push(c.skill);
+            });
+          }
+        } catch (e) {}
+        const pool = skillKeys.slice();
+        coachSkills.forEach((s) => {
+          if (pool.indexOf(s) < 0) pool.push(s);
+        });
         const skillCount = Math.min(
-          skillKeys.length,
-          2 + (potential >= 8 ? 1 : 0),
+          pool.length,
+          2 + (potential >= 8 ? 1 : 0) + (coachSkills.length ? 1 : 0),
         );
-        const shuffled = skillKeys.slice().sort(() => Math.random() - 0.5);
+        const shuffled = pool.slice().sort(() => Math.random() - 0.5);
         const selectedSkills = shuffled.slice(0, skillCount);
         let developmentLog = [];
         selectedSkills.forEach((skillKey) => {
@@ -10813,13 +12563,44 @@
           }
           if (player[skillKey] === undefined) return;
           const currentValue = Number(player[skillKey]) || 10;
-          // Küçük rastgelelik ±10%
-          const increase = developmentAmount * (0.9 + Math.random() * 0.2);
+          // Antrenör bonusu: ilgili skill'de daha fazla artış (manuel antrenman yok)
+          let coachMul = 1;
+          try {
+            if (isHome && typeof coachTrainingFactor === "function") {
+              coachMul = coachTrainingFactor(skillKey) || 1;
+            }
+          } catch (e) {}
+          const increase =
+            developmentAmount *
+            coachMul *
+            (0.9 + Math.random() * 0.2);
           const newValue = Math.min(20, currentValue + increase);
           const actualIncrease = newValue - currentValue;
           if (actualIncrease > 0.005) {
             player[skillKey] = newValue;
             developmentLog.push(skillKey + ": +" + actualIncrease.toFixed(2));
+            try {
+              if (
+                isHome &&
+                typeof pushTrainingDevEntry === "function"
+              ) {
+                const label =
+                  (typeof SKILL_LABELS_TR !== "undefined" &&
+                    SKILL_LABELS_TR[skillKey]) ||
+                  skillKey;
+                pushTrainingDevEntry({
+                  name: player.name,
+                  skill: skillKey,
+                  label: label,
+                  delta: actualIncrease.toFixed(2),
+                  from: currentValue.toFixed(1),
+                  to: newValue.toFixed(1),
+                  condDelta: "0",
+                  at: Date.now(),
+                  source: "match",
+                });
+              }
+            } catch (e) {}
           }
         });
         const experienceGain =
@@ -10977,7 +12758,12 @@
           [...(homeTeam.players || []), ...(homeTeam.bench || [])].forEach(
             (p) => {
               if (p && p.injured && p.injuryDaysLeft > 0) {
-                p.injuryDaysLeft--;
+                let step = 1;
+                try {
+                  if (typeof doctorRecoveryBonus === "function")
+                    step = 1 + Math.floor(doctorRecoveryBonus() / 3);
+                } catch (e) {}
+                p.injuryDaysLeft = Math.max(0, p.injuryDaysLeft - step);
                 if (p.injuryDaysLeft <= 0) {
                   p.injured = false;
                   p.injuryDaysLeft = 0;
@@ -12131,9 +13917,11 @@
       }
 
       function simulateQuickMatch(teamA, teamB) {
-        const diff = teamA.strength - teamB.strength;
-        const lambdaA = Math.max(0.25, 1.3 + diff / 40);
-        const lambdaB = Math.max(0.2, 1.15 - diff / 45);
+        // teamA = home, teamB = away (lig sim)
+        const sA = Number(teamA.strength) || 70;
+        const sB = Number(teamB.strength) || 70;
+        const lambdaA = strengthToGoalLambda(sA, sB, true);
+        const lambdaB = strengthToGoalLambda(sB, sA, false);
         return [poissonRandom(lambdaA), poissonRandom(lambdaB)];
       }
 
@@ -12711,7 +14499,13 @@
         pendingScoutLevel: null,
         pendingAcademyLevel: null,
       };
-      const UPGRADE_DURATION_MS = 90 * 1000;
+      /** 1→2: 5dk · 2→3: 15dk · 3→4: 45dk · 4→5: 120dk */
+      function upgradeDurationMs(currentLevel) {
+        const lv = Math.max(1, Math.min(5, parseInt(currentLevel, 10) || 1));
+        const minutesByLevel = { 1: 5, 2: 15, 3: 45, 4: 120, 5: 180 };
+        return (minutesByLevel[lv] || 180) * 60 * 1000;
+      }
+      const UPGRADE_DURATION_MS = upgradeDurationMs(1);
       function weekKeyNow() {
         const d = new Date();
         const t = new Date(
@@ -13955,11 +15749,12 @@
         addFinanceEntry("gider", "Scout yükseltme", -cost);
         updateBudgetUI();
         youthAcademy.pendingScoutLevel = youthAcademy.scoutLevel + 1;
-        youthAcademy.scoutUpgradeUntil = Date.now() + UPGRADE_DURATION_MS;
+        const scoutDur = upgradeDurationMs(youthAcademy.scoutLevel);
+        youthAcademy.scoutUpgradeUntil = Date.now() + scoutDur;
         setYouthNote(
           "Scout yükseltmesi başladı (" +
-            Math.round(UPGRADE_DURATION_MS / 1000) +
-            " sn) · " +
+            Math.round(scoutDur / 60000) +
+            " dk) · " +
             formatMoney(cost),
         );
         updateYouthAcademyUI();
@@ -13983,11 +15778,12 @@
         addFinanceEntry("gider", "Akademi yükseltme", -cost);
         updateBudgetUI();
         youthAcademy.pendingAcademyLevel = youthAcademy.academyLevel + 1;
-        youthAcademy.academyUpgradeUntil = Date.now() + UPGRADE_DURATION_MS;
+        const acadDur = upgradeDurationMs(youthAcademy.academyLevel);
+        youthAcademy.academyUpgradeUntil = Date.now() + acadDur;
         setYouthNote(
           "Akademi yükseltmesi başladı (" +
-            Math.round(UPGRADE_DURATION_MS / 1000) +
-            " sn) · " +
+            Math.round(acadDur / 60000) +
+            " dk) · " +
             formatMoney(cost),
         );
         updateYouthAcademyUI();
@@ -14421,17 +16217,21 @@
           oppAvg.stamina * 0.25 +
           ogtSimulation.matchBonuses[oppSide].defense * 1.4 +
           ogtSimulation.matchBonuses[oppSide].midfield * 0.8;
-        let prob = 0.1 + (pressScore - controlScore) * 0.0045;
-        if (team.gameStyle === "hücumsel") prob += 0.025;
-        else if (team.gameStyle === "defansif") prob -= 0.025;
-        // Takım gücü: güçlü taraf topu daha iyi tutar
+        let prob =
+          MATCH_BALANCE.turnBase + (pressScore - controlScore) * 0.0042;
+        if (team.gameStyle === "hücumsel") prob += 0.022;
+        else if (team.gameStyle === "defansif") prob -= 0.022;
+        // Güç farkı: zayıf taraf topu daha sık kaybeder
         try {
           const myP = calculateTeamStrength(possSide);
           const opP = calculateTeamStrength(oppSide);
-          const gap = (opP - myP) / 100; // zayıfken top kaybı artar
-          prob += gap * 0.14;
+          const gap = strengthGap(opP, myP); // rakip güçlüyse + 
+          prob += gap * MATCH_BALANCE.turnGap * 0.5;
         } catch (e) {}
-        return Math.max(0.035, Math.min(0.48, prob));
+        return Math.max(
+          MATCH_BALANCE.turnMin,
+          Math.min(MATCH_BALANCE.turnMax, prob),
+        );
       }
 
       function circulateBall() {
@@ -14685,22 +16485,121 @@
         return Math.max(25, Math.min(120, raw));
       }
 
-      /** Güç farkını abartan saldırı ihtimali + hafif ev sahibi avantajı */
+      /**
+       * Maç dengesi — güç farkı kalibrasyonu
+       * Hedef (yaklaşık, ev sahibi avantajı dahil):
+       *   eşit güç  → ev ~45% / berabere ~28% / dep ~27%
+       *   +10 güç   → favori ~60%
+       *   +20 güç   → favori ~72%
+       *   +30 güç   → favori ~82%
+       * Toplam gol bandı ~2.2–2.8 (eşit maçlarda)
+       */
+      const MATCH_BALANCE = {
+        homeAdv: 0.045, // saldırı payına ev avantajı
+        attackMin: 0.16,
+        attackMax: 0.84,
+        goalBase: 0.235,
+        goalSkill: 0.18,
+        goalGap: 0.16,
+        goalMin: 0.09,
+        goalMax: 0.55,
+        // Hızlı sim (poisson lambda)
+        lambdaBase: 1.22,
+        lambdaGap: 38, // diff/38 → gol beklentisi
+        lambdaHome: 0.14,
+        lambdaMin: 0.3,
+        lambdaMax: 3.15,
+        // Top kaybı
+        turnBase: 0.11,
+        turnGap: 0.16,
+        turnMin: 0.04,
+        turnMax: 0.46,
+      };
+
+      /** İki güç arasındaki normalize fark: (a-b)/ölçek → kabaca -1..+1 */
+      function strengthGap(attStr, defStr) {
+        const a = Number(attStr) || 50;
+        const b = Number(defStr) || 50;
+        return (a - b) / 50;
+      }
+
+      /**
+       * Logistic: güç farkı → saldırı / kazanma eğilimi (0–1)
+       * k≈1.1 → +10 güç (gap 0.2) anlamlı ama upset mümkün
+       */
+      function logisticStrengthShare(homeStr, awayStr, homeAdv) {
+        const gap = (Number(homeStr) || 50) - (Number(awayStr) || 50);
+        // 10 güç ≈ logit kayması ~0.55
+        const z = gap / 18 + (homeAdv || 0) * 8;
+        const p = 1 / (1 + Math.exp(-z * 1.05));
+        return p;
+      }
+
+      /** Ev sahibinin saldırı (şut) payı — güç farkına göre */
       function attackProbability() {
         const homeStrength = calculateTeamStrength("home");
         const awayStrength = calculateTeamStrength("away");
-        // Üstel eğri: 10% güç farkı ~ anlamlı üstünlük
-        const h = Math.pow(homeStrength, 1.35);
-        const a = Math.pow(awayStrength, 1.35);
-        let p = h / (h + a);
-        p += 0.04; // ev sahibi
-        // Aşırı skorları kes
-        return Math.max(0.22, Math.min(0.78, p));
+        let p = logisticStrengthShare(
+          homeStrength,
+          awayStrength,
+          MATCH_BALANCE.homeAdv,
+        );
+        return Math.max(
+          MATCH_BALANCE.attackMin,
+          Math.min(MATCH_BALANCE.attackMax, p),
+        );
+      }
+
+      /**
+       * İsabetli şuttan gol olasılığı — forvet skill + takım güç farkı
+       * attSide: "home" | "away"
+       */
+      function calibratedGoalChance(attSide, skillEdge) {
+        const defSide = attSide === "home" ? "away" : "home";
+        let gap = 0;
+        try {
+          gap = strengthGap(
+            calculateTeamStrength(attSide),
+            calculateTeamStrength(defSide),
+          );
+        } catch (e) {}
+        const se = Number(skillEdge) || 0;
+        let g =
+          MATCH_BALANCE.goalBase +
+          se * MATCH_BALANCE.goalSkill +
+          gap * MATCH_BALANCE.goalGap;
+        // Skor durumu: önde olan biraz daha temkinli (gol şansı hafif düşer)
+        try {
+          const lead =
+            attSide === "home" ? homeScore - awayScore : awayScore - homeScore;
+          if (lead >= 2) g *= 0.92;
+          else if (lead <= -2) g *= 1.06; // gerideyse biraz daha risk
+        } catch (e) {}
+        return Math.max(
+          MATCH_BALANCE.goalMin,
+          Math.min(MATCH_BALANCE.goalMax, g),
+        );
+      }
+
+      /** Hızlı simülasyon için beklenen gol (poisson λ) */
+      function strengthToGoalLambda(myStr, oppStr, isHome) {
+        const diff = (Number(myStr) || 70) - (Number(oppStr) || 70);
+        let lambda =
+          MATCH_BALANCE.lambdaBase +
+          diff / MATCH_BALANCE.lambdaGap +
+          (isHome ? MATCH_BALANCE.lambdaHome : 0);
+        return Math.max(
+          MATCH_BALANCE.lambdaMin,
+          Math.min(MATCH_BALANCE.lambdaMax, lambda),
+        );
       }
 
       function getSideMatchPower(side) {
         return calculateTeamStrength(side);
       }
+      window.MATCH_BALANCE = MATCH_BALANCE;
+      window.calibratedGoalChance = calibratedGoalChance;
+      window.strengthToGoalLambda = strengthToGoalLambda;
 
       function runMatchTick() {
         if (matchEnded) return;
@@ -15055,9 +16954,9 @@
               stats[attackKey].onTarget++;
               // İsabetli şutların çoğu kaleci/defans tarafından çelinir;
               // ortalama dönüşüm oranı gerçekçi seviyede (~%27-30) tutuluyor
-              const goalChance = Math.max(
-                0.11,
-                Math.min(0.52, 0.26 + skillEdge * 0.22),
+              const goalChance = calibratedGoalChance(
+                attackKey,
+                skillEdge,
               );
               if (Math.random() < goalChance) {
                 runVarReview(
@@ -16258,7 +18157,7 @@
             );
             if (side === "home") {
               player.injured = true;
-              player.injuryDaysLeft = 1 + Math.floor(Math.random() * 2); // 1-2 maç
+              player.injuryDaysLeft = Math.max(1, 1 + Math.floor(Math.random() * 2) - (typeof doctorRecoveryBonus === "function" ? Math.floor(doctorRecoveryBonus() / 4) : 0)); // 1-2 maç, doktor indirimi
             }
             return;
           }
@@ -16284,7 +18183,7 @@
           );
           if (side === "home") {
             player.injured = true;
-            player.injuryDaysLeft = 3 + Math.floor(Math.random() * 10); // 3-12 maç
+            player.injuryDaysLeft = Math.max(1, 3 + Math.floor(Math.random() * 10) - (typeof doctorRecoveryBonus === "function" ? doctorRecoveryBonus() : 0)); // 3-12, doktor kısaltır
           }
 
           const subsLeft = team.subsMax - team.subsUsed;
@@ -16538,6 +18437,125 @@
       // ============================================================
       // OYUNCU PROFİLİ MODAL
       // ============================================================
+
+      function renderPlayerProfileKit(player, teamName) {
+        const canvas = document.getElementById("modalKitCanvas");
+        const numEl = document.getElementById("modalKitNumber");
+        const metaEl = document.getElementById("modalKitMeta");
+        const num = player && player.number != null ? player.number : "?";
+        if (numEl) {
+          numEl.innerText = String(num);
+        }
+        // Hangi formayı kullan: kullanıcı takımıysa kulüp kiti
+        let kit = null;
+        let kitLabel = "Varsayılan forma";
+        try {
+          const homeName =
+            (typeof teamConfig !== "undefined" &&
+              teamConfig.home &&
+              teamConfig.home.name) ||
+            "";
+          const isUserTeam =
+            !teamName ||
+            teamName === homeName ||
+            teamName === "Altyapı" ||
+            (player && (player.fromAcademy || player.from_market));
+          if (typeof loadKitDesign === "function") {
+            if (isUserTeam) {
+              kit = loadKitDesign("club");
+              kitLabel = "Kulüp forması";
+            } else {
+              kit = loadKitDesign("club");
+              kitLabel = (teamName || "Takım") + " forması";
+            }
+          }
+        } catch (e) {}
+        if (!kit) {
+          kit = {
+            style: "solid",
+            primary: "#1d4ed8",
+            secondary: "#ffffff",
+            shorts: "#0f172a",
+            trim: "#facc15",
+            logo: null,
+            logoEmoji: false,
+          };
+        }
+        if (metaEl) {
+          metaEl.innerText =
+            kitLabel +
+            " · #" +
+            num +
+            (kit.style ? " · " + kit.style : "");
+        }
+        if (numEl) {
+          numEl.style.color = kit.trim || "#facc15";
+        }
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        const c1 = kit.primary || "#1d4ed8";
+        const c2 = kit.secondary || "#ffffff";
+        const shorts = kit.shorts || "#0f172a";
+        const trim = kit.trim || "#facc15";
+        const style = kit.style || "solid";
+        // body
+        ctx.fillStyle = c1;
+        if (style === "stripes") {
+          for (let x = 0; x < w; x += 10) {
+            ctx.fillStyle = Math.floor(x / 10) % 2 === 0 ? c1 : c2;
+            ctx.fillRect(x, 8, 10, 48);
+          }
+        } else if (style === "hoops") {
+          for (let y = 8; y < 56; y += 8) {
+            ctx.fillStyle = Math.floor((y - 8) / 8) % 2 === 0 ? c1 : c2;
+            ctx.fillRect(8, y, w - 16, 8);
+          }
+        } else {
+          ctx.fillStyle = c1;
+          ctx.fillRect(10, 8, w - 20, 48);
+        }
+        // sleeves
+        ctx.fillStyle = c2;
+        ctx.fillRect(2, 12, 10, 28);
+        ctx.fillRect(w - 12, 12, 10, 28);
+        // collar
+        ctx.strokeStyle = trim;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(w / 2 - 10, 8);
+        ctx.lineTo(w / 2, 16);
+        ctx.lineTo(w / 2 + 10, 8);
+        ctx.stroke();
+        // shorts
+        ctx.fillStyle = shorts;
+        ctx.fillRect(14, 56, w - 28, 22);
+        // number on shirt
+        ctx.fillStyle = trim;
+        ctx.font = "bold 22px Segoe UI, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(num), w / 2, 34);
+        // logo
+        if (kit.logo && kit.logoEmoji) {
+          ctx.font = "14px serif";
+          ctx.fillText(String(kit.logo), w / 2, 18);
+        } else if (kit.logo && !kit.logoEmoji) {
+          try {
+            const img = new Image();
+            img.onload = function () {
+              try {
+                ctx.drawImage(img, w / 2 - 8, 12, 16, 16);
+              } catch (e) {}
+            };
+            img.src = kit.logo;
+          } catch (e) {}
+        }
+      }
+      window.renderPlayerProfileKit = renderPlayerProfileKit;
+
       function showPlayerProfile(player, teamName) {
         const modal = document.getElementById("playerModal");
         const quality = calculatePlayerQuality(player);
@@ -16574,6 +18592,9 @@
           (player.age || "?") +
           " yaş · " +
           (teamName || "Takım");
+        try {
+          renderPlayerProfileKit(player, teamName);
+        } catch (e) {}
         const rating = computePlayerRating(player);
         document.getElementById("mRating").innerText = rating.toFixed(1);
         document.getElementById("mGoals").innerText = player.goals || 0;
@@ -18241,6 +20262,14 @@
 
       function startMatch() {
         if (matchStarted) return;
+        try {
+          if (localStorage.getItem("em_confirm_match") === "1") {
+            if (!confirm("Maça başlamak istediğine emin misin?")) return;
+          }
+          const sp = localStorage.getItem("em_match_speed");
+          if (sp === "2") matchSpeedMultiplier = 2;
+          else if (sp === "1") matchSpeedMultiplier = 1;
+        } catch (e) {}
         matchStarted = true;
         try {
           autoBenchInjuredStarters(teamConfig.home);
