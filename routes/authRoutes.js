@@ -15,8 +15,8 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { query, withTransaction } = require("./db");
-const clubsRepo = require("./repos/clubsRepo");
+const { query, withTransaction } = require("../db");
+const clubsRepo = require("../repos/clubsRepo");
 
 const JWT_SECRET = process.env.JWT_SECRET || "em-dev-secret-change-me";
 const JWT_EXPIRES = process.env.JWT_EXPIRES || "7d";
@@ -40,7 +40,7 @@ function authMiddleware(req, res, next) {
       clubId: decoded.clubId || null,
     };
     // Ban kontrolü (süreli ban otomatik kalkar)
-    const { getBanStatus } = require("./adminAntiCheatRoutes");
+    const { getBanStatus } = require("../adminAntiCheatRoutes");
     getBanStatus(req.user.id)
       .then((ban) => {
         if (ban && ban.banned) {
@@ -161,7 +161,7 @@ function createAuthRouter() {
       // Lig seyrekse botlarla doldur + fikstür (kullanıcı beklemesin)
       let leagueFill = null;
       try {
-        const botClubs = require("./botClubs");
+        const botClubs = require("../botClubs");
         const c = result.club;
         leagueFill = await botClubs.ensureLeagueFilled({
           country: (c && c.country) || "Türkiye",
@@ -328,7 +328,7 @@ function createAuthRouter() {
  */
 async function adminResetPasswordHandler(req, res) {
   try {
-    const { isAdmin } = require("./nationalSystem");
+    const { isAdmin } = require("../nationalSystem");
     if (!isAdmin(req.user.username)) {
       return res.status(403).json({ error: "Bu işlem için yetkin yok" });
     }
@@ -366,7 +366,7 @@ async function meHandler(req, res) {
     const club = await clubsRepo.getClubByUserId(req.user.id);
     let elite = { active: false, plan: null, until: null, trial: false };
     try {
-      const premiumSystem = require("./premiumSystem");
+      const premiumSystem = require("../premiumSystem");
       await premiumSystem.ensureTrial(req.user.id);
       elite = await premiumSystem.getStatus(req.user.id);
     } catch (e) {
