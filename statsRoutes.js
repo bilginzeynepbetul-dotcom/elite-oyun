@@ -5,7 +5,7 @@
 const express = require("express");
 const statsSystem = require("./statsSystem");
 const clubsRepo = require("./repos/clubsRepo");
-const { enrichClubId } = require("./authRoutes");
+const { enrichClubId } = require("./routes/authRoutes");
 const { isAdmin } = require("./nationalSystem");
 
 function createStatsRouter() {

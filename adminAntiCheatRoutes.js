@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
-const { isAdmin } = require('../middleware/authMiddleware');
+const db = require('./db');
+const { isAdmin } = require('./authMiddleware');
 
 // Ban listesi ve özet
 router.get('/summary', isAdmin, async (req, res) => {

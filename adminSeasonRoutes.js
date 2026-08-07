@@ -9,7 +9,7 @@ const seasonConfig = require("./seasonConfig");
 const leagueRepo = require("./repos/leagueRepo");
 const clubsRepo = require("./repos/clubsRepo");
 const { isAdmin } = require("./nationalSystem");
-const { enrichClubId } = require("./authRoutes");
+const { enrichClubId } = require("./routes/authRoutes");
 
 function createAdminSeasonRouter() {
   const router = express.Router();
