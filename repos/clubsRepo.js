@@ -226,6 +226,39 @@ async function getTeamName(clubId) {
   return rows[0] ? rows[0].name : null;
 }
 
+
+async function getKitDesign(clubId) {
+  const { rows } = await query(
+    `SELECT kit_design FROM clubs WHERE id = $1`,
+    [clubId],
+  );
+  return (rows[0] && rows[0].kit_design) || null;
+}
+
+async function saveKitDesign(clubId, kit) {
+  await query(
+    `UPDATE clubs SET kit_design = $2::jsonb WHERE id = $1`,
+    [clubId, JSON.stringify(kit || {})],
+  );
+  return { ok: true, kit };
+}
+
+async function getSecondTeam(clubId) {
+  const { rows } = await query(
+    `SELECT second_team FROM clubs WHERE id = $1`,
+    [clubId],
+  );
+  return (rows[0] && rows[0].second_team) || null;
+}
+
+async function saveSecondTeam(clubId, data) {
+  await query(
+    `UPDATE clubs SET second_team = $2::jsonb WHERE id = $1`,
+    [clubId, JSON.stringify(data || {})],
+  );
+  return { ok: true, secondTeam: data };
+}
+
 module.exports = {
   getClub,
   getClubByUserId,
@@ -235,4 +268,8 @@ module.exports = {
   saveTeam,
   getTeamName,
   rowToPlayer,
+  getKitDesign,
+  saveKitDesign,
+  getSecondTeam,
+  saveSecondTeam,
 };
