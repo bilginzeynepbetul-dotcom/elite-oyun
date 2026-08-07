@@ -84,6 +84,31 @@ function pickWeightedByTackle(team) {
   return outfield[outfield.length - 1];
 }
 
+/** Takımın pas stiline göre bu adımda "uzun pas" (rastgele takım arkadaşına,
+ *  komşu olmayan) verilme ihtimalini döndürür.
+ *   kısa    -> genelde komşu oyuncuya kısa pas
+ *   hızlı   -> normal tempo, orijinal davranışa yakın
+ *   uzun    -> sık sık uzun/sürpriz pas
+ *   karışık -> her pasta kısa ya da uzun moddan biri rastgele seçilir,
+ *              böylece hem uzun hem kısa paslar karışık şekilde denenir
+ */
+function longPassChance(style) {
+  switch (style) {
+    case "uzun":
+      return 0.55;
+    case "hizli":
+    case "hızlı":
+      return 0.25;
+    case "karisik":
+    case "karışık":
+      return Math.random() < 0.5 ? 0.15 : 0.55;
+    case "kisa":
+    case "kısa":
+    default:
+      return 0.15;
+  }
+}
+
 /** index-30.html'deki pickNextTeammate() portu — pas alacak bir sonraki oyuncu */
 function pickNextTeammate(team, currentIndex) {
   const famRank = { GK: -1, DF: 0, DM: 1, MF: 2, AM: 3, FW: 4 };
@@ -96,14 +121,16 @@ function pickNextTeammate(team, currentIndex) {
   const currentRankPos = order.findIndex((o) => o.i === currentIndex);
   const safeRankPos = currentRankPos >= 0 ? currentRankPos : 0;
 
+  const chance = longPassChance(team.passStyle);
+
   let nextEntry;
-  if (Math.random() < 0.75) {
-    // %75 ihtimalle komşu oyuncuya (bir öncekine/sonrakine) pas
+  if (Math.random() >= chance) {
+    // komşu oyuncuya (bir öncekine/sonrakine) kısa pas
     const step = Math.random() < 0.5 ? 1 : -1;
     const nextIdx = (((safeRankPos + step) % order.length) + order.length) % order.length;
     nextEntry = order[nextIdx];
   } else {
-    // %25 ihtimalle uzun/sürpriz pas
+    // uzun/sürpriz pas — sahadaki rastgele bir takım arkadaşına
     nextEntry = order[Math.floor(Math.random() * order.length)];
   }
   return nextEntry.i;
