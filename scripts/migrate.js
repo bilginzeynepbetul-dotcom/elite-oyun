@@ -32,6 +32,10 @@ const files = [
   "013_game_settings.sql",
   "014_calendar_friendlies.sql",
   "015_match_archive.sql",
+  "016_elite_subscriptions.sql",
+  "017_elite_features.sql",
+  "018_anti_cheat.sql",
+  "019_ban_fields.sql",
 ];
 
 async function main() {
