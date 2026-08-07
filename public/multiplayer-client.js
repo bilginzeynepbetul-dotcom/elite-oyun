@@ -3115,9 +3115,9 @@
         slice.forEach(function (r, i) {
           const p = [9, 7, 4, 1][i] || 0;
           html +=
-            '<div class="clickable-player" onclick="openCountryProfile && openCountryProfile(\\'' +
+            '<div class="clickable-player" onclick="openCountryProfile && openCountryProfile(\'' +
             r.c +
-            '\\')" style="padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;cursor:pointer;">' +
+            '\')" style="padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;cursor:pointer;">' +
             (i + 1) +
             ". " +
             r.flag +
@@ -3131,7 +3131,7 @@
             "</b> puan</div>";
         });
       }
-    }} else if (sub === "rank") {
+    } else if (sub === "rank") {
       html =
         '<div class="youth-section-title">Milli Takım Sıralaması' +
         suffix +
@@ -3568,7 +3568,7 @@
                 (t.isMeManager
                   ? '<button style="font-size:10px;padding:3px 6px;" onclick="event.stopPropagation();callUpNationalPlayer(\'' +
                     p.playerId +
-                    "')">Seç</button>"
+                    '\')">Seç</button>'
                   : "") +
                 "</span></div>",
             )
