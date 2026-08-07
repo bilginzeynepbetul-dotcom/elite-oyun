@@ -11,7 +11,7 @@ app.use(express.json());
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
-const adminAntiCheatRoutes = require('./adminAntiCheatRoutes');
+const adminAntiCheatRoutes = require('./routes/adminAntiCheatRoutes');
 
 // Ana route'lar
 app.use('/api/auth', authRoutes);
