@@ -1,5 +1,5 @@
 function checkCardEvents(match) {
-  if (Math.random() > 0.015) return null;
+  if (Math.random() > 0.01) return null;
   const side = Math.random() < 0.5 ? "home" : "away";
   const team = match.players[side].team;
   const p =
