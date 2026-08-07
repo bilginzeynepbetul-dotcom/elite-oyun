@@ -101,42 +101,8 @@ async function onMatchEnd(state) {
     console.error("[matchLifecycle] tickets", e);
   }
 
-  // Bildirim — her iki tarafın user'ına
-  try {
-    if (socialSystem && socialSystem.pushNotification && fixtureId) {
-      const fixture = await leagueRepo.getFixtureById(fixtureId);
-      if (fixture) {
-        const homeClub = await clubsRepo.getClub(fixture.homeClubId);
-        const awayClub = await clubsRepo.getClub(fixture.awayClubId);
-        const scoreText =
-          (fixture.homeName || "Ev") +
-          " " +
-          homeGoals +
-          " - " +
-          awayGoals +
-          " " +
-          (fixture.awayName || "Dep");
-        if (homeClub && homeClub.user_id) {
-          await socialSystem.pushNotification(
-            homeClub.user_id,
-            "⚽",
-            "Maç bitti: " + scoreText,
-            "Maç",
-          );
-        }
-        if (awayClub && awayClub.user_id) {
-          await socialSystem.pushNotification(
-            awayClub.user_id,
-            "⚽",
-            "Maç bitti: " + scoreText,
-            "Maç",
-          );
-        }
-      }
-    }
-  } catch (e) {
-    console.error("[matchLifecycle] notify", e);
-  }
+  // Not: Maç sonucu bildirimi kasıtlı olarak gönderilmiyor
+  // (kullanıcı isteğiyle kaldırıldı — bildirimlere maç skoru gelmesin).
 }
 
 /**

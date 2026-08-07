@@ -53,32 +53,8 @@ async function onCupMatchEnd(state) {
     console.error("[cupLifecycle] tickets", e);
   }
 
-  // Bildirim
-  try {
-    if (socialSystem && socialSystem.pushNotification && fixtureId) {
-      const fixture = await cupRepo.getFixtureById(fixtureId);
-      if (fixture) {
-        const homeClub = await clubsRepo.getClub(fixture.homeClubId);
-        const awayClub = await clubsRepo.getClub(fixture.awayClubId);
-        const penaltyNote = result && result.penalties ? " (penaltılarla)" : "";
-        const scoreText =
-          (fixture.homeName || "Ev") + " " + homeGoals + " - " + awayGoals +
-          " " + (fixture.awayName || "Dep") + penaltyNote;
-        if (homeClub && homeClub.user_id) {
-          await socialSystem.pushNotification(
-            homeClub.user_id, "🏅", "Kupa maçı bitti: " + scoreText, "Kupa",
-          );
-        }
-        if (awayClub && awayClub.user_id) {
-          await socialSystem.pushNotification(
-            awayClub.user_id, "🏅", "Kupa maçı bitti: " + scoreText, "Kupa",
-          );
-        }
-      }
-    }
-  } catch (e) {
-    console.error("[cupLifecycle] notify", e);
-  }
+  // Not: Maç sonucu bildirimi kasıtlı olarak gönderilmiyor
+  // (kullanıcı isteğiyle kaldırıldı — bildirimlere maç skoru gelmesin).
 
   // Tur tamamlandıysa sıradaki turu (ya da şampiyonu) oluştur
   try {

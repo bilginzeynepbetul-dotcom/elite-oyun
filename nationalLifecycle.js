@@ -157,19 +157,8 @@ async function onNationalMatchEnd(state, fixture) {
     console.error("[nationalLifecycle] finishFixture", e);
   }
 
-  try {
-    const team = await nationalRepo.getTeamById(fixture.nationalTeamId);
-    if (team && team.managerUserId && socialSystem && socialSystem.pushNotification) {
-      await socialSystem.pushNotification(
-        team.managerUserId,
-        "🏳️",
-        `Milli maç bitti: ${team.country} ${homeGoals} - ${awayGoals} ${fixture.opponentName}`,
-        "Milli Takım",
-      );
-    }
-  } catch (e) {
-    console.error("[nationalLifecycle] notify", e);
-  }
+  // Not: Maç sonucu bildirimi kasıtlı olarak gönderilmiyor
+  // (kullanıcı isteğiyle kaldırıldı — bildirimlere maç skoru gelmesin).
 
   try {
     await nationalSystem.scheduleNextFixtureIfNeeded(COUNTRY);
