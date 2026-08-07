@@ -1,0 +1,50 @@
+CREATE INDEX idx_fixtures_away ON fixtures (away_club_id);
+
+-- ------------------------------------------------------------
+-- 5. Match archive
+-- ------------------------------------------------------------
+CREATE TABLE match_results (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  fixture_id   UUID UNIQUE REFERENCES fixtures(id) ON DELETE SET NULL,
+  home_club_id UUID NOT NULL REFERENCES clubs(id),
+  away_club_id UUID NOT NULL REFERENCES clubs(id),
+  home_goals   SMALLINT NOT NULL,
+  away_goals   SMALLINT NOT NULL,
+  stats        JSONB NOT NULL DEFAULT '{}'::jsonb,
+  scorers      JSONB NOT NULL DEFAULT '[]'::jsonb,
+  finished_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE match_logs (
+  id         BIGSERIAL PRIMARY KEY,
+  match_id   UUID NOT NULL REFERENCES match_results(id) ON DELETE CASCADE,
+  minute     SMALLINT,
+  text       TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_match_logs_match ON match_logs (match_id);
+
+-- ------------------------------------------------------------
+-- 6. Transfer market
+-- ------------------------------------------------------------
+CREATE TYPE listing_status AS ENUM ('active', 'sold', 'expired', 'cancelled');
+
+CREATE TABLE transfer_listings (
+  id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id               UUID REFERENCES players(id) ON DELETE SET NULL,
+  seller_club_id          UUID REFERENCES clubs(id) ON DELETE SET NULL,
+  club_name_snapshot      VARCHAR(64) NOT NULL,
+  player_snapshot         JSONB NOT NULL,
+  auction_start           BIGINT NOT NULL,
+  current_bid             BIGINT NOT NULL,
+  highest_bidder_club_id  UUID REFERENCES clubs(id) ON DELETE SET NULL,
+  highest_bidder_name     VARCHAR(64),
+  auction_ends_at         TIMESTAMPTZ NOT NULL,
+  status                  listing_status NOT NULL DEFAULT 'active',
+  created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_listings_active_ends
+  ON transfer_listings (auction_ends_at)
+  WHERE status = 'active';

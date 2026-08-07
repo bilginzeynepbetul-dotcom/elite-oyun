@@ -1,0 +1,50 @@
+  amount     BIGINT NOT NULL,
+  label      VARCHAR(128) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_ledger_club_ts ON finance_ledger (club_id, created_at DESC);
+
+-- ------------------------------------------------------------
+-- 3. Players
+-- ------------------------------------------------------------
+CREATE TABLE players (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  club_id         UUID REFERENCES clubs(id) ON DELETE SET NULL,
+  name            VARCHAR(64) NOT NULL,
+  number          SMALLINT,
+  pos             VARCHAR(8) NOT NULL,
+  natural_pos     VARCHAR(8),
+  age             SMALLINT NOT NULL DEFAULT 18,
+  pace            REAL NOT NULL DEFAULT 10,
+  passing         REAL NOT NULL DEFAULT 10,
+  finishing       REAL NOT NULL DEFAULT 10,
+  tackle          REAL NOT NULL DEFAULT 10,
+  vision          REAL NOT NULL DEFAULT 10,
+  stamina         REAL NOT NULL DEFAULT 10,
+  strength        REAL NOT NULL DEFAULT 10,
+  technique       REAL NOT NULL DEFAULT 10,
+  agility         REAL NOT NULL DEFAULT 10,
+  positioning     REAL NOT NULL DEFAULT 10,
+  reflex          REAL NOT NULL DEFAULT 10,
+  handling        REAL NOT NULL DEFAULT 10,
+  condition       REAL NOT NULL DEFAULT 90,
+  form            REAL NOT NULL DEFAULT 0,
+  experience      REAL NOT NULL DEFAULT 3,
+  happiness       REAL NOT NULL DEFAULT 80,
+  base_quality    SMALLINT,
+  base_potential  SMALLINT,
+  from_academy    BOOLEAN NOT NULL DEFAULT FALSE,
+  from_market     BOOLEAN NOT NULL DEFAULT FALSE,
+  is_starter      BOOLEAN NOT NULL DEFAULT FALSE,
+  bench_order     SMALLINT,
+  injured         BOOLEAN NOT NULL DEFAULT FALSE,
+  sent_off        BOOLEAN NOT NULL DEFAULT FALSE,
+  cards           SMALLINT NOT NULL DEFAULT 0,
+  goals           INT NOT NULL DEFAULT 0,
+  assists         INT NOT NULL DEFAULT 0,
+  minutes_played  INT NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+

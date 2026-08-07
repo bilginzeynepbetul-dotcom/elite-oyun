@@ -1,0 +1,50 @@
+-- ============================================================
+-- Elite Manager Online — Migration 001: initial schema
+-- PostgreSQL 14+
+-- ============================================================
+
+BEGIN;
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- ------------------------------------------------------------
+-- 1. Users
+-- ------------------------------------------------------------
+CREATE TABLE users (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username      VARCHAR(32) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  email         VARCHAR(255),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_login_at TIMESTAMPTZ,
+  is_banned     BOOLEAN NOT NULL DEFAULT FALSE,
+  CONSTRAINT uq_users_username UNIQUE (username),
+  CONSTRAINT uq_users_email UNIQUE (email)
+);
+
+CREATE INDEX idx_users_username_lower ON users (LOWER(username));
+
+-- ------------------------------------------------------------
+-- 2. Clubs & economy
+-- ------------------------------------------------------------
+CREATE TABLE clubs (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name          VARCHAR(64) NOT NULL,
+  country       VARCHAR(48) NOT NULL DEFAULT 'Türkiye',
+  division      SMALLINT NOT NULL DEFAULT 1,
+  balance       BIGINT NOT NULL DEFAULT 5000000,
+  game_style    VARCHAR(16) NOT NULL DEFAULT 'dengeli',
+  pass_style    VARCHAR(16) NOT NULL DEFAULT 'kısa',
+  attack_dir    VARCHAR(16) NOT NULL DEFAULT 'orta',
+  formation     VARCHAR(16) NOT NULL DEFAULT '4-4-2',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_clubs_user UNIQUE (user_id)
+);
+
+CREATE INDEX idx_clubs_country_division ON clubs (country, division);
+
+CREATE TABLE finance_ledger (
+  id         BIGSERIAL PRIMARY KEY,
+  club_id    UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,

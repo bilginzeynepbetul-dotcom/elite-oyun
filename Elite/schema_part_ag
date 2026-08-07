@@ -1,0 +1,50 @@
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_user_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  text         VARCHAR(200) NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_messages_not_self CHECK (from_user_id <> to_user_id)
+);
+
+CREATE INDEX idx_messages_to_ts ON messages (to_user_id, created_at DESC);
+CREATE INDEX idx_messages_from_ts ON messages (from_user_id, created_at DESC);
+
+CREATE TABLE notifications (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  icon       VARCHAR(8) NOT NULL DEFAULT '🔔',
+  text       VARCHAR(200) NOT NULL,
+  category   VARCHAR(32),
+  is_read    BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_notifs_user_unread ON notifications (user_id, is_read, created_at DESC);
+
+-- ------------------------------------------------------------
+-- 11. updated_at trigger helper
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_clubs_updated
+  BEFORE UPDATE ON clubs
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_players_updated
+  BEFORE UPDATE ON players
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_youth_updated
+  BEFORE UPDATE ON youth_academy
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_stadiums_updated
+  BEFORE UPDATE ON stadiums
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+

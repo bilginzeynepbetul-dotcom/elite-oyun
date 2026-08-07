@@ -1,0 +1,50 @@
+
+CREATE INDEX idx_listings_seller ON transfer_listings (seller_club_id);
+
+CREATE TABLE transfer_bids (
+  id          BIGSERIAL PRIMARY KEY,
+  listing_id  UUID NOT NULL REFERENCES transfer_listings(id) ON DELETE CASCADE,
+  club_id     UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  club_name   VARCHAR(64) NOT NULL,
+  amount      BIGINT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_bids_listing ON transfer_bids (listing_id, created_at DESC);
+
+-- ------------------------------------------------------------
+-- 7. Youth academy
+-- ------------------------------------------------------------
+CREATE TABLE youth_academy (
+  club_id               UUID PRIMARY KEY REFERENCES clubs(id) ON DELETE CASCADE,
+  scout_level           SMALLINT NOT NULL DEFAULT 1
+                          CHECK (scout_level BETWEEN 1 AND 5),
+  academy_level         SMALLINT NOT NULL DEFAULT 1
+                          CHECK (academy_level BETWEEN 1 AND 5),
+  draws_this_season     SMALLINT NOT NULL DEFAULT 0,
+  max_draws_per_season  SMALLINT NOT NULL DEFAULT 12,
+  last_draw_week_key    VARCHAR(16),
+  scout_upgrade_until   TIMESTAMPTZ,
+  academy_upgrade_until TIMESTAMPTZ,
+  pending_scout_level   SMALLINT,
+  pending_academy_level SMALLINT,
+  updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE youth_discoveries (
+  id         BIGSERIAL PRIMARY KEY,
+  club_id    UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  player_id  UUID REFERENCES players(id) ON DELETE SET NULL,
+  name       VARCHAR(64) NOT NULL,
+  pos        VARCHAR(8),
+  age        SMALLINT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_youth_disc_club ON youth_discoveries (club_id, created_at DESC);
+
+-- ------------------------------------------------------------
+-- 8. Training & coaches
+-- ------------------------------------------------------------
+CREATE TABLE club_coaches (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),

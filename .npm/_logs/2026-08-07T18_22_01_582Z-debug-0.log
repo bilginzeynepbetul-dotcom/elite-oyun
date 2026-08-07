@@ -1,0 +1,33 @@
+0 verbose cli /data/data/com.termux/files/usr/bin/node /data/data/com.termux/files/usr/bin/npm
+1 info using npm@11.17.0
+2 info using node@v26.3.1
+3 silly config load:file:/data/data/com.termux/files/usr/lib/node_modules/npm/npmrc
+4 silly config load:file:/data/data/com.termux/files/home/.npmrc
+5 silly config load:file:/data/data/com.termux/files/usr/etc/npmrc
+6 verbose title npm install bcryptjs
+7 verbose argv "install" "bcryptjs"
+8 verbose logfile logs-max:10 dir:/data/data/com.termux/files/home/.npm/_logs/2026-08-07T18_22_01_582Z-
+9 verbose logfile /data/data/com.termux/files/home/.npm/_logs/2026-08-07T18_22_01_582Z-debug-0.log
+10 silly logfile start cleaning logs, removing 1 files
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:1174405120 maxSize:293601280 maxEntrySize:146800640
+13 silly idealTree buildDeps
+14 silly fetch manifest bcryptjs@*
+15 silly packumentCache full:https://registry.npmjs.org/bcryptjs cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/bcryptjs 478ms (cache revalidated)
+17 silly packumentCache full:https://registry.npmjs.org/bcryptjs set size:80385 disposed:false
+18 silly placeDep ROOT bcryptjs@3.0.3 OK for: home@1.0.0 want: *
+19 silly reify moves {}
+20 silly audit bulk request { stripe: [ '22.4.0' ], bcryptjs: [ '3.0.3' ] }
+21 http cache bcryptjs@https://registry.npmjs.org/bcryptjs/-/bcryptjs-3.0.3.tgz 1ms (cache hit)
+22 silly tarball no local data for bcryptjs@https://registry.npmjs.org/bcryptjs/-/bcryptjs-3.0.3.tgz. Extracting by manifest.
+23 http fetch GET 200 https://registry.npmjs.org/bcryptjs/-/bcryptjs-3.0.3.tgz 212ms (cache miss)
+24 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 248ms
+25 silly audit report {}
+26 silly ADD node_modules/bcryptjs
+27 verbose cwd /data/data/com.termux/files/home
+28 verbose os Linux 6.1.157-android14-11
+29 verbose node v26.3.1
+30 verbose npm  v11.17.0
+31 verbose exit 0
+32 info ok

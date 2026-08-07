@@ -1,0 +1,50 @@
+  club_id    UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  skill      VARCHAR(16) NOT NULL,
+  level      SMALLINT NOT NULL CHECK (level BETWEEN 1 AND 5),
+  salary     INT NOT NULL DEFAULT 0,
+  name       VARCHAR(64),
+  CONSTRAINT uq_coaches_club_skill UNIQUE (club_id, skill)
+);
+
+CREATE TABLE training_log (
+  id          BIGSERIAL PRIMARY KEY,
+  club_id     UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  player_id   UUID REFERENCES players(id) ON DELETE SET NULL,
+  player_name VARCHAR(64),
+  skill       VARCHAR(16) NOT NULL,
+  delta       REAL NOT NULL,
+  value_after REAL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_training_club_ts ON training_log (club_id, created_at DESC);
+
+-- ------------------------------------------------------------
+-- 9. Stadium
+-- ------------------------------------------------------------
+CREATE TABLE stadiums (
+  club_id           UUID PRIMARY KEY REFERENCES clubs(id) ON DELETE CASCADE,
+  name              VARCHAR(64) NOT NULL,
+  capacity          INT NOT NULL DEFAULT 24500
+                      CHECK (capacity BETWEEN 1000 AND 120000),
+  ticket_price      SMALLINT NOT NULL DEFAULT 12
+                      CHECK (ticket_price BETWEEN 5 AND 80),
+  seat_upgrade_cost INT NOT NULL DEFAULT 45000,
+  total_upgrades    INT NOT NULL DEFAULT 0,
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ------------------------------------------------------------
+-- 10. Social: forum, messages, notifications
+-- ------------------------------------------------------------
+CREATE TABLE forum_posts (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID REFERENCES users(id) ON DELETE SET NULL,
+  username   VARCHAR(32) NOT NULL,
+  text       VARCHAR(200) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_forum_ts ON forum_posts (created_at DESC);
+
+CREATE TABLE messages (

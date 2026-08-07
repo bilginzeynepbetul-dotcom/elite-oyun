@@ -1,0 +1,10 @@
+{
+  "name": "elite-manager-server",
+  "version": "1.0.0",
+  "description": "Elite Manager - basit statik dosya sunucusu (bağımlılık yok)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}

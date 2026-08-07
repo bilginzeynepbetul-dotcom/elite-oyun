@@ -1,0 +1,50 @@
+CREATE INDEX idx_players_club ON players (club_id);
+CREATE INDEX idx_players_club_starter ON players (club_id, is_starter);
+
+-- ------------------------------------------------------------
+-- 4. Seasons, standings, fixtures
+-- ------------------------------------------------------------
+CREATE TABLE seasons (
+  id         SERIAL PRIMARY KEY,
+  country    VARCHAR(48) NOT NULL,
+  division   SMALLINT NOT NULL,
+  year_label VARCHAR(16) NOT NULL,
+  is_current BOOLEAN NOT NULL DEFAULT TRUE,
+  CONSTRAINT uq_seasons_cdy UNIQUE (country, division, year_label)
+);
+
+CREATE TABLE league_standings (
+  id         BIGSERIAL PRIMARY KEY,
+  season_id  INT NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+  club_id    UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  played     SMALLINT NOT NULL DEFAULT 0,
+  won        SMALLINT NOT NULL DEFAULT 0,
+  drawn      SMALLINT NOT NULL DEFAULT 0,
+  lost       SMALLINT NOT NULL DEFAULT 0,
+  gf         SMALLINT NOT NULL DEFAULT 0,
+  ga         SMALLINT NOT NULL DEFAULT 0,
+  pts        SMALLINT NOT NULL DEFAULT 0,
+  CONSTRAINT uq_standings_season_club UNIQUE (season_id, club_id)
+);
+
+CREATE INDEX idx_standings_season_pts ON league_standings (season_id, pts DESC, gf DESC);
+
+CREATE TYPE fixture_status AS ENUM ('scheduled', 'live', 'finished', 'cancelled');
+
+CREATE TABLE fixtures (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  season_id     INT NOT NULL REFERENCES seasons(id),
+  home_club_id  UUID NOT NULL REFERENCES clubs(id),
+  away_club_id  UUID NOT NULL REFERENCES clubs(id),
+  kickoff_at    TIMESTAMPTZ NOT NULL,
+  status        fixture_status NOT NULL DEFAULT 'scheduled',
+  home_goals    SMALLINT,
+  away_goals    SMALLINT,
+  match_id      UUID,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_fixtures_different_clubs CHECK (home_club_id <> away_club_id)
+);
+
+CREATE INDEX idx_fixtures_kickoff ON fixtures (kickoff_at);
+CREATE INDEX idx_fixtures_status ON fixtures (status);
+CREATE INDEX idx_fixtures_home ON fixtures (home_club_id);
