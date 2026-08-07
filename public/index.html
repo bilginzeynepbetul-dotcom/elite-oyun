@@ -3517,7 +3517,7 @@
         </div>
       </div>
     </div>
-    <div id="page-match" class="page active">
+    <div id="page-match" class="page">
       <div class="field-wrapper">
         <canvas id="field" width="600" height="400"></canvas>
       </div>
@@ -5568,7 +5568,7 @@
 
       // Sayfa geçmişi (geri tuşu için)
       let pageHistory = [];
-      let currentPageId = "page-match";
+      let currentPageId = null;
 
       function refreshNextMatchCard() {
         const title = document.getElementById("nextMatchTitle");
