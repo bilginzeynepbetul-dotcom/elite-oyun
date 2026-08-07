@@ -2649,6 +2649,33 @@
     return Math.round(n);
   }
 
+  /** Kulüp Kadro/Taktik sayfasındaki kalite rozetiyle aynı görsel dil:
+   *  oyuncunun yeteneğini (overall) renkli emoji rozet olarak gösterir.
+   *  "Çıkar" tuşunun yerine, milli/U21 taktik sayfasında bunu kullanıyoruz. */
+  function natAbilityBadge(overall) {
+    const v = Math.round(Number(overall) || 0);
+    let emoji = "💫",
+      color = "#f87171";
+    if (v >= 14) {
+      emoji = "🌟";
+      color = "#4ade80";
+    } else if (v >= 9) {
+      emoji = "⭐";
+      color = "#facc15";
+    }
+    return (
+      '<span style="font-size:11px;font-weight:700;color:' +
+      color +
+      ';white-space:nowrap;" title="Yetenek: ' +
+      v +
+      '">' +
+      emoji +
+      " " +
+      v +
+      "</span>"
+    );
+  }
+
   /** Squad'daki mevcut ilk 11'i, formasyonun slotlarına en iyi eşleşmeyle yerleştirir. */
   function buildNationalLineupFromSquad(state, formation) {
     const template = NAT_FORMATION_PRESETS[formation] || NAT_FORMATION_PRESETS["4-4-2"];
@@ -2869,11 +2896,7 @@
                 ", " +
                 fmtNatOverall(p.overall) +
                 ")</span></span>" +
-                (t.isMeManager
-                  ? '<button style="font-size:10px;padding:3px 6px;color:#f87171;" onclick="dropNationalPlayer(\'' +
-                    p.playerId +
-                    "')\">Çıkar</button>"
-                  : "") +
+                natAbilityBadge(p.overall) +
                 "</div>",
             )
             .join("") +
@@ -3094,11 +3117,7 @@
             const badge = isSel
               ? '<span style="color:#4ade80;font-size:10px;">İLK11 · ' + _natLineup[slotIdx].pos + "</span>"
               : '<span style="color:#64748b;font-size:10px;">YEDEK</span>';
-            const controls = t.isMeManager
-              ? '<button style="font-size:10px;padding:3px 6px;color:#f87171;" onclick="dropNationalPlayer(\'' +
-                p.playerId +
-                "')\">Çıkar</button>"
-              : "";
+            const controls = natAbilityBadge(p.overall);
             const rowClick = t.isMeManager
               ? ' onclick="placeNationalPlayer(\'' + p.playerId + '\')" style="cursor:pointer;"'
               : "";
@@ -3276,6 +3295,64 @@
     _natSelectedSlot = null;
     renderNationalManage();
   };
+  /** Verilen mevkinin bandındaki (kanat hariç) merkez oyuncuları kulüp
+   *  taktik sayfasındaki gibi ortala ve eşit mesafeye yay. Tek oyuncu
+   *  kalırsa onu tam ortaya (y=200) alır. Kaleci/kanat bantlarını es geçer. */
+  function rebalanceNatCenterBand(pos) {
+    const cp = String(pos || "").toUpperCase();
+    if (!["FC", "MC", "DC", "DM", "OMC"].includes(cp)) return;
+    if (typeof getZoneBand !== "function") return;
+    const band = getZoneBand(cp);
+    const wingKeys = ["DL", "DR", "ML", "MR", "FL", "FR"];
+    const centers = _natLineup.filter(
+      (s) =>
+        s &&
+        getZoneBand(s.pos) === band &&
+        !wingKeys.includes(String(s.pos).toUpperCase()),
+    );
+    if (centers.length === 0) return;
+    const bandX = centers[0].x;
+    if (centers.length === 1) {
+      centers[0].y = 200;
+      centers[0].x = bandX;
+      return;
+    }
+    centers.sort((a, b) => (a.y || 0) - (b.y || 0));
+    const gap = Math.max(36, Math.min(55, Math.floor(140 / (centers.length - 1))));
+    const total = gap * (centers.length - 1);
+    const base = 200 - total / 2;
+    centers.forEach((c, i) => {
+      c.y = base + i * gap;
+      c.x = bandX;
+    });
+  }
+  /** Mevcut dizilişte (kaleci hariç) hat bazında oyuncu sayısını döner. */
+  function natLineCounts() {
+    let def = 0,
+      mid = 0,
+      fw = 0;
+    _natLineup.forEach((s) => {
+      if (!s) return;
+      const band = typeof getZoneBand === "function" ? getZoneBand(s.pos) : null;
+      if (band === "DF") def++;
+      else if (band === "FW") fw++;
+      else if (band && band !== "GK") mid++;
+    });
+    return { def, mid, fw };
+  }
+
+  /** Bir mevkinin hangi hatta (def/mid/fw) sayıldığını döner, kaleci/tanımsız için null. */
+  function natLineCategory(pos) {
+    const band = typeof getZoneBand === "function" ? getZoneBand(pos) : null;
+    if (band === "DF") return "def";
+    if (band === "FW") return "fw";
+    if (band && band !== "GK") return "mid";
+    return null;
+  }
+
+  // Diziliş kuralı: en az 3 defans, 2 orta saha, 1 forvet olmalı — daha aza izin verilmez.
+  const NAT_MIN_LINE_COUNTS = { def: 3, mid: 2, fw: 1 };
+
   window.handleNationalPitchClick = function (kind, index, zx, zy, zpos) {
     if (_natSelectedSlot === null) {
       if (kind === "slot") {
@@ -3302,9 +3379,41 @@
     }
     // kind === "zone": seçili bölgeyi (ve varsa oyuncusunu) boş hedef bölgeye taşı
     const slot = _natLineup[_natSelectedSlot];
+    const fromPos = slot.pos;
+    // Taşımadan önce: hedef hat kuralını ihlal eder mi kontrol et (en az 3 def/2 orta/1 forvet).
+    const fromCat = natLineCategory(fromPos);
+    const toCat = natLineCategory(zpos);
+    if (fromCat !== toCat) {
+      const projected = natLineCounts();
+      if (fromCat) projected[fromCat]--;
+      if (toCat) projected[toCat]++;
+      if (
+        projected.def < NAT_MIN_LINE_COUNTS.def ||
+        projected.mid < NAT_MIN_LINE_COUNTS.mid ||
+        projected.fw < NAT_MIN_LINE_COUNTS.fw
+      ) {
+        alert(
+          "Diziliş kuralı: en az " +
+            NAT_MIN_LINE_COUNTS.def +
+            " defans, " +
+            NAT_MIN_LINE_COUNTS.mid +
+            " orta saha, " +
+            NAT_MIN_LINE_COUNTS.fw +
+            " forvet olmalı.",
+        );
+        _natSelectedSlot = null;
+        renderNationalManage();
+        return;
+      }
+    }
     slot.x = zx;
     slot.y = zy;
     slot.pos = zpos;
+    // Kulüp taktik sayfasındaki gibi: merkez banttaki (kanat hariç) oyuncuları
+    // ortala ve eşit mesafeye yay. Hem oyuncunun geldiği banttan (tek kalan
+    // oyuncu varsa onu da tam ortaya alır) hem de gittiği bandı güncelle.
+    rebalanceNatCenterBand(fromPos);
+    rebalanceNatCenterBand(zpos);
     _natSelectedSlot = null;
     renderNationalManage();
   };

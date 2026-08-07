@@ -96,17 +96,17 @@
       /* ===== SES KONTROL BUTONU ===== */
       .sound-toggle {
         position: fixed;
-        bottom: 20px;
-        right: 20px;
+        top: 8px;
+        right: 104px;
         background: rgba(15, 23, 42, 0.85);
         border: 1px solid #2c3a52;
         border-radius: 50%;
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 18px;
         color: #94a3b8;
         cursor: pointer;
         z-index: 99999;
@@ -3801,6 +3801,15 @@
     <div id="page-tactics" class="page">
       <div class="report-container">
         <div style="display: flex; gap: 8px; margin-bottom: 12px" id="tacticsModeRow">
+          <button
+            class="sub-btn tactics-mode-btn"
+            id="tacticsModeClub"
+            data-mode="club"
+            style="flex: 1"
+            onclick="setTacticsMode('club')"
+          >
+            🏟️ Kulüp
+          </button>
           <button
             class="sub-btn tactics-mode-btn"
             id="tacticsModeA"
@@ -8610,6 +8619,57 @@
             row.appendChild(potCell);
             row.appendChild(contractCell);
             container.appendChild(row);
+
+            // ---- Tüm yetenekler; maçta etkili olanlar (mevkiye göre) öne çıkar ----
+            const skillDefs = [
+              { key: "pace", abbr: "HIZ" },
+              { key: "passing", abbr: "PAS" },
+              { key: "finishing", abbr: "BİT" },
+              { key: "tackle", abbr: "MÜD" },
+              { key: "vision", abbr: "GÖR" },
+              { key: "dribbling", abbr: "TOP" },
+              { key: "stamina", abbr: "DAY" },
+              { key: "strength", abbr: "GÜÇ" },
+              { key: "technique", abbr: "TEK" },
+              { key: "agility", abbr: "ÇEV" },
+              { key: "positioning", abbr: "POZ" },
+              { key: "reflex", abbr: "REF" },
+              { key: "handling", abbr: "TUT" },
+            ];
+            const relevantKeys =
+              (typeof getSkillsForPos === "function" ? getSkillsForPos(p) : []) ||
+              [];
+            const orderedSkills = skillDefs.slice().sort((a, b) => {
+              const ai = relevantKeys.indexOf(a.key);
+              const bi = relevantKeys.indexOf(b.key);
+              const aRel = ai !== -1,
+                bRel = bi !== -1;
+              if (aRel && bRel) return ai - bi;
+              if (aRel) return -1;
+              if (bRel) return 1;
+              return 0;
+            });
+            const skillsRow = document.createElement("div");
+            skillsRow.style.cssText =
+              "display:flex;flex-wrap:wrap;gap:4px;padding:2px 4px 8px 4px;border-bottom:1px solid rgba(51,65,85,0.3);";
+            orderedSkills.forEach((sk) => {
+              const val = Math.round(Number(p[sk.key]) || 0);
+              const isRelevant = relevantKeys.indexOf(sk.key) !== -1;
+              const chip = document.createElement("span");
+              chip.title =
+                (typeof SKILL_LABELS_TR !== "undefined" && SKILL_LABELS_TR[sk.key]) ||
+                sk.key;
+              chip.style.cssText =
+                "font-size:9px;font-weight:" +
+                (isRelevant ? "800" : "500") +
+                ";padding:2px 5px;border-radius:5px;" +
+                (isRelevant
+                  ? "background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.35);"
+                  : "background:rgba(51,65,85,0.35);color:#94a3b8;border:1px solid transparent;");
+              chip.innerText = sk.abbr + " " + val;
+              skillsRow.appendChild(chip);
+            });
+            container.appendChild(skillsRow);
           });
         });
       }
