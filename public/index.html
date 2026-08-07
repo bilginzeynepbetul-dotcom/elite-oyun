@@ -123,6 +123,37 @@
         border-color: #f87171;
       }
 
+      /* ===== MAÇ HIZI BUTONU ===== */
+      .speed-toggle {
+        position: fixed;
+        bottom: 20px;
+        right: 78px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid #2c3a52;
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        font-weight: 700;
+        color: #94a3b8;
+        cursor: pointer;
+        z-index: 99999;
+        transition: all 0.2s ease;
+        backdrop-filter: blur(4px);
+      }
+      .speed-toggle:hover {
+        background: #1e293b;
+        color: #e2e8f0;
+        border-color: #38bdf8;
+      }
+      .speed-toggle.active {
+        color: #4ade80;
+        border-color: #4ade80;
+      }
+
       .field-wrapper {
         position: relative;
         padding: 14px;
@@ -3230,6 +3261,7 @@
           <span class="username" id="usernameDisplay">Misafir</span>
         </div>
         <div id="weatherNote" class="weather-note">Hava Durumu: -</div>
+        <div id="refereeNote" class="weather-note">Hakem: -</div>
         <div id="stats-panel">
           <div class="stat-row">
             <span class="stat-val" id="homeShots">0</span
@@ -3997,6 +4029,7 @@
             </div>
             <select
               id="planTriggerSelect"
+              onchange="updatePlanFormUI()"
               style="
                 width: 100%;
                 padding: 6px 8px;
@@ -4013,10 +4046,28 @@
               <option value="winning">Öndeyken</option>
             </select>
           </div>
-          <div>
-            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px">
+          <div id="planMinuteWrap">
+            <div
+              id="planMinuteLabel"
+              style="font-size: 11px; color: #94a3b8; margin-bottom: 4px"
+            >
               Dakika (1–120 · 90+ uzatma / stopaj)
             </div>
+            <label
+              id="planAnyMinuteWrap"
+              style="
+                display: none;
+                align-items: center;
+                gap: 6px;
+                font-size: 11px;
+                color: #94a3b8;
+                margin-bottom: 4px;
+                cursor: pointer;
+              "
+            >
+              <input type="checkbox" id="planAnyMinuteCheck" onchange="updatePlanFormUI()" />
+              Herhangi bir dakika (durum oluşur oluşmaz hemen uygula)
+            </label>
             <input
               type="number"
               id="planMinuteInput"
@@ -4554,6 +4605,17 @@
       🔊
     </div>
 
+    <!-- ===== MAÇ HIZI BUTONU ===== -->
+    <div
+      class="speed-toggle"
+      id="speedToggle"
+      onclick="toggleMatchSpeed()"
+      style="display: none"
+      title="Maç hızını 2 katına çıkar"
+    >
+      1x
+    </div>
+
     
     <!-- Maç Raporu (skora tıklayınca) -->
     <div id="page-match-report" class="page">
@@ -4657,6 +4719,40 @@
       let awayScore = 0;
       let matchInterval = null;
       let circulationInterval = null;
+      // Maç hızı: 1 = normal, 2 = 2x hızlandırılmış (tur süreleri yarıya iner)
+      const MATCH_TICK_MS = 900;
+      const CIRCULATION_TICK_MS = 700;
+      let matchSpeedMultiplier = 1;
+
+      function toggleMatchSpeed() {
+        matchSpeedMultiplier = matchSpeedMultiplier === 1 ? 2 : 1;
+        const btn = document.getElementById("speedToggle");
+        if (btn) {
+          btn.innerText = matchSpeedMultiplier + "x";
+          btn.classList.toggle("active", matchSpeedMultiplier === 2);
+          btn.title =
+            matchSpeedMultiplier === 2
+              ? "Normal hıza dön"
+              : "Maç hızını 2 katına çıkar";
+        }
+        // Maç şu an oynanıyorsa aralıkları yeni hıza göre yeniden kur
+        if (matchStarted && !matchEnded && matchInterval) {
+          clearInterval(matchInterval);
+          clearInterval(circulationInterval);
+          matchInterval = setInterval(
+            runMatchTick,
+            MATCH_TICK_MS / matchSpeedMultiplier,
+          );
+          circulationInterval = setInterval(
+            circulateBall,
+            CIRCULATION_TICK_MS / matchSpeedMultiplier,
+          );
+        }
+        addLog(
+          "⏩ Maç hızı: " + matchSpeedMultiplier + "x",
+          "tactics-log",
+        );
+      }
       let possessionSide = "home";
       let possessionIndex = 5;
       let inMajorAction = false;
@@ -5169,6 +5265,8 @@
         currentPageId = null;
         const soundBtn = document.getElementById("soundToggle");
         if (soundBtn) soundBtn.style.display = "none";
+        const speedBtn = document.getElementById("speedToggle");
+        if (speedBtn) speedBtn.style.display = "none";
         try {
           updateMenuClubNat();
           const mm = document.getElementById("menuMatches");
@@ -5729,6 +5827,9 @@
           const soundBtn = document.getElementById("soundToggle");
           if (soundBtn)
             soundBtn.style.display = prev === "page-match" ? "flex" : "none";
+          const speedBtn = document.getElementById("speedToggle");
+          if (speedBtn)
+            speedBtn.style.display = prev === "page-match" ? "flex" : "none";
           return;
         }
         // Geçmiş boşsa ana menüye dön
@@ -5766,6 +5867,9 @@
         const soundBtn = document.getElementById("soundToggle");
         if (soundBtn)
           soundBtn.style.display = pageId === "page-match" ? "flex" : "none";
+        const speedBtn = document.getElementById("speedToggle");
+        if (speedBtn)
+          speedBtn.style.display = pageId === "page-match" ? "flex" : "none";
       }
 
       function goToEconomy() {
@@ -6800,7 +6904,7 @@
             "Eleme tablosu Fikstür sekmesinde · Oynanan skorlar orada güncellenir",
           );
         } else if (comp === "cl") {
-          html += cardBox("Grup puanları Fikstür sekmesinde görünür");
+          html += buildCLGroupStandingsHTML();
         } else {
           html +=
             '<div style="color:#64748b;text-align:center;padding:8px;">Puan durumu yok.</div>';
@@ -6825,10 +6929,91 @@
               (12 - i) +
               "</b></div>";
           });
+        } else if (comp === "league") {
+          html += '<div id="realLeagueKingsBox">Yükleniyor...</div>';
+          setTimeout(function () {
+            loadRealLeagueKings();
+          }, 0);
         } else {
           html += renderLeagueScorersHTML();
         }
         return html;
+      }
+
+      // Gerçek gol/asist krallığını sunucudan (gerçek oyuncu + gerçek takım
+      // adıyla) çeker ve #realLeagueKingsBox içine basar. Sunucudan veri
+      // alınamazsa eski (uydurma) listeye geri düşer.
+      async function loadRealLeagueKings() {
+        const box = document.getElementById("realLeagueKingsBox");
+        if (!box) return;
+        try {
+          const country =
+            typeof getSelectedLeagueCountry === "function"
+              ? getSelectedLeagueCountry()
+              : USER_COUNTRY;
+          const tier =
+            typeof getSelectedLeagueTier === "function"
+              ? getSelectedLeagueTier()
+              : 1;
+          const headers = { "Content-Type": "application/json" };
+          const token = localStorage.getItem("em_jwt_token");
+          if (token) headers["Authorization"] = "Bearer " + token;
+          const res = await fetch(
+            (window.EM_API_BASE || "") +
+              "/api/league/stats?country=" +
+              encodeURIComponent(country) +
+              "&division=" +
+              encodeURIComponent(tier),
+            { headers },
+          );
+          const data = await res.json();
+          const goals = (data && data.goalKing) || [];
+          const assists = (data && data.assistKing) || [];
+          if (!goals.length && !assists.length) {
+            box.innerHTML = renderLeagueScorersHTML();
+            return;
+          }
+          function row(s, i, key, color) {
+            const player = (s && s.playerName) || "Oyuncu";
+            const team = (s && s.clubName) || "-";
+            const value = (s && s[key]) || 0;
+            return (
+              '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);font-size:12px;"><span>' +
+              (i + 1) +
+              ". " +
+              player +
+              ' <span style="color:#64748b;">(' +
+              team +
+              ')</span></span><b style="color:' +
+              color +
+              ';">' +
+              value +
+              "</b></div>"
+            );
+          }
+          let html =
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+          html +=
+            '<div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">⚽ Gol Krallığı</div>';
+          goals
+            .slice(0, 8)
+            .forEach((s, i) => (html += row(s, i, "goals", "#4ade80")));
+          if (!goals.length)
+            html +=
+              '<div style="color:#64748b;text-align:center;padding:8px;">Henüz gol atılmadı.</div>';
+          html +=
+            '</div><div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">🎯 Asist Krallığı</div>';
+          assists
+            .slice(0, 8)
+            .forEach((s, i) => (html += row(s, i, "assists", "#38bdf8")));
+          if (!assists.length)
+            html +=
+              '<div style="color:#64748b;text-align:center;padding:8px;">Henüz asist yok.</div>';
+          html += "</div></div>";
+          box.innerHTML = html;
+        } catch (e) {
+          box.innerHTML = renderLeagueScorersHTML();
+        }
       }
 
       function buildHistoryHTML(comp) {
@@ -6936,12 +7121,11 @@
         return html;
       }
 
-      function buildCLFixtureHTML() {
+      // Kıtalar Ligi grup puan durumu (Puan Durumu sekmesinde gösterilir).
+      function buildCLGroupStandingsHTML() {
         const my = teamConfig.home.name;
         let html =
-          '<div class="youth-section-title">Kıtalar Ligi — Grup Fikstürü</div>';
-        html +=
-          '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Çarşamba 21:00 (TR) · Telifsiz kulüp isimleri</div>';
+          '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Telifsiz kulüp isimleri</div>';
         const groupA = [my, CL_TEAMS[0], CL_TEAMS[1], CL_TEAMS[2]];
         html +=
           '<div style="font-size:12px;font-weight:700;color:#38bdf8;margin:8px 0 4px;">Grup A</div>';
@@ -6969,8 +7153,15 @@
               i + 1 + ". " + n + " · <b>" + [7, 5, 4, 1][i] + "</b> puan",
             )),
         );
+        return html;
+      }
+
+      function buildCLFixtureHTML() {
+        const my = teamConfig.home.name;
+        let html =
+          '<div class="youth-section-title">Kıtalar Ligi — Maçlar</div>';
         html +=
-          '<div class="youth-section-title" style="margin-top:12px;">Maçlar (Çarşamba 21:00 TR)</div>';
+          '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Çarşamba 21:00 (TR) · Telifsiz kulüp isimleri</div>';
         [
           [my, CL_TEAMS[0], "1-1", true],
           [CL_TEAMS[1], CL_TEAMS[2], "2-0", true],
@@ -11714,6 +11905,33 @@
       const currentWeather =
         WEATHER_OPTIONS[Math.floor(Math.random() * WEATHER_OPTIONS.length)];
 
+      // ============================================================
+      // HAKEM
+      // ============================================================
+      // Telifsiz/uydurma hakem isimleri — sertlik profili kart/faul
+      // eğilimini hafifçe etkiler (bazı hakemler daha sıkı yönetir).
+      const REFEREE_POOL = [
+        { name: "Serkan Yıldırım", strictness: 1.15 },
+        { name: "Bora Aksoy", strictness: 0.9 },
+        { name: "Fatih Karataş", strictness: 1.0 },
+        { name: "Emre Doğan", strictness: 0.85 },
+        { name: "Tolga Şahin", strictness: 1.2 },
+        { name: "Uğur Baran", strictness: 1.0 },
+        { name: "Mert Kılıçarslan", strictness: 0.95 },
+        { name: "Volkan Ergün", strictness: 1.1 },
+      ];
+      let currentReferee = null;
+
+      function assignMatchReferee() {
+        currentReferee =
+          REFEREE_POOL[Math.floor(Math.random() * REFEREE_POOL.length)];
+        const rn = document.getElementById("refereeNote");
+        if (rn) rn.innerText = "Hakem: " + currentReferee.name;
+        return currentReferee;
+      }
+      // Sayfa ilk açıldığında da bir hakem gösterilsin (maç başlayınca yenilenir)
+      assignMatchReferee();
+
       function initPlayerRatingAttributes(team) {
         [...team.players, ...(team.bench || [])].forEach((p) => {
           p.condition = p.condition || 80 + Math.random() * 20;
@@ -14953,18 +15171,120 @@
         noise.stop(start + duration + 0.02);
       }
 
+      // Gerçekçi hakem düdüğü: sabit bir ıslık yerine, gerçek "boncuklu"
+      // (pea whistle) düdüklerdeki hızlı titreşimi (trill) taklit eder.
+      // Ana frekansı hızlı bir LFO ile modüle edip üstüne hafif "nefes"
+      // gürültüsü bindiriyoruz.
+      function playWhistleTrill(ctx, start, duration, peakGain, destination) {
+        const dest = destination || ctx.destination;
+        const baseFreq = 3000 + Math.random() * 250;
+
+        const osc = ctx.createOscillator();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(baseFreq, start);
+
+        // Titreşim (pea-roll) LFO'su — ~28 Hz
+        const lfo = ctx.createOscillator();
+        lfo.type = "sine";
+        lfo.frequency.setValueAtTime(27 + Math.random() * 6, start);
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.setValueAtTime(140, start);
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+
+        // Tiz olmayan harmonikleri kırpmak için alçak geçirgen filtre
+        const toneFilter = ctx.createBiquadFilter();
+        toneFilter.type = "bandpass";
+        toneFilter.frequency.value = baseFreq;
+        toneFilter.Q.value = 3.2;
+
+        const gain = ctx.createGain();
+        const attack = Math.min(0.012, duration * 0.15);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(
+          Math.max(peakGain, 0.0002),
+          start + attack,
+        );
+        gain.gain.setValueAtTime(peakGain, start + duration - 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+        osc.connect(toneFilter);
+        toneFilter.connect(gain);
+        gain.connect(dest);
+
+        // Nefes/hava gürültüsü katmanı — düdüğün metalik tınısını yumuşatır
+        playNoiseBurst(
+          ctx,
+          start,
+          duration,
+          peakGain * 0.22,
+          baseFreq * 1.1,
+          dest,
+        );
+
+        osc.start(start);
+        lfo.start(start);
+        osc.stop(start + duration + 0.02);
+        lfo.stop(start + duration + 0.02);
+      }
+
       function playGoalSound() {
         if (!soundEnabled) return;
         try {
           const ctx = getAudioCtx();
           if (!ctx) return;
           const now = ctx.currentTime;
-          // Yükselen zafer arpeji + kısa kalabalık uğultusu
+
+          // 1) Yükselen kalabalık uğultusu — coşkunun büyümesi
+          const roarDur = 1.9;
+          const roarGain = ctx.createGain();
+          roarGain.gain.setValueAtTime(0.0001, now);
+          roarGain.gain.exponentialRampToValueAtTime(0.11, now + 0.55);
+          roarGain.gain.linearRampToValueAtTime(0.05, now + roarDur);
+          roarGain.connect(ctx.destination);
+          const roarFilter = ctx.createBiquadFilter();
+          roarFilter.type = "bandpass";
+          roarFilter.Q.value = 0.7;
+          roarFilter.frequency.setValueAtTime(350, now);
+          roarFilter.frequency.linearRampToValueAtTime(2200, now + roarDur);
+          const bufferSize = Math.floor(ctx.sampleRate * roarDur);
+          const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+          const roarNoise = ctx.createBufferSource();
+          roarNoise.buffer = buffer;
+          roarNoise.connect(roarFilter);
+          roarFilter.connect(roarGain);
+          roarNoise.start(now);
+          roarNoise.stop(now + roarDur + 0.05);
+
+          // 2) Stadyum korna/zafer akoru — kısa üçlü akor, hafif detune
+          //    ile kalınlaştırılmış (gerçek stadyum kornalarına benzer)
+          const chordFreqs = [523.25, 659.25, 783.99];
+          chordFreqs.forEach((f, i) => {
+            [0, 1].forEach((d) => {
+              const detune = d === 0 ? -3 : 3;
+              const start = now + 0.08 + i * 0.05;
+              const osc = ctx.createOscillator();
+              osc.type = "sawtooth";
+              osc.frequency.setValueAtTime(f, start);
+              osc.detune.setValueAtTime(detune, start);
+              const g = ctx.createGain();
+              g.gain.setValueAtTime(0.0001, start);
+              g.gain.exponentialRampToValueAtTime(0.09, start + 0.03);
+              g.gain.exponentialRampToValueAtTime(0.0001, start + 0.6);
+              osc.connect(g);
+              g.connect(ctx.destination);
+              osc.start(start);
+              osc.stop(start + 0.65);
+            });
+          });
+
+          // 3) Yükselen zafer arpeji (üst melodi)
           const notes = [523.25, 659.25, 783.99, 1046.5];
           notes.forEach((f, i) => {
-            playTone(ctx, f, now + i * 0.09, 0.32, "triangle", 0.16);
+            playTone(ctx, f, now + 0.3 + i * 0.09, 0.32, "triangle", 0.15);
           });
-          playNoiseBurst(ctx, now + 0.05, 1.1, 0.06, 1800);
         } catch (e) {
           /* sessiz hata */
         }
@@ -14976,9 +15296,23 @@
           const ctx = getAudioCtx();
           if (!ctx) return;
           const now = ctx.currentTime;
-          // İki kısa keskin düdük vuruşu
-          playTone(ctx, 2200, now, 0.16, "square", 0.12);
-          playTone(ctx, 2200, now + 0.22, 0.22, "square", 0.12);
+          // Gerçekçi hakem düdüğü: kısa-uzun ikili vuruş ("peep-peeeep")
+          playWhistleTrill(ctx, now, 0.16, 0.14);
+          playWhistleTrill(ctx, now + 0.24, 0.34, 0.14);
+        } catch (e) {
+          /* sessiz hata */
+        }
+      }
+
+      // Faul/kart anında çalınan tek, kısa ve keskin düdük vuruşu —
+      // maç başı/sonu çift vuruşundan ayırt edilsin diye tek atım.
+      function playFoulWhistleSound() {
+        if (!soundEnabled) return;
+        try {
+          const ctx = getAudioCtx();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          playWhistleTrill(ctx, now, 0.2, 0.13);
         } catch (e) {
           /* sessiz hata */
         }
@@ -15413,6 +15747,30 @@
         if (outWrap) outWrap.style.display = isSub ? "block" : "none";
         if (inWrap) inWrap.style.display = isSub ? "block" : "none";
         if (styleWrap) styleWrap.style.display = isSub ? "none" : "block";
+
+        // Tetikleyici skor durumuysa (mağlup/berabere/önde) "Herhangi bir
+        // dakika" seçeneğini göster; "Dakika" tetikleyicisinde bu seçenek
+        // anlamsız olduğundan gizlenir ve dakika alanı zorunlu kalır.
+        const trigger =
+          document.getElementById("planTriggerSelect")?.value || "minute";
+        const isScoreTrigger = trigger !== "minute";
+        const anyWrap = document.getElementById("planAnyMinuteWrap");
+        const anyCheck = document.getElementById("planAnyMinuteCheck");
+        const minuteLabel = document.getElementById("planMinuteLabel");
+        const minuteInput = document.getElementById("planMinuteInput");
+        if (anyWrap)
+          anyWrap.style.display = isScoreTrigger ? "flex" : "none";
+        if (!isScoreTrigger && anyCheck) anyCheck.checked = false;
+        if (minuteLabel)
+          minuteLabel.textContent = isScoreTrigger
+            ? "En az kaçıncı dakikadan itibaren (1–120)"
+            : "Dakika (1–120 · 90+ uzatma / stopaj)";
+        const anyActive = isScoreTrigger && anyCheck && anyCheck.checked;
+        if (minuteInput) {
+          minuteInput.disabled = !!anyActive;
+          minuteInput.style.opacity = anyActive ? "0.4" : "1";
+        }
+
         if (isSub) {
           populatePlanSubSelects();
           return;
@@ -15479,13 +15837,19 @@
         const typeEl = document.getElementById("planTypeSelect");
         const triggerEl = document.getElementById("planTriggerSelect");
         const minuteEl = document.getElementById("planMinuteInput");
+        const anyMinuteEl = document.getElementById("planAnyMinuteCheck");
         const valueEl = document.getElementById("planValueSelect");
         if (!typeEl || !triggerEl) return;
         const type = typeEl.value;
         const trigger = triggerEl.value;
-        let minute = parseInt(minuteEl?.value, 10) || 60;
-        if (minute < 1) minute = 1;
-        if (minute > 120) minute = 120;
+        const anyMinute =
+          trigger !== "minute" && !!(anyMinuteEl && anyMinuteEl.checked);
+        let minute = null;
+        if (!anyMinute) {
+          minute = parseInt(minuteEl?.value, 10) || 60;
+          if (minute < 1) minute = 1;
+          if (minute > 120) minute = 120;
+        }
         const value = valueEl ? valueEl.value : "";
         let outId = null,
           inId = null,
@@ -15593,7 +15957,9 @@
               p.trigger === "minute"
                 ? p.minute + ". dk"
                 : (triggerLabel[p.trigger] || p.trigger) +
-                  (p.minute ? " (≥" + p.minute + ". dk)" : "");
+                  (p.minute
+                    ? " (≥" + p.minute + ". dk)"
+                    : " (herhangi bir dk)");
             return (
               '<div class="report-card" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
               '<div><b style="color:#e2e8f0;">' +
@@ -15701,13 +16067,16 @@
       // KART SİSTEMİ
       // ============================================================
       function checkCardEvents() {
+        const refStrictness =
+          (currentReferee && currentReferee.strictness) || 1;
         ["home", "away"].forEach((side) => {
           const team = side === "home" ? teamConfig.home : teamConfig.away;
-          let cardChance = 0.045;
+          let cardChance = 0.045 * refStrictness;
           if (team.customTactics?.chokePress === "aktif") cardChance += 0.02;
           if (Math.random() < cardChance) {
             const candidate = pickWeightedByTackle(team);
             if (!candidate || candidate.sentOff) return;
+            playFoulWhistleSound();
             if (candidate.cards >= 1) {
               candidate.cards = 2;
               candidate.sentOff = true;
@@ -17821,6 +18190,7 @@
         // Sadece doğal stopaj (2–5 dk). Planlı 90+ talimat maçı UZATMAZ;
         // maç uzarsa (stopaj) o dakikaya gelince devreye girer.
         matchEndMinute = 90 + (2 + Math.floor(Math.random() * 4));
+        assignMatchReferee();
         playWhistleSound();
         document
           .querySelectorAll(".tactic-toggle input")
@@ -17852,8 +18222,14 @@
             "tactics-log",
           );
         }
-        matchInterval = setInterval(runMatchTick, 900);
-        circulationInterval = setInterval(circulateBall, 700);
+        matchInterval = setInterval(
+          runMatchTick,
+          MATCH_TICK_MS / matchSpeedMultiplier,
+        );
+        circulationInterval = setInterval(
+          circulateBall,
+          CIRCULATION_TICK_MS / matchSpeedMultiplier,
+        );
         circulateBall();
       }
 
