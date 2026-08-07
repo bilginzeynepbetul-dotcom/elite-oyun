@@ -24,7 +24,7 @@
       /* GERİ OK BUTONU */
       .back-arrow {
         position: fixed;
-        top: 12px;
+        top: 8px;
         right: 12px;
         left: auto;
         background: rgba(15, 23, 42, 0.85);
@@ -52,7 +52,7 @@
       }
       .home-arrow {
         position: fixed;
-        top: 12px;
+        top: 8px;
         right: 58px;
         background: rgba(15, 23, 42, 0.85);
         border: 1px solid #2c3a52;
@@ -2244,13 +2244,6 @@
               <div class="subtitle">Koltuk &amp; bilet</div>
             </div>
           </div>
-          <div class="menu-item" onclick="goToKitDesign()">
-            <div class="icon-badge">👕</div>
-            <div class="text-wrap">
-              <div class="title">Forma &amp; Logo</div>
-              <div class="subtitle">Elite · Milli TD ücretsiz</div>
-            </div>
-          </div>
           <div class="menu-item" onclick="goToForum()">
             <div class="icon-badge">💬</div>
             <div class="text-wrap">
@@ -2329,6 +2322,9 @@
               <option value="tr">Türkçe</option>
               <option value="en">English</option>
               <option value="de">Deutsch</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="it">Italiano</option>
             </select>
           </div>
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
@@ -2349,36 +2345,45 @@
             <div style="font-weight:800;color:#38bdf8;margin-bottom:6px;">⚽ Temel akış</div>
             <div style="font-size:13px;color:#cbd5e1;line-height:1.55;">
               1) Kadro ve taktiğini ayarla · 2) Sonraki maçı oyna · 3) Antrenman &amp; altyapı ile geliş · 4) Transferde güçlen · 5) Lig / Kupa / Kıtalar Ligi’nde yüksel.
+              Menüdeki her bölüm birbirini besler: iyi taktik + formda kadro maç kazandırır, kazanılan maçlar bütçe ve itibar getirir, bütçe de transfer/altyapı/stadyum yatırımını mümkün kılar.
             </div>
           </div>
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
             <div style="font-weight:800;color:#4ade80;margin-bottom:6px;">🌱 Altyapı</div>
             <div style="font-size:13px;color:#cbd5e1;line-height:1.55;">
               Her sezon <b>12 oyuncu çekme hakkı</b> vardır. Haftalık limit yoktur; sezon içinde istediğin zaman kullanabilirsin. Scout ve akademi seviyesini yükseltmek oyuncu kalitesini artırır.
+              İstersen çekim yapmadan önce tercih ettiğin beceriyi seçerek o alanda güçlü bir yetenek çıkma ihtimalini artırabilirsin. Beğendiğin genç oyuncuyu A takıma terfi ettirerek kadroya katabilirsin.
             </div>
           </div>
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
             <div style="font-weight:800;color:#facc15;margin-bottom:6px;">💪 Antrenman</div>
             <div style="font-size:13px;color:#cbd5e1;line-height:1.55;">
-              Oyuncuları tek tek çalıştırabilir veya üstteki <b>toplu seç</b> ile birden fazla oyuncuya aynı skill antrenmanını uygulayabilirsin. Kondisyon düşükse gelişim azalır.
+              Oyuncuları tek tek çalıştırabilir veya üstteki <b>toplu seç</b> ile birden fazla oyuncuya aynı skill antrenmanını uygulayabilirsin. "Tümünü seç" işaretlenince, seçtiğin antrenman türü otomatik olarak listedeki her oyuncunun kendi antrenman kutusuna da yansır.
+              Kondisyon düşükse gelişim azalır; yorgun oyuncuları maç öncesi dinlendirmek antrenman verimini de artırır.
             </div>
           </div>
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
             <div style="font-weight:800;color:#f59e0b;margin-bottom:6px;">💰 Transfer</div>
             <div style="font-size:13px;color:#cbd5e1;line-height:1.55;">
-              <b>Açık Artırma</b> ile oyuncu al, <b>Oyuncu Sat</b> ile kadrodan listele (süre ayarlanabilir), <b>Tekliflerim</b> ile verdiğin teklifleri takip et. En yüksek teklif satırda görünür.
+              <b>Açık Artırma</b> ile oyuncu al, <b>Oyuncu Sat</b> ile kadrodan listele (açılış fiyatı ve listede kalma süresi seçilebilir, en az 24 saat), <b>Tekliflerim</b> ile verdiğin teklifleri takip et. En yüksek teklif satırda görünür ve süre dolunca en yüksek teklifi veren oyuncuyu kazanır.
             </div>
           </div>
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
             <div style="font-weight:800;color:#a78bfa;margin-bottom:6px;">📅 Maçlar</div>
             <div style="font-size:13px;color:#cbd5e1;line-height:1.55;">
-              Menüdeki <b>Maçlar</b> altında Lig, Kupa, Kıtalar Ligi, Milli Takımlar ve Canlı Maçlar bulunur. Geri tuşu her zaman bir önceki sayfaya döner.
+              Menüdeki <b>Maçlar</b> altında Lig, Kupa, Kıtalar Ligi, Milli Takımlar ve Canlı Maçlar bulunur. Taktik ekranında diziliş, oyun stili ve pas stilini (kısa/uzun/hızlı/karışık) maç öncesi ve maç sırasında değiştirebilirsin. Geri tuşu her zaman bir önceki sayfaya döner.
             </div>
           </div>
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
-            <div style="font-weight:800;color:#94a3b8;margin-bottom:6px;">💾 Kayıt</div>
+            <div style="font-weight:800;color:#f472b6;margin-bottom:6px;">🎁 Günlük giriş ödülü</div>
             <div style="font-size:13px;color:#cbd5e1;line-height:1.55;">
-              Kariyer <b>otomatik kaydedilir</b> (tarayıcı / cihaz depolaması). Aynı kullanıcı adıyla giriş yaptığında ilerleme yüklenir. “Yeni Kariyer” kaydı sıfırlar.
+              Her gün oyuna girdiğinde bir kereye mahsus bütçe ödülü kazanırsın. Üst üste her gün girdikçe "seri"n artar ve ödül büyür; bir gün ara verirsen seri sıfırlanır ve tekrar 1'den başlar. Elite üyelerde ödül miktarı x2'dir.
+            </div>
+          </div>
+          <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
+            <div style="font-weight:800;color:#fb923c;margin-bottom:6px;">⭐ Elite Üyelik</div>
+            <div style="font-size:13px;color:#cbd5e1;line-height:1.55;">
+              Forma &amp; logo (kulüp), ikinci takım, transfer önceliği ve günlük ödülde x2 gibi ek avantajlar sağlar. Ayarlar sayfasından dilediğin zaman durumunu kontrol edebilirsin.
             </div>
           </div>
         </div>
@@ -2905,73 +2910,9 @@
       </div>
     </div>
 
-    <!-- ===== SAYFA: FORMA & LOGO (Elite / Milli TD) ===== -->
-    <div id="page-kit" class="page">
-      <div class="report-container">
-        <div class="tactics-title">👕 Forma &amp; Logo Tasarımı</div>
-        <div class="formation-hint" id="kitAccessHint">
-          Elite üyelik veya milli takım TD hakkı ile düzenlenebilir.
-        </div>
-        <div id="kitLockedBox" style="display:none;padding:16px;background:#0f172a;border:1px solid #facc15;border-radius:14px;margin-bottom:12px;text-align:center;">
-          <div style="font-weight:800;color:#facc15;margin-bottom:8px;">⭐ Kilitli</div>
-          <div style="font-size:13px;color:#94a3b8;margin-bottom:12px;">Forma ve logo düzenleme Elite üyelere açıktır. Milli takım teknik direktörleri ücretsiz kullanabilir.</div>
-          <button class="sub-btn" style="width:auto;padding:10px 18px;background:linear-gradient(90deg,#f59e0b,#d97706);" onclick="goToPremium()">Elite Üyelik</button>
-        </div>
-        <div id="kitEditorWrap">
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;" id="kitTargetTabs">
-            <button type="button" class="sub-btn kit-target-tab active" data-kt="club" style="width:auto;padding:6px 12px;font-size:11px;" onclick="setKitTarget('club')">Kulüp</button>
-            <button type="button" class="sub-btn kit-target-tab" data-kt="national" style="width:auto;padding:6px 12px;font-size:11px;background:#334155;" onclick="setKitTarget('national')">Milli Takım</button>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-            <div style="background:#0f172a;border:1px solid #2c3a52;border-radius:14px;padding:12px;text-align:center;">
-              <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Önizleme</div>
-              <canvas id="kitPreviewCanvas" width="160" height="200" style="max-width:100%;border-radius:12px;background:#1e293b;"></canvas>
-              <div id="kitLogoPreviewWrap" style="margin-top:10px;min-height:48px;">
-                <img id="kitLogoPreview" alt="Logo" style="max-width:64px;max-height:64px;border-radius:10px;display:none;border:1px solid #334155;" />
-              </div>
-            </div>
-            <div style="background:#0f172a;border:1px solid #2c3a52;border-radius:14px;padding:12px;">
-              <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">Forma stili</div>
-              <select id="kitStyleSelect" onchange="renderKitPreview()" style="width:100%;padding:8px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:12px;margin-bottom:10px;">
-                <option value="solid">Düz</option>
-                <option value="stripes">Dikey çizgi</option>
-                <option value="hoops">Yatay çizgi</option>
-                <option value="sash">Çapraz kuşak</option>
-                <option value="halves">İki renk yarım</option>
-              </select>
-              <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Ana renk</div>
-              <input type="color" id="kitColorPrimary" value="#1d4ed8" onchange="renderKitPreview()" style="width:100%;height:36px;border:none;border-radius:8px;margin-bottom:8px;cursor:pointer;" />
-              <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">İkinci renk</div>
-              <input type="color" id="kitColorSecondary" value="#ffffff" onchange="renderKitPreview()" style="width:100%;height:36px;border:none;border-radius:8px;margin-bottom:8px;cursor:pointer;" />
-              <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Şort / çorap</div>
-              <input type="color" id="kitColorShorts" value="#0f172a" onchange="renderKitPreview()" style="width:100%;height:36px;border:none;border-radius:8px;margin-bottom:8px;cursor:pointer;" />
-              <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Yaka / kenar</div>
-              <input type="color" id="kitColorTrim" value="#facc15" onchange="renderKitPreview()" style="width:100%;height:36px;border:none;border-radius:8px;cursor:pointer;" />
-            </div>
-          </div>
-          <div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;margin-bottom:12px;">
-            <div style="font-weight:700;color:#e2e8f0;margin-bottom:8px;">🖼️ Logo</div>
-            <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">Cihazından resim yükle (PNG/JPG) veya hazır amblem seç.</div>
-            <input type="file" id="kitLogoFile" accept="image/*" onchange="onKitLogoFile(event)" style="width:100%;font-size:12px;color:#cbd5e1;margin-bottom:8px;" />
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;" id="kitLogoPresets">
-              <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPreset('⚽')">⚽</button>
-              <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPreset('🦁')">🦁</button>
-              <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPreset('🦅')">🦅</button>
-              <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPreset('🔥')">🔥</button>
-              <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPreset('⭐')">⭐</button>
-              <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPreset('🛡️')">🛡️</button>
-            </div>
-            <button type="button" class="sub-btn" style="width:auto;padding:6px 12px;font-size:11px;background:#334155;" onclick="clearKitLogo()">Logoyu temizle</button>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            <button class="sub-btn" style="flex:1;min-width:120px;padding:12px;background:linear-gradient(90deg,#059669,#10b981);font-weight:800;" onclick="saveKitDesign()">💾 Kaydet</button>
-            <button class="sub-btn" style="flex:1;min-width:120px;padding:12px;background:#334155;" onclick="resetKitDesign()">Sıfırla</button>
-          </div>
-          <div id="kitNote" style="text-align:center;font-size:12px;color:#94a3b8;margin-top:10px;min-height:18px;"></div>
-        </div>
-      </div>
-    </div>
-
+    <!-- ===== Forma & Logo düzenleyicisi artık burada değil:
+         kulüp forması Kadro sayfasında bir sekme, milli forma
+         Milli Takımlar sayfasında bir alt-sekme olarak yer alıyor. ===== -->
     <!-- ===== SAYFA: FORUM (yer tutucu) ===== -->
     <div id="page-forum" class="page">
       <div class="report-container">
@@ -3107,6 +3048,19 @@
             onclick="showNationalSub('history')"
           >
             Tarihçe
+          </button>
+          <button
+            class="sub-btn nat-subtab"
+            data-sub="kit"
+            style="
+              width: auto;
+              padding: 6px 12px;
+              font-size: 11px;
+              background: #334155;
+            "
+            onclick="showNationalSub('kit')"
+          >
+            👕 Forma &amp; Logo
           </button>
         </div>
         <div id="nationalTeamsList"></div>
@@ -3364,6 +3318,7 @@
               <option value="kisa">Kısa Pas</option>
               <option value="uzun">Uzun Pas</option>
               <option value="hizli">Hızlı Pas</option>
+              <option value="karisik">Karışık Pas</option>
             </select>
           </div>
           <div>
@@ -3511,11 +3466,91 @@
     <div id="page-squad" class="page">
       <div class="report-container">
         <div class="tactics-title">Takım Kadrosu — Murat SK</div>
-        <div class="formation-hint">
-          Forma numarasını değiştirmek için # kutusunu kullan. İsim satırına tıklayınca
-          profil açılır. Kontrat: süre ve haftalık maaş.
+        <div style="display:flex;gap:6px;margin-bottom:12px;" id="squadMainTabs">
+          <button
+            type="button"
+            class="sub-btn squad-main-tab active"
+            data-stab="roster"
+            style="width:auto;padding:7px 14px;font-size:12px;"
+            onclick="showSquadTab('roster')"
+          >
+            Kadro
+          </button>
+          <button
+            type="button"
+            class="sub-btn squad-main-tab"
+            data-stab="kit"
+            style="width:auto;padding:7px 14px;font-size:12px;background:#334155;"
+            onclick="showSquadTab('kit')"
+          >
+            👕 Forma &amp; Logo
+          </button>
         </div>
-        <div id="squadRosterList"></div>
+        <div id="squadTabRoster">
+          <div class="formation-hint">
+            Forma numarasını değiştirmek için # kutusunu kullan. İsim satırına tıklayınca
+            profil açılır. Kontrat: süre ve haftalık maaş.
+          </div>
+          <div id="squadRosterList"></div>
+        </div>
+        <div id="squadTabKit" style="display:none;">
+          <div class="formation-hint" id="kitAccessHint">
+            Elite üyelik ile düzenlenebilir.
+          </div>
+          <div id="kitLockedBox" style="display:none;padding:16px;background:#0f172a;border:1px solid #facc15;border-radius:14px;margin-bottom:12px;text-align:center;">
+            <div style="font-weight:800;color:#facc15;margin-bottom:8px;">⭐ Kilitli</div>
+            <div style="font-size:13px;color:#94a3b8;margin-bottom:12px;">Kulüp forma ve logo düzenleme Elite üyelere açıktır.</div>
+            <button class="sub-btn" style="width:auto;padding:10px 18px;background:linear-gradient(90deg,#f59e0b,#d97706);" onclick="goToPremium()">Elite Üyelik</button>
+          </div>
+          <div id="kitEditorWrap">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+              <div style="background:#0f172a;border:1px solid #2c3a52;border-radius:14px;padding:12px;text-align:center;">
+                <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Önizleme</div>
+                <canvas id="kitPreviewCanvas" width="160" height="200" style="max-width:100%;border-radius:12px;background:#1e293b;"></canvas>
+                <div id="kitLogoPreviewWrap" style="margin-top:10px;min-height:48px;">
+                  <img id="kitLogoPreview" alt="Logo" style="max-width:64px;max-height:64px;border-radius:10px;display:none;border:1px solid #334155;" />
+                </div>
+              </div>
+              <div style="background:#0f172a;border:1px solid #2c3a52;border-radius:14px;padding:12px;">
+                <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">Forma stili</div>
+                <select id="kitStyleSelect" onchange="renderKitPreviewFor('kit')" style="width:100%;padding:8px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:12px;margin-bottom:10px;">
+                  <option value="solid">Düz</option>
+                  <option value="stripes">Dikey çizgi</option>
+                  <option value="hoops">Yatay çizgi</option>
+                  <option value="sash">Çapraz kuşak</option>
+                  <option value="halves">İki renk yarım</option>
+                </select>
+                <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Ana renk</div>
+                <input type="color" id="kitColorPrimary" value="#1d4ed8" onchange="renderKitPreviewFor('kit')" style="width:100%;height:36px;border:none;border-radius:8px;margin-bottom:8px;cursor:pointer;" />
+                <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">İkinci renk</div>
+                <input type="color" id="kitColorSecondary" value="#ffffff" onchange="renderKitPreviewFor('kit')" style="width:100%;height:36px;border:none;border-radius:8px;margin-bottom:8px;cursor:pointer;" />
+                <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Şort / çorap</div>
+                <input type="color" id="kitColorShorts" value="#0f172a" onchange="renderKitPreviewFor('kit')" style="width:100%;height:36px;border:none;border-radius:8px;margin-bottom:8px;cursor:pointer;" />
+                <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Yaka / kenar</div>
+                <input type="color" id="kitColorTrim" value="#facc15" onchange="renderKitPreviewFor('kit')" style="width:100%;height:36px;border:none;border-radius:8px;cursor:pointer;" />
+              </div>
+            </div>
+            <div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;margin-bottom:12px;">
+              <div style="font-weight:700;color:#e2e8f0;margin-bottom:8px;">🖼️ Logo</div>
+              <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">Cihazından resim yükle (PNG/JPG) veya hazır amblem seç.</div>
+              <input type="file" id="kitLogoFile" accept="image/*" onchange="onKitLogoFileFor(event,'kit')" style="width:100%;font-size:12px;color:#cbd5e1;margin-bottom:8px;" />
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;" id="kitLogoPresets">
+                <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','⚽')">⚽</button>
+                <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','🦁')">🦁</button>
+                <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','🦅')">🦅</button>
+                <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','🔥')">🔥</button>
+                <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','⭐')">⭐</button>
+                <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','🛡️')">🛡️</button>
+              </div>
+              <button type="button" class="sub-btn" style="width:auto;padding:6px 12px;font-size:11px;background:#334155;" onclick="clearKitLogoFor('kit')">Logoyu temizle</button>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <button class="sub-btn" style="flex:1;min-width:120px;padding:12px;background:linear-gradient(90deg,#059669,#10b981);font-weight:800;" onclick="saveKitDesignFor('kit','club')">💾 Kaydet</button>
+              <button class="sub-btn" style="flex:1;min-width:120px;padding:12px;background:#334155;" onclick="resetKitDesignFor('kit','club')">Sıfırla</button>
+            </div>
+            <div id="kitNote" style="text-align:center;font-size:12px;color:#94a3b8;margin-top:10px;min-height:18px;"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -3891,6 +3926,7 @@
                 <option value="kisa">Kısa Pas</option>
                 <option value="uzun">Uzun Pas</option>
                 <option value="hizli">Hızlı Pas</option>
+                <option value="karisik">Karışık Pas</option>
               </select>
             </div>
             <div>
@@ -4036,6 +4072,7 @@
               <option value="kisa">Kısa Pas</option>
               <option value="uzun">Uzun Pas</option>
               <option value="hizli">Hızlı Pas</option>
+              <option value="karisik">Karışık Pas</option>
               <option value="orta">Hücum: Orta</option>
               <option value="sol">Hücum: Sol</option>
               <option value="sag">Hücum: Sağ</option>
@@ -5786,9 +5823,14 @@
             b.style.background = on ? "" : "#334155";
             b.classList.toggle("active", on);
           });
-        const which = _natWhich || "A";
         const list = document.getElementById("nationalTeamsList");
         if (!list) return;
+        if (_natSub === "kit") {
+          list.innerHTML = natKitEditorHtml();
+          refreshKitAccessFor("natKit", "national");
+          return;
+        }
+        const which = _natWhich || "A";
         const suffix = which === "U21" ? " U21" : "";
         const rows = COUNTRY_NAMES.map((c) => {
           const teams =
@@ -6106,19 +6148,39 @@
           (row.lost || 0) +
           "\n\nYeni sezona geçilsin mi? (Oyuncular +1 yaş, lig sıfırlanır)";
         if (!confirm(msg)) return;
-        // Sıralama primi
+        // Sıralama primi + unvan
         let bonus = 50000;
-        if (standing.rank === 1) bonus = 800000;
-        else if (standing.rank === 2) bonus = 450000;
-        else if (standing.rank === 3) bonus = 250000;
-        else if (standing.rank && standing.rank <= 6) bonus = 120000;
-        else if (standing.rank && standing.rank <= 10) bonus = 60000;
+        let title = "";
+        if (standing.rank === 1) {
+          bonus = 800000;
+          title = "🏆 Şampiyon!";
+        } else if (standing.rank === 2) {
+          bonus = 450000;
+          title = "🥈 İkincilik";
+        } else if (standing.rank === 3) {
+          bonus = 250000;
+          title = "🥉 Üçüncülük";
+        } else if (standing.rank && standing.rank <= 6) {
+          bonus = 120000;
+          title = "Avrupa kotası";
+        } else if (standing.rank && standing.rank <= 10) {
+          bonus = 60000;
+        }
         clubBudget += bonus;
         addFinanceEntry(
           "gelir",
           "Sezon sonu primi (" + rank + ". sıra)",
           bonus,
         );
+        // Şampiyonluk kupası kabine eklenir
+        if (standing.rank === 1) {
+          try {
+            teamTrophies.home.unshift({
+              name: "🏆 " + USER_COUNTRY + " Ligi Şampiyonluğu",
+              year: String(currentSeasonYear - 1),
+            });
+          } catch (e) {}
+        }
         advanceSeasonAges();
         // Lig istatistiklerini sıfırla
         try {
@@ -6148,13 +6210,16 @@
               (currentSeasonYear - 1) +
               " · " +
               rank +
-              ". sıra · Prim " +
+              ". sıra" +
+              (title ? " · " + title : "") +
+              " · Prim " +
               formatMoney(bonus),
             "Sezon",
           );
         }
         alert(
-          "Yeni sezon " +
+          (title ? title + "\n" : "") +
+            "Yeni sezon " +
             currentSeasonYear +
             "!\nPrim: " +
             formatMoney(bonus) +
@@ -6666,14 +6731,26 @@
               if (found) {
                 if (found.home === h.name)
                   scoreHtml =
-                    ' <b style="color:#facc15;">' +
+                    ' <b style="color:#facc15;cursor:pointer;text-decoration:underline;" title="Maç raporu" onclick=\'event.stopPropagation();openMatchReportByScore(' +
+                    JSON.stringify(h.name) +
+                    "," +
+                    JSON.stringify(a.name) +
+                    "," +
+                    JSON.stringify(found.homeGoals + "-" + found.awayGoals) +
+                    ")'>" +
                     found.homeGoals +
                     "-" +
                     found.awayGoals +
                     "</b> ";
                 else
                   scoreHtml =
-                    ' <b style="color:#facc15;">' +
+                    ' <b style="color:#facc15;cursor:pointer;text-decoration:underline;" title="Maç raporu" onclick=\'event.stopPropagation();openMatchReportByScore(' +
+                    JSON.stringify(h.name) +
+                    "," +
+                    JSON.stringify(a.name) +
+                    "," +
+                    JSON.stringify(found.awayGoals + "-" + found.homeGoals) +
+                    ")'>" +
                     found.awayGoals +
                     "-" +
                     found.homeGoals +
@@ -6713,8 +6790,6 @@
         if (comp === "league") {
           let html = '<div class="youth-section-title">Puan Durumu</div>';
           html += '<div id="inlineStandingsWrap"></div>';
-          html +=
-            '<div style="margin-top:12px;"><button class="sub-btn" style="width:auto;padding:8px 14px;" onclick="playLeagueRound()">Haftayı Oynat</button></div>';
           html +=
             '<div style="font-size:11px;color:#94a3b8;margin-top:8px;text-align:center;">Oynanan maçlar Fikstür sekmesinde skorla görünür.</div>';
           return html;
@@ -6902,14 +6977,23 @@
           [my, CL_TEAMS[1], "—", false],
           [CL_TEAMS[0], CL_TEAMS[2], "—", false],
         ].forEach((f) => {
+          const scoreHtml = f[3]
+            ? ' <b style="color:#facc15;cursor:pointer;text-decoration:underline;" title="Maç raporu" onclick=\'event.stopPropagation();openMatchReportByScore(' +
+              JSON.stringify(f[0]) +
+              "," +
+              JSON.stringify(f[1]) +
+              "," +
+              JSON.stringify(f[2]) +
+              ")'>" +
+              f[2] +
+              "</b> "
+            : ' <b style="color:#facc15;">' + f[2] + "</b> ";
           html += cardBox(
             (f[0] === my || f[1] === my
               ? '<span style="color:#4ade80;">● </span>'
               : "") +
               f[0] +
-              ' <b style="color:#facc15;">' +
-              f[2] +
-              "</b> " +
+              scoreHtml +
               f[1] +
               (f[3]
                 ? ' <span style="color:#64748b;font-size:11px;">(Oynandı)</span>'
@@ -8351,14 +8435,16 @@
         updateStadiumUI();
       }
 
-      // ---- Forma & Logo (Elite veya Milli TD) ----
-      let _kitTarget = "club"; // club | national
-      let _kitLogoData = null; // dataURL or emoji
-      let _kitLogoIsEmoji = false;
+      // ---- Forma & Logo (Elite / Milli Takım) — jenerik, prefix tabanlı ----
+      // prefix: DOM eleman id önekleri (örn. "kit" kulüp için Kadro sekmesinde,
+      //         "natKit" milli takım için Milli Takımlar sayfasında).
+      // target: "club" | "national" — izin kontrolü ve localStorage anahtarı için.
+      let _kitLogoDataMap = {}; // { [prefix]: dataURL | emoji | null }
+      let _kitLogoIsEmojiMap = {}; // { [prefix]: boolean }
       let _isNationalManagerFlag = false;
 
       function canEditKit(target) {
-        const t = target || _kitTarget || "club";
+        const t = target || "club";
         // Milli forma: sadece milli TD (ücretsiz)
         if (t === "national") return !!_isNationalManagerFlag;
         // Kulüp forma: Elite
@@ -8424,23 +8510,23 @@
         };
       }
 
-      function applyKitToForm(kit) {
-        if (!kit) kit = defaultKit(_kitTarget);
+      function applyKitToFormFor(prefix, kit, target) {
+        if (!kit) kit = defaultKit(target);
         const setVal = function (id, v) {
           const el = document.getElementById(id);
           if (el && v != null) el.value = v;
         };
-        setVal("kitStyleSelect", kit.style || "solid");
-        setVal("kitColorPrimary", kit.primary || "#1d4ed8");
-        setVal("kitColorSecondary", kit.secondary || "#ffffff");
-        setVal("kitColorShorts", kit.shorts || "#0f172a");
-        setVal("kitColorTrim", kit.trim || "#facc15");
-        _kitLogoData = kit.logo || null;
-        _kitLogoIsEmoji = !!kit.logoEmoji;
-        const img = document.getElementById("kitLogoPreview");
+        setVal(prefix + "StyleSelect", kit.style || "solid");
+        setVal(prefix + "ColorPrimary", kit.primary || "#1d4ed8");
+        setVal(prefix + "ColorSecondary", kit.secondary || "#ffffff");
+        setVal(prefix + "ColorShorts", kit.shorts || "#0f172a");
+        setVal(prefix + "ColorTrim", kit.trim || "#facc15");
+        _kitLogoDataMap[prefix] = kit.logo || null;
+        _kitLogoIsEmojiMap[prefix] = !!kit.logoEmoji;
+        const img = document.getElementById(prefix + "LogoPreview");
         if (img) {
-          if (_kitLogoData && !_kitLogoIsEmoji) {
-            img.src = _kitLogoData;
+          if (_kitLogoDataMap[prefix] && !_kitLogoIsEmojiMap[prefix]) {
+            img.src = _kitLogoDataMap[prefix];
             img.style.display = "inline-block";
           } else {
             img.style.display = "none";
@@ -8448,30 +8534,32 @@
         }
       }
 
-      function collectKitFromForm() {
+      function collectKitFromFormFor(prefix) {
         return {
-          style: (document.getElementById("kitStyleSelect") || {}).value || "solid",
-          primary: (document.getElementById("kitColorPrimary") || {}).value || "#1d4ed8",
-          secondary: (document.getElementById("kitColorSecondary") || {}).value || "#ffffff",
-          shorts: (document.getElementById("kitColorShorts") || {}).value || "#0f172a",
-          trim: (document.getElementById("kitColorTrim") || {}).value || "#facc15",
-          logo: _kitLogoData,
-          logoEmoji: _kitLogoIsEmoji,
+          style: (document.getElementById(prefix + "StyleSelect") || {}).value || "solid",
+          primary: (document.getElementById(prefix + "ColorPrimary") || {}).value || "#1d4ed8",
+          secondary: (document.getElementById(prefix + "ColorSecondary") || {}).value || "#ffffff",
+          shorts: (document.getElementById(prefix + "ColorShorts") || {}).value || "#0f172a",
+          trim: (document.getElementById(prefix + "ColorTrim") || {}).value || "#facc15",
+          logo: _kitLogoDataMap[prefix] || null,
+          logoEmoji: !!_kitLogoIsEmojiMap[prefix],
           updatedAt: Date.now(),
         };
       }
 
-      function renderKitPreview() {
-        const canvas = document.getElementById("kitPreviewCanvas");
+      function renderKitPreviewFor(prefix) {
+        const canvas = document.getElementById(prefix + "PreviewCanvas");
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         const w = canvas.width;
         const h = canvas.height;
-        const style = (document.getElementById("kitStyleSelect") || {}).value || "solid";
-        const c1 = (document.getElementById("kitColorPrimary") || {}).value || "#1d4ed8";
-        const c2 = (document.getElementById("kitColorSecondary") || {}).value || "#ffffff";
-        const shorts = (document.getElementById("kitColorShorts") || {}).value || "#0f172a";
-        const trim = (document.getElementById("kitColorTrim") || {}).value || "#facc15";
+        const style = (document.getElementById(prefix + "StyleSelect") || {}).value || "solid";
+        const c1 = (document.getElementById(prefix + "ColorPrimary") || {}).value || "#1d4ed8";
+        const c2 = (document.getElementById(prefix + "ColorSecondary") || {}).value || "#ffffff";
+        const shorts = (document.getElementById(prefix + "ColorShorts") || {}).value || "#0f172a";
+        const trim = (document.getElementById(prefix + "ColorTrim") || {}).value || "#facc15";
+        const logoData = _kitLogoDataMap[prefix];
+        const logoIsEmoji = !!_kitLogoIsEmojiMap[prefix];
         ctx.clearRect(0, 0, w, h);
         // background
         ctx.fillStyle = "#1e293b";
@@ -8544,12 +8632,12 @@
         ctx.fillRect(tx + 14, ty + th + 34, 24, 4);
         ctx.fillRect(tx + tw - 38, ty + th + 34, 24, 4);
         // logo / badge
-        if (_kitLogoData && _kitLogoIsEmoji) {
+        if (logoData && logoIsEmoji) {
           ctx.font = "22px serif";
           ctx.textAlign = "center";
-          ctx.fillText(_kitLogoData, tx + 28, ty + 42);
-        } else if (_kitLogoData && !_kitLogoIsEmoji) {
-          const img = document.getElementById("kitLogoPreview");
+          ctx.fillText(logoData, tx + 28, ty + 42);
+        } else if (logoData && !logoIsEmoji) {
+          const img = document.getElementById(prefix + "LogoPreview");
           if (img && img.complete && img.naturalWidth) {
             try {
               ctx.drawImage(img, tx + 14, ty + 22, 28, 28);
@@ -8563,148 +8651,200 @@
         ctx.fillText("10", tx + tw / 2, ty + 70);
       }
 
-      function setKitTarget(t) {
-        _kitTarget = t === "national" ? "national" : "club";
-        document.querySelectorAll(".kit-target-tab").forEach(function (btn) {
-          const on = btn.getAttribute("data-kt") === _kitTarget;
-          btn.classList.toggle("active", on);
-          btn.style.background = on ? "" : "#334155";
-        });
-        const kit = loadKitDesign(_kitTarget) || defaultKit(_kitTarget);
-        applyKitToForm(kit);
-        renderKitPreview();
-      }
-      window.setKitTarget = setKitTarget;
-
-      function onKitLogoFile(ev) {
+      function onKitLogoFileFor(ev, prefix) {
         const file = ev && ev.target && ev.target.files && ev.target.files[0];
         if (!file) return;
         if (file.size > 800 * 1024) {
-          const n = document.getElementById("kitNote");
+          const n = document.getElementById(prefix + "Note");
           if (n) n.innerText = "Logo max 800 KB olmalı.";
           return;
         }
         const reader = new FileReader();
         reader.onload = function () {
-          _kitLogoData = reader.result;
-          _kitLogoIsEmoji = false;
-          const img = document.getElementById("kitLogoPreview");
+          _kitLogoDataMap[prefix] = reader.result;
+          _kitLogoIsEmojiMap[prefix] = false;
+          const img = document.getElementById(prefix + "LogoPreview");
           if (img) {
-            img.src = _kitLogoData;
+            img.src = _kitLogoDataMap[prefix];
             img.style.display = "inline-block";
             img.onload = function () {
-              renderKitPreview();
+              renderKitPreviewFor(prefix);
             };
           }
-          renderKitPreview();
+          renderKitPreviewFor(prefix);
         };
         reader.readAsDataURL(file);
       }
-      window.onKitLogoFile = onKitLogoFile;
+      window.onKitLogoFileFor = onKitLogoFileFor;
 
-      function setKitLogoPreset(emoji) {
-        _kitLogoData = emoji;
-        _kitLogoIsEmoji = true;
-        const img = document.getElementById("kitLogoPreview");
+      function setKitLogoPresetFor(prefix, emoji) {
+        _kitLogoDataMap[prefix] = emoji;
+        _kitLogoIsEmojiMap[prefix] = true;
+        const img = document.getElementById(prefix + "LogoPreview");
         if (img) img.style.display = "none";
-        renderKitPreview();
+        renderKitPreviewFor(prefix);
       }
-      window.setKitLogoPreset = setKitLogoPreset;
+      window.setKitLogoPresetFor = setKitLogoPresetFor;
 
-      function clearKitLogo() {
-        _kitLogoData = null;
-        _kitLogoIsEmoji = false;
-        const img = document.getElementById("kitLogoPreview");
+      function clearKitLogoFor(prefix) {
+        _kitLogoDataMap[prefix] = null;
+        _kitLogoIsEmojiMap[prefix] = false;
+        const img = document.getElementById(prefix + "LogoPreview");
         if (img) {
           img.removeAttribute("src");
           img.style.display = "none";
         }
-        const f = document.getElementById("kitLogoFile");
+        const f = document.getElementById(prefix + "LogoFile");
         if (f) f.value = "";
-        renderKitPreview();
+        renderKitPreviewFor(prefix);
       }
-      window.clearKitLogo = clearKitLogo;
+      window.clearKitLogoFor = clearKitLogoFor;
 
-      function saveKitDesign() {
-        if (!canEditKit(_kitTarget)) {
-          const n = document.getElementById("kitNote");
+      function saveKitDesignFor(prefix, target) {
+        if (!canEditKit(target)) {
+          const n = document.getElementById(prefix + "Note");
           if (n)
             n.innerText =
-              _kitTarget === "national"
+              target === "national"
                 ? "Milli forma için milli TD olmalısın."
                 : "Kulüp forma için Elite üyelik gerekir.";
           return;
         }
-        const kit = collectKitFromForm();
+        const kit = collectKitFromFormFor(prefix);
         try {
-          localStorage.setItem(kitStorageKey(_kitTarget), JSON.stringify(kit));
+          localStorage.setItem(kitStorageKey(target), JSON.stringify(kit));
         } catch (e) {
-          const n = document.getElementById("kitNote");
+          const n = document.getElementById(prefix + "Note");
           if (n) n.innerText = "Kayıt başarısız (depolama dolu?).";
           return;
         }
         // Kulüp forması takım rengine yansıt (basit)
         try {
-          if (_kitTarget === "club" && teamConfig && teamConfig.home) {
+          if (target === "club" && teamConfig && teamConfig.home) {
             teamConfig.home.kitPrimary = kit.primary;
             teamConfig.home.kitSecondary = kit.secondary;
             teamConfig.home.kitStyle = kit.style;
             teamConfig.home.logo = kit.logo;
           }
         } catch (e) {}
-        const n = document.getElementById("kitNote");
+        const n = document.getElementById(prefix + "Note");
         if (n)
           n.innerText =
             "Kaydedildi · " +
-            (_kitTarget === "national" ? "Milli forma" : "Kulüp forma");
+            (target === "national" ? "Milli forma" : "Kulüp forma");
         if (typeof pushNotification === "function")
           pushNotification("👕", "Forma tasarımı kaydedildi", "Görünüm");
-        renderKitPreview();
+        renderKitPreviewFor(prefix);
       }
-      window.saveKitDesign = saveKitDesign;
+      window.saveKitDesignFor = saveKitDesignFor;
 
-      function resetKitDesign() {
-        const kit = defaultKit(_kitTarget);
-        applyKitToForm(kit);
-        renderKitPreview();
-        const n = document.getElementById("kitNote");
+      function resetKitDesignFor(prefix, target) {
+        const kit = defaultKit(target);
+        applyKitToFormFor(prefix, kit, target);
+        renderKitPreviewFor(prefix);
+        const n = document.getElementById(prefix + "Note");
         if (n) n.innerText = "Varsayılana döndü (henüz kaydetmedin).";
       }
-      window.resetKitDesign = resetKitDesign;
+      window.resetKitDesignFor = resetKitDesignFor;
 
-      function goToKitDesign() {
-        hideMainMenuAndShowBack();
-        switchPage("page-kit");
-        const clubOk = canEditKit("club");
-        const natOk = canEditKit("national");
-        const allowed = clubOk || natOk;
-        const locked = document.getElementById("kitLockedBox");
-        const editor = document.getElementById("kitEditorWrap");
-        const hint = document.getElementById("kitAccessHint");
+      // Bir kit formunu (kulüp ya da milli) DOM'a yeni yazıldığında veya
+      // sekmesi açıldığında: erişim (kilit) durumunu, ipucu metnini ve
+      // kayıtlı/varsayılan tasarımı forma uygular.
+      function refreshKitAccessFor(prefix, target) {
+        const allowed = canEditKit(target);
+        const locked = document.getElementById(prefix + "LockedBox");
+        const editor = document.getElementById(prefix + "EditorWrap");
+        const hint = document.getElementById(prefix + "AccessHint");
         if (locked) locked.style.display = allowed ? "none" : "block";
         if (editor) editor.style.opacity = allowed ? "1" : "0.45";
         if (editor) editor.style.pointerEvents = allowed ? "auto" : "none";
         if (hint) {
-          if (clubOk && natOk)
-            hint.innerText =
-              "Elite + Milli TD · kulüp ve milli forma düzenlenebilir.";
-          else if (clubOk)
-            hint.innerText = "Elite üye · kulüp forma & logo serbest.";
-          else if (natOk)
-            hint.innerText =
-              "Milli TD · milli forma ücretsiz (kulüp forma için Elite gerekir).";
-          else
-            hint.innerText =
-              "Kulüp forma: Elite · Milli forma: sadece milli TD (ücretsiz).";
+          if (target === "national") {
+            hint.innerText = allowed
+              ? "Milli TD · milli forma & logo serbest."
+              : "Milli forma düzenleme sadece milli takım teknik direktörlerine açıktır (ücretsiz).";
+          } else {
+            hint.innerText = allowed
+              ? "Elite üye · kulüp forma & logo serbest."
+              : "Kulüp forma ve logo düzenleme Elite üyelere açıktır.";
+          }
         }
-        const natTab = document.querySelector(
-          '.kit-target-tab[data-kt="national"]',
-        );
-        if (natTab)
-          natTab.style.display = natOk ? "inline-block" : "none";
-        setKitTarget(natOk && !clubOk ? "national" : "club");
+        const kit = loadKitDesign(target) || defaultKit(target);
+        applyKitToFormFor(prefix, kit, target);
+        renderKitPreviewFor(prefix);
       }
-      window.goToKitDesign = goToKitDesign;
+      window.refreshKitAccessFor = refreshKitAccessFor;
+
+      // Milli Takımlar sayfasındaki "Forma & Logo" alt-sekmesi için HTML
+      // üretir — nationalTeamsList her alt-sekme değişiminde yeniden
+      // çizildiğinden bu form da aynı şekilde bir string olarak üretiliyor.
+      function natKitEditorHtml() {
+        const p = "natKit";
+        return (
+          '<div class="formation-hint" id="' + p + 'AccessHint">Milli takım TD hakkı ile düzenlenebilir.</div>' +
+          '<div id="' + p + 'LockedBox" style="display:none;padding:16px;background:#0f172a;border:1px solid #facc15;border-radius:14px;margin-bottom:12px;text-align:center;">' +
+            '<div style="font-weight:800;color:#facc15;margin-bottom:8px;">⭐ Kilitli</div>' +
+            '<div style="font-size:13px;color:#94a3b8;">Milli forma ve logo düzenleme sadece milli takım teknik direktörlerine açıktır (ücretsiz).</div>' +
+          '</div>' +
+          '<div id="' + p + 'EditorWrap">' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">' +
+              '<div style="background:#0f172a;border:1px solid #2c3a52;border-radius:14px;padding:12px;text-align:center;">' +
+                '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Önizleme</div>' +
+                '<canvas id="' + p + 'PreviewCanvas" width="160" height="200" style="max-width:100%;border-radius:12px;background:#1e293b;"></canvas>' +
+                '<div id="' + p + 'LogoPreviewWrap" style="margin-top:10px;min-height:48px;">' +
+                  '<img id="' + p + 'LogoPreview" alt="Logo" style="max-width:64px;max-height:64px;border-radius:10px;display:none;border:1px solid #334155;" />' +
+                '</div>' +
+              '</div>' +
+              '<div style="background:#0f172a;border:1px solid #2c3a52;border-radius:14px;padding:12px;">' +
+                '<div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">Forma stili</div>' +
+                '<select id="' + p + 'StyleSelect" onchange="renderKitPreviewFor(\'' + p + '\')" style="width:100%;padding:8px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:12px;margin-bottom:10px;">' +
+                  '<option value="solid">Düz</option>' +
+                  '<option value="stripes">Dikey çizgi</option>' +
+                  '<option value="hoops">Yatay çizgi</option>' +
+                  '<option value="sash">Çapraz kuşak</option>' +
+                  '<option value="halves">İki renk yarım</option>' +
+                '</select>' +
+                '<div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Ana renk</div>' +
+                '<input type="color" id="' + p + 'ColorPrimary" value="#e11d48" onchange="renderKitPreviewFor(\'' + p + '\')" style="width:100%;height:36px;border:none;border-radius:8px;margin-bottom:8px;cursor:pointer;" />' +
+                '<div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">İkinci renk</div>' +
+                '<input type="color" id="' + p + 'ColorSecondary" value="#ffffff" onchange="renderKitPreviewFor(\'' + p + '\')" style="width:100%;height:36px;border:none;border-radius:8px;margin-bottom:8px;cursor:pointer;" />' +
+                '<div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Şort / çorap</div>' +
+                '<input type="color" id="' + p + 'ColorShorts" value="#0f172a" onchange="renderKitPreviewFor(\'' + p + '\')" style="width:100%;height:36px;border:none;border-radius:8px;margin-bottom:8px;cursor:pointer;" />' +
+                '<div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Yaka / kenar</div>' +
+                '<input type="color" id="' + p + 'ColorTrim" value="#facc15" onchange="renderKitPreviewFor(\'' + p + '\')" style="width:100%;height:36px;border:none;border-radius:8px;cursor:pointer;" />' +
+              '</div>' +
+            '</div>' +
+            '<div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;margin-bottom:12px;">' +
+              '<div style="font-weight:700;color:#e2e8f0;margin-bottom:8px;">🖼️ Logo</div>' +
+              '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">Cihazından resim yükle (PNG/JPG) veya hazır amblem seç.</div>' +
+              '<input type="file" id="' + p + 'LogoFile" accept="image/*" onchange="onKitLogoFileFor(event,\'' + p + '\')" style="width:100%;font-size:12px;color:#cbd5e1;margin-bottom:8px;" />' +
+              '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' +
+                ["⚽", "🦁", "🦅", "🔥", "⭐", "🛡️", "🇹🇷"]
+                  .map(function (e) {
+                    return (
+                      '<button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor(\'' +
+                      p +
+                      "','" +
+                      e +
+                      "')\">" +
+                      e +
+                      "</button>"
+                    );
+                  })
+                  .join("") +
+              '</div>' +
+              '<button type="button" class="sub-btn" style="width:auto;padding:6px 12px;font-size:11px;background:#334155;" onclick="clearKitLogoFor(\'' + p + '\')">Logoyu temizle</button>' +
+            '</div>' +
+            '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+              '<button class="sub-btn" style="flex:1;min-width:120px;padding:12px;background:linear-gradient(90deg,#059669,#10b981);font-weight:800;" onclick="saveKitDesignFor(\'' + p + '\',\'national\')">💾 Kaydet</button>' +
+              '<button class="sub-btn" style="flex:1;min-width:120px;padding:12px;background:#334155;" onclick="resetKitDesignFor(\'' + p + '\',\'national\')">Sıfırla</button>' +
+            '</div>' +
+            '<div id="' + p + 'Note" style="text-align:center;font-size:12px;color:#94a3b8;margin-top:10px;min-height:18px;"></div>' +
+          '</div>'
+        );
+      }
+      window.natKitEditorHtml = natKitEditorHtml;
+
 
       function goToForum() {
         hideMainMenuAndShowBack();
@@ -9059,8 +9199,23 @@
       function goToSubs() {
         hideMainMenuAndShowBack();
         switchPage("page-squad");
+        showSquadTab("roster");
         renderSquadRosterPage("home");
       }
+      function showSquadTab(tab) {
+        const t = tab === "kit" ? "kit" : "roster";
+        document.querySelectorAll("#squadMainTabs .squad-main-tab").forEach(function (btn) {
+          const on = btn.getAttribute("data-stab") === t;
+          btn.classList.toggle("active", on);
+          btn.style.background = on ? "" : "#334155";
+        });
+        const rosterEl = document.getElementById("squadTabRoster");
+        const kitEl = document.getElementById("squadTabKit");
+        if (rosterEl) rosterEl.style.display = t === "roster" ? "block" : "none";
+        if (kitEl) kitEl.style.display = t === "kit" ? "block" : "none";
+        if (t === "kit") refreshKitAccessFor("kit", "club");
+      }
+      window.showSquadTab = showSquadTab;
       function goToYouth() {
         hideMainMenuAndShowBack();
         switchPage("page-youth");
@@ -9344,6 +9499,32 @@
         document.querySelectorAll(".train-player-cb").forEach(function (cb) {
           cb.checked = !!on;
         });
+        if (on) {
+          const bulk = document.getElementById("bulkTrainSkillSelect");
+          const skill = bulk && bulk.value;
+          if (skill) {
+            document.querySelectorAll(".train-skill-select").forEach(function (sel) {
+              let hasOption = false;
+              for (let i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value === skill) {
+                  hasOption = true;
+                  break;
+                }
+              }
+              if (!hasOption) {
+                const opt = document.createElement("option");
+                opt.value = skill;
+                opt.textContent =
+                  (typeof SKILL_LABELS_TR !== "undefined" && SKILL_LABELS_TR[skill]) ||
+                  (typeof SKILL_LABELS_FOR_COACH !== "undefined" &&
+                    SKILL_LABELS_FOR_COACH[skill]) ||
+                  skill;
+                sel.appendChild(opt);
+              }
+              sel.value = skill;
+            });
+          }
+        }
       }
       window.toggleTrainSelectAll = toggleTrainSelectAll;
       window.trainSelectedPlayers = trainSelectedPlayers;
@@ -9964,6 +10145,57 @@
           settings_title: "Einstellungen",
           help_title: "Hilfe — Spiel lernen",
           lang_saved: "Sprache gespeichert",
+        },
+        es: {
+          menu_matches: "Partidos",
+          menu_tactics: "Táctica",
+          menu_squad: "Plantilla",
+          menu_youth: "Cantera",
+          menu_training: "Entrenamiento",
+          menu_transfer: "Transferencias",
+          menu_economy: "Economía",
+          menu_stadium: "Estadio",
+          menu_forum: "Foro",
+          menu_premium: "Membresía Elite",
+          menu_help: "Ayuda",
+          menu_logout: "Cerrar sesión",
+          settings_title: "Ajustes",
+          help_title: "Ayuda — Aprende el juego",
+          lang_saved: "Idioma guardado",
+        },
+        fr: {
+          menu_matches: "Matchs",
+          menu_tactics: "Tactiques",
+          menu_squad: "Effectif",
+          menu_youth: "Centre de formation",
+          menu_training: "Entraînement",
+          menu_transfer: "Transferts",
+          menu_economy: "Finances",
+          menu_stadium: "Stade",
+          menu_forum: "Forum",
+          menu_premium: "Adhésion Elite",
+          menu_help: "Aide",
+          menu_logout: "Déconnexion",
+          settings_title: "Paramètres",
+          help_title: "Aide — Apprendre le jeu",
+          lang_saved: "Langue enregistrée",
+        },
+        it: {
+          menu_matches: "Partite",
+          menu_tactics: "Tattiche",
+          menu_squad: "Rosa",
+          menu_youth: "Settore giovanile",
+          menu_training: "Allenamento",
+          menu_transfer: "Trasferimenti",
+          menu_economy: "Economia",
+          menu_stadium: "Stadio",
+          menu_forum: "Forum",
+          menu_premium: "Abbonamento Elite",
+          menu_help: "Aiuto",
+          menu_logout: "Esci",
+          settings_title: "Impostazioni",
+          help_title: "Aiuto — Impara il gioco",
+          lang_saved: "Lingua salvata",
         },
       };
       function getGameLang() {
@@ -11962,6 +12194,69 @@
         if (typeof renderLeagueScorers === "function") renderLeagueScorers();
       }
 
+      /** Kullanıcı kendi ligindeki fikstür maçını oynadığında, o haftanın
+       *  geri kalan (bot-bot) maçlarını da otomatik oynatıp fikstüre işler —
+       *  böylece "Haftayı Oynat" butonuna gerek kalmadan hafta tamamlanır. */
+      function simulateRemainingRoundMatches(homeName, awayName) {
+        try {
+          const country = USER_COUNTRY;
+          const tier = USER_DIVISION;
+          const teams = [
+            ...((worldLeagues[country] && worldLeagues[country][tier]) || []),
+          ];
+          const n = teams.length;
+          if (n < 2) return;
+          const weeks = Math.max(1, Math.min(n - 1, 9));
+          let foundWeek = -1;
+          let foundRotated = null;
+          for (let w = 0; w < weeks; w++) {
+            const rotated = teams.slice(w % n).concat(teams.slice(0, w % n));
+            for (let i = 0; i < Math.floor(n / 2); i++) {
+              const h = rotated[i],
+                a = rotated[n - 1 - i];
+              if (!h || !a) continue;
+              if (
+                (h.name === homeName && a.name === awayName) ||
+                (h.name === awayName && a.name === homeName)
+              ) {
+                foundWeek = w;
+                foundRotated = rotated;
+                break;
+              }
+            }
+            if (foundWeek >= 0) break;
+          }
+          if (foundWeek < 0 || !foundRotated) return;
+          if (!leagueReports[country]) leagueReports[country] = {};
+          if (!leagueReports[country][tier]) leagueReports[country][tier] = [];
+          const reps = leagueReports[country][tier];
+          for (let i = 0; i < Math.floor(n / 2); i++) {
+            const h = foundRotated[i],
+              a = foundRotated[n - 1 - i];
+            if (!h || !a) continue;
+            if (
+              h.name === homeName ||
+              a.name === homeName ||
+              h.name === awayName ||
+              a.name === awayName
+            )
+              continue; // kullanıcının maçı zaten işlendi
+            const already = reps.some(
+              (r) =>
+                (r.home === h.name && r.away === a.name) ||
+                (r.home === a.name && r.away === h.name),
+            );
+            if (already) continue;
+            const [gA, gB] = simulateQuickMatch(h, a);
+            applyLeagueResult(h, a, gA, gB);
+            reps.push(generateMatchReport(h, a, gA, gB));
+          }
+          renderStandings();
+          if (typeof renderLeagueScorers === "function") renderLeagueScorers();
+        } catch (e) {}
+      }
+      window.simulateRemainingRoundMatches = simulateRemainingRoundMatches;
+
       // ============================================================
       // TAKIM PROFİLİ
       // ============================================================
@@ -12396,7 +12691,18 @@
         transferAuctionTimer = setInterval(() => {
           resolveExpiredAuctions();
           const page = document.getElementById("page-transfer");
-          if (page && page.classList.contains("active")) renderTransferPage();
+          if (page && page.classList.contains("active")) {
+            // Kullanıcı "Oyuncu Sat" formundaki fiyat/süre alanlarıyla
+            // etkileşimdeyken listeyi yeniden çizme — aksi halde açık
+            // olan "Süre" seçim kutusu her saniye kapanır/sıfırlanır.
+            const active = document.activeElement;
+            const isEditingSellForm =
+              active &&
+              active.classList &&
+              (active.classList.contains("sell-price-input") ||
+                active.classList.contains("sell-hours-input"));
+            if (!isEditingSellForm) renderTransferPage();
+          }
         }, 1000);
       }
 
@@ -14201,6 +14507,13 @@
                   : "Berabere",
           });
           renderStandings();
+          // Haftanın diğer maçları da (botlar) aynı anda oynanıp fikstüre işlensin
+          try {
+            simulateRemainingRoundMatches(
+              teamConfig.home.name,
+              teamConfig.away.name,
+            );
+          } catch (e) {}
           managerStats.matches++;
           if (homeScore > awayScore) managerStats.wins++;
           else if (homeScore < awayScore) managerStats.losses++;
@@ -15117,6 +15430,7 @@
             { v: "kisa", t: "Kısa Pas" },
             { v: "uzun", t: "Uzun Pas" },
             { v: "hizli", t: "Hızlı Pas" },
+            { v: "karisik", t: "Karışık Pas" },
           ],
           attack: [
             { v: "orta", t: "Orta" },
@@ -15262,6 +15576,7 @@
           kisa: "Kısa Pas",
           uzun: "Uzun Pas",
           hizli: "Hızlı Pas",
+          karisik: "Karışık Pas",
           orta: "Orta",
           sol: "Sol",
           sag: "Sağ",

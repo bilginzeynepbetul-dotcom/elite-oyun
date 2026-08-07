@@ -3041,7 +3041,7 @@
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0 10px;padding-top:12px;border-top:1px solid #2c3a52;">' +
         '<div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Pas Stili</div>' +
         '<select style="width:100%;padding:6px 8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;" onchange="_natPassStyle=this.value">' +
-        ["kisa", "uzun", "hizli"]
+        ["kisa", "uzun", "hizli", "karisik"]
           .map(
             (v) =>
               '<option value="' +
@@ -3049,7 +3049,13 @@
               '"' +
               (v === _natPassStyle ? " selected" : "") +
               ">" +
-              (v === "kisa" ? "Kısa Pas" : v === "uzun" ? "Uzun Pas" : "Hızlı Pas") +
+              (v === "kisa"
+                ? "Kısa Pas"
+                : v === "uzun"
+                  ? "Uzun Pas"
+                  : v === "hizli"
+                    ? "Hızlı Pas"
+                    : "Karışık Pas") +
               "</option>",
           )
           .join("") +
