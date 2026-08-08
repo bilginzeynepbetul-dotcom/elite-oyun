@@ -18,9 +18,54 @@ const jwt = require("jsonwebtoken");
 const { query, withTransaction } = require("../db");
 const clubsRepo = require("../repos/clubsRepo");
 
-const JWT_SECRET = process.env.JWT_SECRET || "em-dev-secret-change-me";
+// GÜVENLİK: sabit/varsayılan bir JWT secret ile prod'a çıkmak, bu dosyayı
+// gören (repo erişimi olan) herkesin istediği kullanıcı/admin adına geçerli
+// token üretebilmesi demektir. Bu yüzden burada asla hardcoded bir fallback
+// kullanılmaz; env değişkeni yoksa uygulama güvenli şekilde başlamayı reddeder.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error(
+    "JWT_SECRET ortam değişkeni tanımlı değil. Güvenlik nedeniyle sabit bir " +
+      "varsayılan secret KULLANILMIYOR — lütfen .env dosyasına güçlü, rastgele " +
+      "bir JWT_SECRET ekleyin (ör. `openssl rand -hex 32`).",
+  );
+}
 const JWT_EXPIRES = process.env.JWT_EXPIRES || "7d";
 const BCRYPT_ROUNDS = 10;
+
+// Kullanıcı bulunamadığında bile bcrypt.compare çalıştırmak için sabit bir
+// "dummy" hash. Böylece "kullanıcı yok" ile "şifre yanlış" yanıtları arasında
+// zamanlama farkı oluşmaz (username enumeration'a karşı).
+const DUMMY_PASSWORD_HASH =
+  "$2a$10$CwTycUXWue0Thq9StjUM0uJ8Y6vTvvpUseTvv8h5DIYszM.b7kNwe";
+
+// ------------------------------------------------------------
+// Basit in-memory rate limiter (login / reset-password / security-question).
+// Not: tek process için yeterli; birden fazla instance/cluster ile
+// çalışıyorsanız bunun yerine Redis tabanlı bir limiter (ör. rate-limiter-flexible)
+// veya express-rate-limit + shared store kullanın.
+// ------------------------------------------------------------
+const _rateBuckets = new Map();
+function rateLimited(key, max, windowMs) {
+  const now = Date.now();
+  const rec = _rateBuckets.get(key);
+  if (!rec || now - rec.start > windowMs) {
+    _rateBuckets.set(key, { start: now, count: 1 });
+    return false;
+  }
+  rec.count++;
+  return rec.count > max;
+}
+// Bucket map'in süresiz büyümesini önlemek için basit periyodik temizlik.
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [k, rec] of _rateBuckets) {
+      if (now - rec.start > 30 * 60 * 1000) _rateBuckets.delete(k);
+    }
+  },
+  10 * 60 * 1000,
+).unref?.();
 
 function signToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
@@ -115,6 +160,15 @@ function createAuthRouter() {
       if (!password || password.length < 6) {
         return res.status(400).json({ error: "Şifre en az 6 karakter olmalı" });
       }
+      // GÜVENLİK: teamName burada reddedilmezse HTML/script içerebilir ve
+      // sıralama, fikstür, transfer pazarı gibi onlarca ekranda başka
+      // kullanıcıların tarayıcısında kaçışsız (unescaped) gösteriliyor —
+      // bu yüzden kayıt anında whitelist ile engellenir (stored XSS önlemi).
+      if (teamName && !/^[a-zA-Z0-9 _.\-ğüşıöçĞÜŞİÖÇ]+$/.test(teamName)) {
+        return res.status(400).json({
+          error: "Takım adı sadece harf, rakam, boşluk, . _ - karakterlerini içerebilir",
+        });
+      }
 
       const existing = await query(
         `SELECT id FROM users WHERE LOWER(username) = LOWER($1)`,
@@ -187,12 +241,9 @@ function createAuthRouter() {
       if (e && e.code === "23505") {
         return res.status(409).json({ error: "Bu kullanıcı adı alınmış" });
       }
-      // Geçici: gerçek hatayı ekranda göster (teşhis kolaylığı için).
-      // Prod'a çıkarken bu satırı "Kayıt başarısız" ile değiştir.
-      res.status(500).json({
-        error: "Kayıt başarısız: " + (e && e.message ? e.message : "bilinmeyen hata"),
-        code: e && e.code,
-      });
+      // GÜVENLİK: iç hata mesajı (SQL/şema detayları vb.) client'a sızdırılmaz;
+      // teşhis için tüm detay yukarıdaki console.error ile sunucu logunda tutulur.
+      res.status(500).json({ error: "Kayıt başarısız. Lütfen tekrar dene." });
     }
   });
 
@@ -205,15 +256,32 @@ function createAuthRouter() {
         return res.status(400).json({ error: "Kullanıcı adı ve şifre gerekli" });
       }
 
+      // Kaba kuvvet (brute-force) girişimlerine karşı IP başına sınır.
+      const rlKey = "login:" + (req.ip || "unknown");
+      if (rateLimited(rlKey, 15, 15 * 60 * 1000)) {
+        return res.status(429).json({
+          error: "Çok fazla giriş denemesi. Lütfen birkaç dakika sonra tekrar dene.",
+        });
+      }
+
       const { rows } = await query(
         `SELECT id, username, password_hash, is_banned, banned_until, ban_reason
          FROM users WHERE LOWER(username) = LOWER($1)`,
         [username],
       );
       const user = rows[0];
-      if (!user) {
+
+      // Kullanıcı bulunamasa bile bcrypt.compare çalıştırılır (dummy hash ile);
+      // aksi halde "kullanıcı yok" yanıtı belirgin şekilde daha hızlı döner ve
+      // bu zamanlama farkı username enumeration için kullanılabilir.
+      const ok = await bcrypt.compare(
+        password,
+        user ? user.password_hash : DUMMY_PASSWORD_HASH,
+      );
+      if (!user || !ok) {
         return res.status(401).json({ error: "Hatalı kullanıcı adı veya şifre" });
       }
+
       if (user.is_banned) {
         // Süreli ban dolmuş mu?
         if (user.banned_until && new Date(user.banned_until).getTime() <= Date.now()) {
@@ -229,11 +297,6 @@ function createAuthRouter() {
             until: user.banned_until || null,
           });
         }
-      }
-
-      const ok = await bcrypt.compare(password, user.password_hash);
-      if (!ok) {
-        return res.status(401).json({ error: "Hatalı kullanıcı adı veya şifre" });
       }
 
       await query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [
@@ -254,10 +317,9 @@ function createAuthRouter() {
       });
     } catch (e) {
       console.error("[auth/login]", e);
-      res.status(500).json({
-        error: "Giriş başarısız: " + (e && e.message ? e.message : "bilinmeyen hata"),
-        code: e && e.code,
-      });
+      // GÜVENLİK: iç hata mesajı (SQL/şema detayları vb.) client'a sızdırılmaz;
+      // tüm detay yalnızca sunucu logunda tutulur.
+      res.status(500).json({ error: "Giriş başarısız. Lütfen tekrar dene." });
     }
   });
 
@@ -266,6 +328,10 @@ function createAuthRouter() {
     try {
       const username = String((req.query && req.query.username) || "").trim();
       if (!username) return res.status(400).json({ error: "Kullanıcı adı gerekli" });
+      const rlKey = "secq:" + (req.ip || "unknown");
+      if (rateLimited(rlKey, 20, 15 * 60 * 1000)) {
+        return res.status(429).json({ error: "Çok fazla deneme. Birkaç dakika sonra tekrar dene." });
+      }
       const { rows } = await query(
         `SELECT security_question FROM users WHERE LOWER(username) = LOWER($1)`,
         [username],
@@ -293,6 +359,14 @@ function createAuthRouter() {
       }
       if (newPassword.length < 6) {
         return res.status(400).json({ error: "Yeni şifre en az 6 karakter olmalı" });
+      }
+      // Güvenlik sorusu cevapları genelde şifreden düşük entropiye sahiptir
+      // (ör. "forma numarası") — bu uç kaba kuvvet denemesine karşı sıkı sınırlanır.
+      const rlKey = "reset:" + (req.ip || "unknown") + ":" + username.toLowerCase();
+      if (rateLimited(rlKey, 5, 15 * 60 * 1000)) {
+        return res.status(429).json({
+          error: "Çok fazla deneme. Lütfen birkaç dakika sonra tekrar dene.",
+        });
       }
       const { rows } = await query(
         `SELECT id, security_answer_hash FROM users WHERE LOWER(username) = LOWER($1)`,
