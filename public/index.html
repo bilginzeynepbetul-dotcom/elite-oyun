@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="tr">
   <head>
+    <!-- GEÇİCİ: mobil hata ayıklama konsolu — sorun çözülünce kaldırılacak -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
@@ -10198,7 +10201,7 @@
           html +=
             '<div class="clickable-player" style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px 10px;align-items:center;padding:10px 8px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:12px;color:#e2e8f0;cursor:pointer;" onclick="(function(){var t=teamConfig.home;var all=[].concat(t.players||[],t.bench||[]);var pl=all.find(function(x){return String(x.id)===\'' +
             safeId +
-            "\';});if(pl&&typeof showPlayerProfile===\'function\')showPlayerProfile(pl,t.name);})()">" +
+            "\';});if(pl&&typeof showPlayerProfile===\'function\')showPlayerProfile(pl,t.name);})()\">" +
             "<span><b>#" +
             (p.number || "?") +
             " " +
@@ -10206,7 +10209,7 @@
             '</b> <span style="color:#64748b;">' +
             (p.pos || "") +
             "</span></span>" +
-            "<span style="color:#e2e8f0;font-weight:600;">" +
+            '<span style="color:#e2e8f0;font-weight:600;">' +
             (p.contractYears || 1) +
             " yıl</span>" +
             '<span style="color:#facc15;">' +
@@ -11601,11 +11604,11 @@ function canManageStaff() {
                   return (
                     '<span style="display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border-radius:999px;background:#1e293b;border:1px solid #334155;font-size:11px;">' +
                     r +
-                    ' <a href="#" style="color:#f87171;text-decoration:none;margin-left:4px;" onclick="revokeStaffRole(\\'' +
+                    ' <a href="#" style="color:#f87171;text-decoration:none;margin-left:4px;" onclick="revokeStaffRole(\'' +
                     u +
-                    "\\',\\'" +
+                    "','" +
                     r +
-                    "\\');return false;\">✕</a></span>"
+                    "');return false;\">✕</a></span>"
                   );
                 })
                 .join("") +
@@ -18961,7 +18964,7 @@ function canManageStaff() {
                   attributeDelta.defense += 2.8;
                   attributeDelta.gk += 1.0;
                   logMessage =
-                    team.name + " Özel: Dinamik Alan Kademesi hat hat kapandı!";
+                    team.name + " Özel: Dinamik Alan Kademesi hattı kapattı!";
                 } else {
                   attributeDelta.defense -= 1.5;
                   logMessage =
