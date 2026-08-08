@@ -376,6 +376,16 @@ async function setFixtureLive(fixtureId, matchId) {
   );
 }
 
+async function listDueFixtures(limit = 20) {
+  const { rows } = await query(
+    `SELECT id, kickoff_at AS "kickoffAt" FROM fixtures
+     WHERE status = 'scheduled' AND kickoff_at <= NOW()
+     ORDER BY kickoff_at ASC LIMIT $1`,
+    [limit],
+  );
+  return rows;
+}
+
 module.exports = {
   getCurrentSeason,
   getStandings,
@@ -389,4 +399,5 @@ module.exports = {
   setFixtureLive,
   listClubIdsInSeason,
   listClubIdsByCountryDivision,
+  listDueFixtures,
 };

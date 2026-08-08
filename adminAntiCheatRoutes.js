@@ -3,6 +3,35 @@ const router = express.Router();
 const db = require('./db');
 const { isAdmin } = require('./authMiddleware');
 
+// Kullanıcının ban durumunu döner (routes/authRoutes.js authMiddleware bunu her istekte çağırır)
+async function getBanStatus(userId) {
+  try {
+    const result = await db.query(
+      'SELECT is_banned, banned_until, ban_reason FROM users WHERE id = $1',
+      [userId]
+    );
+    if (result.rows.length === 0) return { banned: false };
+    const { is_banned, banned_until, ban_reason } = result.rows[0];
+
+    if (banned_until && new Date() >= new Date(banned_until)) {
+      // Süre dolmuş, otomatik kaldır
+      await db.query(
+        'UPDATE users SET is_banned = FALSE, banned_until = NULL, ban_reason = NULL WHERE id = $1',
+        [userId]
+      );
+      return { banned: false };
+    }
+
+    if (is_banned || (banned_until && new Date() < new Date(banned_until))) {
+      return { banned: true, reason: ban_reason, until: banned_until };
+    }
+    return { banned: false };
+  } catch (error) {
+    console.error('getBanStatus error:', error);
+    return { banned: false };
+  }
+}
+
 // Ban listesi ve özet
 router.get('/summary', isAdmin, async (req, res) => {
   try {
@@ -184,3 +213,4 @@ router.get('/status/:userId', isAdmin, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.getBanStatus = getBanStatus;

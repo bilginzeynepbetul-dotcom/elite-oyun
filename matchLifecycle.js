@@ -35,7 +35,7 @@ try {
  * Match.getPublicState() şeklindeki state ile çağrılır.
  * matchEngine.Match end() → this.onEnd(state)
  */
-async function onMatchEnd(state) {
+async function onMatchEnd(state, matchInstance) {
   if (!state) return;
   const fixtureId = state.fixtureId;
   const homeGoals = state.score ? state.score.home : 0;
@@ -114,15 +114,24 @@ async function onMatchEnd(state) {
  * @param {object} opts.io - socket.io namespace/server
  * @param {Map} opts.liveMatches - fixtureId → Match
  * @param {typeof import("./matchEngine").Match} opts.MatchClass
+ * @param {object} [opts.repo] - getFixtureById/setFixtureLive sağlayan depo (varsayılan: leagueRepo)
+ * @param {(state, matchInstance) => Promise<void>} [opts.onEndFn] - maç bitince çağrılır (varsayılan: onMatchEnd)
  */
 async function startFixtureMatch(opts) {
-  const { fixtureId, io, liveMatches, MatchClass } = opts;
+  const {
+    fixtureId,
+    io,
+    liveMatches,
+    MatchClass,
+    repo = leagueRepo,
+    onEndFn = onMatchEnd,
+  } = opts;
   if (!fixtureId || !MatchClass) throw new Error("fixtureId ve MatchClass gerekli");
   if (liveMatches && liveMatches.has(fixtureId)) {
     return liveMatches.get(fixtureId);
   }
 
-  const fixture = await leagueRepo.getFixtureById(fixtureId);
+  const fixture = await repo.getFixtureById(fixtureId);
   if (!fixture) throw new Error("Fikstür yok");
   if (fixture.status === "finished") throw new Error("Maç zaten bitmiş");
 
@@ -159,14 +168,14 @@ async function startFixtureMatch(opts) {
     circulationMs: bothBot ? 100 : undefined,
     onEnd: async (state) => {
       try {
-        await onMatchEnd(state);
+        await onEndFn(state, match);
       } finally {
         if (liveMatches) liveMatches.delete(fixtureId);
       }
     },
   });
 
-  await leagueRepo.setFixtureLive(fixtureId, matchId);
+  await repo.setFixtureLive(fixtureId, matchId);
   if (liveMatches) liveMatches.set(fixtureId, match);
 
   match.start();

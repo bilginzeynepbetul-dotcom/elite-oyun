@@ -18,7 +18,8 @@
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.3",
     "knex": "^2.5.1",
-    "stripe": "^14.25.0"
+    "stripe": "^14.25.0",
+    "socket.io": "^4.7.5"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

@@ -1,39 +1,214 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const http = require('http');
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 10000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Routes
-const { createAuthRouter } = require('./routes/authRoutes');
-const adminAntiCheatRoutes = require('./adminAntiCheatRoutes');
+// ============================================================
+// AUTH
+// ============================================================
+const {
+  createAuthRouter,
+  authMiddleware,
+  meHandler,
+  adminResetPasswordHandler,
+  enrichClubId,
+  socketAuthMiddleware,
+} = require('./routes/authRoutes');
+const { isAdmin } = require('./authMiddleware');
 
-// Ana route'lar
 app.use('/api/auth', createAuthRouter());
-app.use('/api/admin/anti-cheat', adminAntiCheatRoutes);
+app.get('/api/me', authMiddleware, meHandler);
+app.post('/api/auth/admin-reset-password', authMiddleware, adminResetPasswordHandler);
 
-// Health check
+// clubId'yi her istekte bir kere doldurup senkron erişilebilir yapar
+// (birçok router getClubId(req)'i senkron çağırıyor)
+async function attachClubId(req, res, next) {
+  try {
+    await enrichClubId(req);
+  } catch (e) {
+    console.warn('[attachClubId]', e.message);
+  }
+  next();
+}
+
+const getClubId = (req) => (req.user && req.user.clubId) || null;
+const getUserId = (req) => req.user && req.user.id;
+const getUsername = (req) => req.user && req.user.username;
+
+// Tüm oyun içi route'lar için: giriş yapılmış olmalı + clubId dolu olmalı
+const gameAuth = [authMiddleware, attachClubId];
+
+// ============================================================
+// ADMIN / ANTI-CHEAT
+// ============================================================
+const adminAntiCheatRoutes = require('./adminAntiCheatRoutes');
+app.use('/api/admin/anti-cheat', authMiddleware, adminAntiCheatRoutes);
+
+const { createAdminSeasonRouter } = require('./adminSeasonRoutes');
+app.use('/api', authMiddleware, isAdmin, createAdminSeasonRouter());
+
+// ============================================================
+// TAKIM / EKONOMİ
+// ============================================================
+const { createTeamRouter } = require('./teamRoutes');
+app.use('/api', gameAuth, createTeamRouter());
+
+// ============================================================
+// LİG (puan durumu, fikstür)
+// ============================================================
+const { createLeagueRouter } = require('./leagueRoutes');
+app.use('/api', gameAuth, createLeagueRouter());
+
+// ============================================================
+// İSTATİSTİK / ÖDÜLLER
+// ============================================================
+const { createStatsRouter } = require('./statsRoutes');
+app.use('/api', gameAuth, createStatsRouter());
+
+// ============================================================
+// KUPA
+// ============================================================
+const { createCupRouter } = require('./cupRoutes');
+app.use('/api', gameAuth, createCupRouter());
+
+// ============================================================
+// TRANSFER
+// ============================================================
+const { createTransferRouter } = require('./transferRoutes');
+app.use('/api/transfer', gameAuth, createTransferRouter({ getClubId }));
+
+// ============================================================
+// ALTYAPI / AKADEMİ
+// ============================================================
+const { createYouthRouter } = require('./youthRoutes');
+app.use('/api/youth', gameAuth, createYouthRouter({ getClubId }));
+
+// ============================================================
+// ANTRENMAN
+// ============================================================
+const { createTrainingRouter } = require('./trainingRoutes');
+app.use('/api/training', gameAuth, createTrainingRouter({ getClubId }));
+
+// ============================================================
+// STADYUM
+// ============================================================
+const { createStadiumRouter } = require('./stadiumRoutes');
+app.use('/api/stadium', gameAuth, createStadiumRouter({ getClubId }));
+
+// ============================================================
+// ELİTE / PREMIUM
+// ============================================================
+const { createPremiumRouter } = require('./premiumRoutes');
+app.use('/api/premium', gameAuth, createPremiumRouter());
+
+// ============================================================
+// MİLLİ TAKIM
+// ============================================================
+const { createNationalRouter } = require('./nationalRoutes');
+app.use('/api/national', gameAuth, createNationalRouter({ getClubId, getUserId, getUsername }));
+
+// ============================================================
+// SOSYAL (forum, mesaj, bildirim)
+// ============================================================
+const { createSocialRouter } = require('./socialRoutes');
+app.use('/api', gameAuth, createSocialRouter({ getUserId, getUsername }));
+
+// ============================================================
+// SÖZLEŞMELER
+// ============================================================
+const { createContractRouter } = require('./contractRoutes');
+app.use('/api/contracts', gameAuth, createContractRouter({ getClubId }));
+
+// ============================================================
+// HAZIRLIK MAÇLARI
+// ============================================================
+const { createFriendlyRouter } = require('./friendlyRoutes');
+app.use('/api', gameAuth, createFriendlyRouter());
+
+// ============================================================
+// BOT KULÜP / LİG DOLDURMA
+// ============================================================
+const { createBotRouter } = require('./botRoutes');
+app.use('/api', gameAuth, createBotRouter());
+
+// ============================================================
+// MAÇ ARŞİVİ
+// ============================================================
+const { createMatchArchiveRouter } = require('./matchArchiveRoutes');
+app.use('/api', gameAuth, createMatchArchiveRouter());
+
+// ============================================================
+// SOCKET.IO (canlı maç izleme altyapısı)
+// ============================================================
+let io = null;
+try {
+  const { Server } = require('socket.io');
+  io = new Server(server, { cors: { origin: '*' } });
+  io.use(socketAuthMiddleware);
+
+  const liveMatches = new Map(); // fixtureId -> Match instance
+  app.set('liveMatches', liveMatches);
+  app.set('io', io);
+
+  const { registerMatchControlHandlers } = require('./server-match-socket-handlers');
+  registerMatchControlHandlers(
+    io,
+    (fixtureId) => liveMatches.get(fixtureId) || null,
+    (socket) => socket.data && socket.data.user
+  );
+  console.log('✅ Socket.IO hazır');
+
+  const { startScheduler } = require('./matchScheduler');
+  startScheduler({ io, liveMatches, intervalMs: 15000 });
+} catch (e) {
+  console.warn('⚠️  Socket.IO kurulamadı (canlı maç izleme devre dışı):', e.message);
+  // Socket.IO olmadan da maçlar arka planda simüle edilip sonuçlanabilsin
+  try {
+    const { startScheduler } = require('./matchScheduler');
+    const liveMatchesFallback = new Map();
+    app.set('liveMatches', liveMatchesFallback);
+    startScheduler({ io: null, liveMatches: liveMatchesFallback, intervalMs: 15000 });
+  } catch (e2) {
+    console.error('⚠️  Maç zamanlayıcı da başlatılamadı:', e2.message);
+  }
+}
+
+// ============================================================
+// SAĞLIK KONTROLÜ
+// ============================================================
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// 404
-app.use((req, res) => {
+// ============================================================
+// STATİK ARAYÜZ (public/)
+// ============================================================
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Bilinmeyen /api/* isteği → 404 JSON
+app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Endpoint bulunamadı' });
 });
 
-// Error handler
+// Diğer tüm yollar → index.html (SPA)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Hata yakalayıcı
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(500).json({ error: 'Sunucu hatası' });
 });
 
-// Başlat
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server ${PORT} portunda çalışıyor`);
 });
