@@ -1,15 +1,29 @@
 <!doctype html>
 <html lang="tr">
   <head>
-    <!-- GEÇİCİ: mobil hata ayıklama konsolu — sorun çözülünce kaldırılacak -->
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <title>Elite Manager</title>
+    <!-- Eruda yalnızca ?debug=1 ile (sürekli yük ~performans kaybı) -->
+    <script>
+      (function () {
+        try {
+          if (/[?&]debug=1(?:&|$)/.test(location.search)) {
+            var s = document.createElement("script");
+            s.src = "https://cdn.jsdelivr.net/npm/eruda";
+            s.onload = function () {
+              try {
+                eruda.init();
+              } catch (e) {}
+            };
+            document.head.appendChild(s);
+          }
+        } catch (e) {}
+      })();
+    </script>
 
     <!-- ===== SES EFEKTLERİ =====
          Not: Harici ses dosyaları (soundjay.com) artık erişilebilir değil (403).
@@ -1902,6 +1916,67 @@
         margin-top: 2px;
       }
 
+      /* Elite logo animasyon */
+      @keyframes emLogoPulse {
+        0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px #facc15); }
+        50% { transform: scale(1.08); filter: drop-shadow(0 0 10px #facc15); }
+      }
+      @keyframes emLogoSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .kit-logo-anim {
+        animation: emLogoPulse 1.6s ease-in-out infinite;
+      }
+      /* Profil çerçeveleri */
+      .profile-frame {
+        box-sizing: border-box;
+        border: 3px solid transparent;
+      }
+      .profile-frame.frame-gold {
+        border-color: #facc15;
+        box-shadow: 0 0 12px rgba(250, 204, 21, 0.55);
+      }
+      .profile-frame.frame-neon {
+        border-color: #22d3ee;
+        box-shadow: 0 0 14px rgba(34, 211, 238, 0.7);
+      }
+      .profile-frame.frame-fire {
+        border-color: #f97316;
+        box-shadow: 0 0 14px rgba(249, 115, 22, 0.7);
+      }
+      .profile-frame.frame-ice {
+        border-color: #93c5fd;
+        box-shadow: 0 0 14px rgba(147, 197, 253, 0.7);
+      }
+      .profile-frame.frame-elite {
+        border: 3px solid #facc15;
+        box-shadow: 0 0 0 2px #0f172a, 0 0 16px rgba(250, 204, 21, 0.8);
+        animation: emLogoPulse 2s ease-in-out infinite;
+      }
+      /* Stadyum temaları (tesis kartı) */
+      #stadiumTabFacility.theme-classic { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); }
+      #stadiumTabFacility.theme-green { background: linear-gradient(180deg, #052e16 0%, #14532d 100%); }
+      #stadiumTabFacility.theme-sunset { background: linear-gradient(180deg, #7c2d12 0%, #431407 100%); }
+      #stadiumTabFacility.theme-snow { background: linear-gradient(180deg, #0c4a6e 0%, #1e293b 100%); }
+      #stadiumTabFacility.theme-derby { background: linear-gradient(180deg, #450a0a 0%, #1c1917 100%); }
+      #stadiumTabFacility.theme-royal { background: linear-gradient(180deg, #3b0764 0%, #1e1b4b 100%); }
+
+      /* Performans: gizli sayfalar boyanmasın */
+      .page:not(.active) {
+        content-visibility: hidden;
+        contain: layout style paint;
+      }
+      .page.active {
+        content-visibility: visible;
+      }
+      #transferMarketList,
+      #squadRosterList,
+      #logs {
+        content-visibility: auto;
+        contain-intrinsic-size: 400px;
+      }
+
       .logout-btn {
         width: 100%;
         padding: 10px;
@@ -2158,21 +2233,26 @@
             value="123456"
           />
           <label class="field-label" for="regSecurityQuestion">
-            Güvenlik sorusu (şifremi unutursam)
+            Güvenlik sorusu (zorunlu · şifre kurtarma)
           </label>
           <input
             type="text"
             id="regSecurityQuestion"
             placeholder="ör. İlk takımımın forma numarası kaçtı?"
             maxlength="120"
+            required
           />
-          <label class="field-label" for="regSecurityAnswer">Cevap</label>
+          <label class="field-label" for="regSecurityAnswer">Cevap (zorunlu)</label>
           <input
             type="text"
             id="regSecurityAnswer"
             placeholder="Cevabını buraya yaz"
             maxlength="80"
+            required
           />
+          <p style="font-size:11px;color:#64748b;margin:0 0 10px;line-height:1.4;">
+            Hesap sunucuda saklanır. Aynı kullanıcı adı/e-posta ile tekrar kayıt olunamaz. Üye no (U…) otomatik verilir.
+          </p>
           <button class="login-btn" id="registerBtn">Kayıt Ol</button>
           <div class="error-msg" id="registerError"></div>
           <div class="register-link">
@@ -2359,35 +2439,14 @@
             <div class="icon-badge">📅</div>
             <div class="text-wrap">
               <div class="title">Maçlar</div>
-              <div class="subtitle">Lig · Kupa · Kıtalar · Milli · Canlı</div>
+              <div class="subtitle">Lig · Kupa · Milli · Canlı</div>
             </div>
           </div>
-          <div class="menu-item" onclick="goToTactics()">
-            <div class="icon-badge">📋</div>
+          <div class="menu-item" onclick="goToTeamHub()">
+            <div class="icon-badge">👥</div>
             <div class="text-wrap">
-              <div class="title">Taktikler</div>
-              <div class="subtitle">Diziliş &amp; Özel Taktikler</div>
-            </div>
-          </div>
-          <div class="menu-item" onclick="goToSubs()">
-            <div class="icon-badge">🔄</div>
-            <div class="text-wrap">
-              <div class="title">Kadro</div>
-              <div class="subtitle">Takım oyuncuları</div>
-            </div>
-          </div>
-          <div class="menu-item" onclick="goToTraining()">
-            <div class="icon-badge">💪</div>
-            <div class="text-wrap">
-              <div class="title">Antrenman</div>
-              <div class="subtitle">Gelişim · Çalışanlar</div>
-            </div>
-          </div>
-          <div class="menu-item" onclick="goToTransfer()">
-            <div class="icon-badge">🔄</div>
-            <div class="text-wrap">
-              <div class="title">Transfer</div>
-              <div class="subtitle">Açık artırma</div>
+              <div class="title">Takım</div>
+              <div class="subtitle">Kadro · Taktik · Antrenman · Transfer</div>
             </div>
           </div>
           <div class="menu-item" onclick="goToClubHub()">
@@ -2596,7 +2655,7 @@
     <div id="page-matches-hub" class="page">
       <div class="report-container">
         <div class="tactics-title">📅 Maçlar</div>
-        <div class="formation-hint">Lig, kupa, kıtalar, milli ve canlı maçlar</div>
+        <div class="formation-hint">Tüm maç türleri tek yerde</div>
         <div style="display:grid;gap:10px;margin-top:12px;">
           <div class="menu-item" style="margin:0;" onclick="goToLeagueHub()">
             <div class="icon-badge">🏆</div>
@@ -2631,6 +2690,75 @@
             <div class="text-wrap">
               <div class="title">Canlı Maçlar</div>
               <div class="subtitle">Saati gelen tüm maçlar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TAKIM HUB ===== -->
+    <div id="page-team-hub" class="page">
+      <div class="report-container">
+        <div class="tactics-title">👥 Takım</div>
+        <div class="formation-hint">Kadro, taktik, gelişim ve transfer</div>
+        <div style="display:grid;gap:10px;margin-top:12px;">
+          <div class="menu-item" style="margin:0;" onclick="goToSubs()">
+            <div class="icon-badge">📋</div>
+            <div class="text-wrap">
+              <div class="title">Kadro</div>
+              <div class="subtitle">Oyuncular · Kontrat · Kalite</div>
+            </div>
+          </div>
+          <div class="menu-item" style="margin:0;" onclick="goToTactics()">
+            <div class="icon-badge">📐</div>
+            <div class="text-wrap">
+              <div class="title">Taktikler</div>
+              <div class="subtitle">Diziliş · Özel taktik · Hücum yönü</div>
+            </div>
+          </div>
+          <div class="menu-item" style="margin:0;" onclick="goToTraining()">
+            <div class="icon-badge">💪</div>
+            <div class="text-wrap">
+              <div class="title">Antrenman</div>
+              <div class="subtitle">Skill gelişimi · Çalışanlar</div>
+            </div>
+          </div>
+          <div class="menu-item" style="margin:0;" onclick="goToTransfer()">
+            <div class="icon-badge">🔄</div>
+            <div class="text-wrap">
+              <div class="title">Transfer</div>
+              <div class="subtitle">Açık artırma · Al / Sat</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== KULÜP HUB ===== -->
+    <div id="page-club-hub" class="page">
+      <div class="report-container">
+        <div class="tactics-title">🏟️ Kulüp</div>
+        <div class="formation-hint">Para, tesis ve gençlik sistemi</div>
+        <div style="display:grid;gap:10px;margin-top:12px;">
+          <div class="menu-item" style="margin:0;" onclick="goToEconomy()">
+            <div class="icon-badge">💶</div>
+            <div class="text-wrap">
+              <div class="title">Ekonomi</div>
+              <div class="subtitle">Kasa · Gelir / gider</div>
+            </div>
+          </div>
+          <div class="menu-item" style="margin:0;" onclick="goToStadium('facility')">
+            <div class="icon-badge">🏟️</div>
+            <div class="text-wrap">
+              <div class="title">Stadyum</div>
+              <div class="subtitle">Kapasite · Bilet · Tesis</div>
+            </div>
+          </div>
+          <div class="menu-item" style="margin:0;" onclick="goToStadium('youth')">
+            <div class="icon-badge">🌱</div>
+            <div class="text-wrap">
+              <div class="title">Altyapı</div>
+              <div class="subtitle">Akademi · Scout · Gençler</div>
             </div>
           </div>
         </div>
@@ -2855,6 +2983,7 @@
             type="button"
             class="sub-btn transfer-main-tab active"
             data-ttab="market"
+            data-i18n="tab_auction"
             style="width: auto; padding: 7px 14px; font-size: 12px"
             onclick="showTransferTab('market')"
           >
@@ -2864,6 +2993,7 @@
             type="button"
             class="sub-btn transfer-main-tab"
             data-ttab="sell"
+            data-i18n="tab_sell"
             style="width: auto; padding: 7px 14px; font-size: 12px; background: #334155"
             onclick="showTransferTab('sell')"
           >
@@ -2873,6 +3003,7 @@
             type="button"
             class="sub-btn transfer-main-tab"
             data-ttab="mybids"
+            data-i18n="tab_bids"
             style="width: auto; padding: 7px 14px; font-size: 12px; background: #334155"
             onclick="showTransferTab('mybids')"
           >
@@ -2976,6 +3107,53 @@
             <option value="8">K 8+</option>
             <option value="9">K 9+</option>
           </select>
+          <select
+            id="transferPotFilter"
+            onchange="renderTransferPage()"
+            style="
+              padding: 8px;
+              border-radius: 8px;
+              background: #0f172a;
+              color: #e2e8f0;
+              border: 1px solid #334155;
+              font-size: 12px;
+            "
+          >
+            <option value="">Tüm potansiyel</option>
+            <option value="6">P 6+</option>
+            <option value="7">P 7+</option>
+            <option value="8">P 8+</option>
+            <option value="9">P 9+</option>
+          </select>
+        </div>
+        <!-- Elite gelişmiş filtre: yaş aralığı + mevki + pot birlikte -->
+        <div
+          id="transferEliteFilters"
+          style="
+            display: none;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+            align-items: center;
+            padding: 10px;
+            background: #0f172a;
+            border: 1px solid #facc15;
+            border-radius: 12px;
+          "
+        >
+          <span style="font-size:11px;color:#facc15;font-weight:700;">⭐ Elite filtre</span>
+          <label style="font-size:11px;color:#94a3b8;">Min yaş
+            <input id="transferMinAge" type="number" min="15" max="45" placeholder="15" onchange="renderTransferPage()" style="width:56px;margin-left:4px;padding:6px;border-radius:6px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;" />
+          </label>
+          <label style="font-size:11px;color:#94a3b8;">Max yaş
+            <input id="transferMaxAge" type="number" min="15" max="45" placeholder="40" onchange="renderTransferPage()" style="width:56px;margin-left:4px;padding:6px;border-radius:6px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;" />
+          </label>
+          <label style="font-size:11px;color:#94a3b8;">Min pot
+            <input id="transferMinPot" type="number" min="1" max="10" step="0.5" placeholder="—" onchange="renderTransferPage()" style="width:56px;margin-left:4px;padding:6px;border-radius:6px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;" />
+          </label>
+          <label style="font-size:11px;color:#94a3b8;">Min kalite
+            <input id="transferMinQ" type="number" min="1" max="10" step="0.5" placeholder="—" onchange="renderTransferPage()" style="width:56px;margin-left:4px;padding:6px;border-radius:6px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;" />
+          </label>
         </div>
         <div
           id="transferNote"
@@ -3097,6 +3275,30 @@
         <div id="eliteRenameBox" style="margin-top:14px;padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
           <div style="font-weight:800;color:#facc15;margin-bottom:8px;">⭐ Elite · İsim Değiştir</div>
           <div id="eliteRenameHint" style="font-size:12px;color:#94a3b8;margin-bottom:10px;">Takım ve stadyum adını değiştirmek Elite üyeliğe özeldir.</div>
+          <!-- Elite: stadyum teması + profil çerçevesi -->
+          <div id="eliteThemeBox" style="padding:12px;background:#0f172a;border:1px solid #facc15;border-radius:12px;margin-bottom:12px;">
+            <div style="font-weight:700;color:#facc15;margin-bottom:8px;">⭐ Elite görünüm</div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">Stadyum teması</div>
+            <select id="stadiumThemeSelect" onchange="applyStadiumTheme()" style="width:100%;padding:8px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:12px;margin-bottom:10px;">
+              <option value="classic">Klasik gece</option>
+              <option value="green">Yeşil saha</option>
+              <option value="sunset">Gün batımı</option>
+              <option value="snow">Kış / kar</option>
+              <option value="derby">Derbi kırmızı</option>
+              <option value="royal">Kraliyet mor</option>
+            </select>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">Profil çerçevesi</div>
+            <select id="profileFrameSelect" onchange="applyProfileFrame()" style="width:100%;padding:8px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:12px;margin-bottom:8px;">
+              <option value="none">Yok</option>
+              <option value="gold">Altın</option>
+              <option value="neon">Neon</option>
+              <option value="fire">Ateş</option>
+              <option value="ice">Buz</option>
+              <option value="elite">Elite yıldız</option>
+            </select>
+            <div id="profileFramePreview" class="profile-frame frame-none" style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:#1e293b;font-size:28px;margin-top:4px;">👤</div>
+            <div style="font-size:11px;color:#64748b;margin-top:6px;">Elite değilse seçimler kilitli kalır.</div>
+          </div>
           <div style="display:grid;gap:8px;">
             <div>
               <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Takım adı</div>
@@ -3720,6 +3922,7 @@
             type="button"
             class="sub-btn squad-main-tab active"
             data-stab="roster"
+            data-i18n="menu_squad"
             style="width:auto;padding:7px 14px;font-size:12px;"
             onclick="showSquadTab('roster')"
           >
@@ -3729,6 +3932,7 @@
             type="button"
             class="sub-btn squad-main-tab"
             data-stab="quality"
+            data-i18n="tab_quality"
             style="width:auto;padding:7px 14px;font-size:12px;background:#334155;"
             onclick="showSquadTab('quality')"
           >
@@ -3738,6 +3942,7 @@
             type="button"
             class="sub-btn squad-main-tab"
             data-stab="contracts"
+            data-i18n="tab_contract"
             style="width:auto;padding:7px 14px;font-size:12px;background:#334155;"
             onclick="showSquadTab('contracts')"
           >
@@ -3820,6 +4025,30 @@
                 <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','🔥')">🔥</button>
                 <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','⭐')">⭐</button>
                 <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','🛡️')">🛡️</button>
+                <!-- Elite ekstra amblem slotları -->
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','🐉')">🐉</button>
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','🐺')">🐺</button>
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','👑')">👑</button>
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','💎')">💎</button>
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','🌹')">🌹</button>
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','⚡')">⚡</button>
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','🦊')">🦊</button>
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:16px;" onclick="setKitLogoPresetFor('kit','🐻')">🐻</button>
+              </div>
+              <div style="margin-bottom:8px;">
+                <label style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:8px;cursor:pointer;">
+                  <input type="checkbox" id="kitLogoAnim" onchange="renderKitPreviewFor('kit')" />
+                  Animasyonlu logo (Elite)
+                </label>
+              </div>
+              <div style="font-size:11px;color:#64748b;margin-bottom:6px;">Logo slotları (Elite: 3 kayıt) · aktif logoyu kaydet</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;" id="kitLogoSlots">
+                <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:11px;" onclick="saveKitLogoSlot(0)">Slot 1</button>
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:11px;" onclick="saveKitLogoSlot(1)">Slot 2</button>
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:11px;" onclick="saveKitLogoSlot(2)">Slot 3</button>
+                <button type="button" class="sub-btn" style="width:auto;padding:6px 10px;font-size:11px;background:#334155;" onclick="loadKitLogoSlot(0)">Yükle 1</button>
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:11px;background:#334155;" onclick="loadKitLogoSlot(1)">Yükle 2</button>
+                <button type="button" class="sub-btn elite-logo-extra" style="width:auto;padding:6px 10px;font-size:11px;background:#334155;" onclick="loadKitLogoSlot(2)">Yükle 3</button>
               </div>
               <button type="button" class="sub-btn" style="width:auto;padding:6px 12px;font-size:11px;background:#334155;" onclick="clearKitLogoFor('kit')">Logoyu temizle</button>
             </div>
@@ -4998,7 +5227,25 @@
     <script>
       // ============================================================
       // TÜM JAVASCRIPT KODU
+      // Performans: tek HTML ~0.9MB — sekmeye görünürlük / maç sayfası
+      // dışında gereksiz RAF ve aralıkları durdururuz.
       // ============================================================
+      var _emPageVisible = !document.hidden;
+      var _emRafPaused = false;
+      var _emOnMatchPage = false;
+      try {
+        document.addEventListener("visibilitychange", function () {
+          _emPageVisible = !document.hidden;
+          if (!_emPageVisible) {
+            // Arka planda ağır aralıkları yavaşlat / durdur
+            try {
+              if (typeof matchInterval !== "undefined" && matchInterval) {
+                /* maç arka planda da işlesin ama canvas RAF durur */
+              }
+            } catch (e) {}
+          }
+        });
+      } catch (e) {}
 
       // ============================================================
       // MAÇ MOTORU DEĞİŞKENLERİ
@@ -6310,11 +6557,14 @@
         } else if (!loaded && typeof pushNotification === "function") {
           pushNotification("🆕", "Yeni kariyer — iyi şanslar", "Sistem");
         }
-        // Otomatik kayıt (her 45 sn)
+        // Otomatik kayıt (her 60 sn; gizli sekmede atla)
         if (window._careerSaveTimer) clearInterval(window._careerSaveTimer);
         window._careerSaveTimer = setInterval(function () {
+          try {
+            if (document.hidden) return;
+          } catch (e) {}
           if (managerName) saveCareer(false);
-        }, 45000);
+        }, 60000);
         saveCareer(false);
       }
 
@@ -6385,20 +6635,28 @@
       function switchPage(pageId) {
         if (currentPageId && currentPageId !== pageId) {
           pageHistory.push(currentPageId);
-          // Çok uzun geçmiş olmasın
           if (pageHistory.length > 15) pageHistory.shift();
         }
         currentPageId = pageId;
-        document
-          .querySelectorAll(".page")
-          .forEach((p) => p.classList.remove("active"));
-        document.getElementById(pageId).classList.add("active");
+        // Sadece aktif değişen sayfaları dokun (tüm .page taraması yerine)
+        const prev = document.querySelector(".page.active");
+        if (prev && prev.id !== pageId) prev.classList.remove("active");
+        const pageEl = document.getElementById(pageId);
+        if (pageEl) pageEl.classList.add("active");
+        const onMatch = pageId === "page-match";
         const soundBtn = document.getElementById("soundToggle");
-        if (soundBtn)
-          soundBtn.style.display = pageId === "page-match" ? "flex" : "none";
+        if (soundBtn) soundBtn.style.display = onMatch ? "flex" : "none";
         const speedBtn = document.getElementById("speedToggle");
-        if (speedBtn)
-          speedBtn.style.display = pageId === "page-match" ? "flex" : "none";
+        if (speedBtn) speedBtn.style.display = onMatch ? "flex" : "none";
+        // Maç sayfasından çıkınca canvas döngüsü seyrek moda düşer
+        if (onMatch) {
+          try {
+            if (typeof scheduleRender === "function") scheduleRender();
+          } catch (e) {}
+        }
+        try {
+          if (typeof applyPageLanguage === "function") applyPageLanguage(pageId);
+        } catch (e) {}
       }
 
       function goToEconomy() {
@@ -6408,14 +6666,15 @@
       }
       function goToClubHub() {
         hideMainMenuAndShowBack();
-        switchPage("page-stadium");
-        showStadiumTab("facility");
-        updateStadiumUI();
-        try {
-          if (typeof refreshEliteRenameUI === "function") refreshEliteRenameUI();
-        } catch (e) {}
+        switchPage("page-club-hub");
       }
       window.goToClubHub = goToClubHub;
+
+      function goToTeamHub() {
+        hideMainMenuAndShowBack();
+        switchPage("page-team-hub");
+      }
+      window.goToTeamHub = goToTeamHub;
       function renderEconomyPage() {
         updateBudgetUI();
         const list = document.getElementById("economyLedgerList");
@@ -9619,15 +9878,19 @@
         ensureTransferMarket();
         renderTransferPage();
       }
-      function goToStadium() {
+      function goToStadium(tab) {
         hideMainMenuAndShowBack();
         switchPage("page-stadium");
-        showStadiumTab("facility");
+        showStadiumTab(tab === "youth" || tab === "economy" ? tab : "facility");
+        try {
+          if (typeof restoreEliteCosmetics === "function") restoreEliteCosmetics();
+        } catch (e) {}
         updateStadiumUI();
         try {
           if (typeof refreshEliteRenameUI === "function") refreshEliteRenameUI();
         } catch (e) {}
       }
+      window.goToStadium = goToStadium;
 
       function showStadiumTab(tab) {
         const t =
@@ -9774,6 +10037,12 @@
         setVal(prefix + "ColorTrim", kit.trim || "#facc15");
         _kitLogoDataMap[prefix] = kit.logo || null;
         _kitLogoIsEmojiMap[prefix] = !!kit.logoEmoji;
+        if (!_kitLogoSlotsMap) _kitLogoSlotsMap = {};
+        _kitLogoSlotsMap[prefix] = Array.isArray(kit.logoSlots)
+          ? kit.logoSlots.slice(0, 3)
+          : [];
+        const animEl = document.getElementById(prefix + "LogoAnim");
+        if (animEl) animEl.checked = !!kit.logoAnim;
         const img = document.getElementById(prefix + "LogoPreview");
         if (img) {
           if (_kitLogoDataMap[prefix] && !_kitLogoIsEmojiMap[prefix]) {
@@ -9782,10 +10051,14 @@
           } else {
             img.style.display = "none";
           }
+          img.classList.toggle("kit-logo-anim", !!kit.logoAnim);
         }
       }
 
+      var _kitLogoSlotsMap = {};
+
       function collectKitFromFormFor(prefix) {
+        const animEl = document.getElementById(prefix + "LogoAnim");
         return {
           style: (document.getElementById(prefix + "StyleSelect") || {}).value || "solid",
           primary: (document.getElementById(prefix + "ColorPrimary") || {}).value || "#1d4ed8",
@@ -9794,9 +10067,139 @@
           trim: (document.getElementById(prefix + "ColorTrim") || {}).value || "#facc15",
           logo: _kitLogoDataMap[prefix] || null,
           logoEmoji: !!_kitLogoIsEmojiMap[prefix],
+          logoAnim: !!(animEl && animEl.checked),
+          logoSlots: (_kitLogoSlotsMap[prefix] || []).slice(0, 3),
           updatedAt: Date.now(),
         };
       }
+
+      function saveKitLogoSlot(idx) {
+        const elite =
+          typeof isEliteMember === "function" ? isEliteMember() : false;
+        if (idx > 0 && !elite) {
+          alert("Slot 2–3 yalnızca Elite üyeler için.");
+          return;
+        }
+        const prefix = "kit";
+        if (!_kitLogoSlotsMap[prefix]) _kitLogoSlotsMap[prefix] = [];
+        _kitLogoSlotsMap[prefix][idx] = {
+          logo: _kitLogoDataMap[prefix] || null,
+          logoEmoji: !!_kitLogoIsEmojiMap[prefix],
+        };
+        const n = document.getElementById("kitNote");
+        if (n) n.innerText = "Logo slot " + (idx + 1) + " kaydedildi (forma kaydetmeyi unutma).";
+      }
+      function loadKitLogoSlot(idx) {
+        const elite =
+          typeof isEliteMember === "function" ? isEliteMember() : false;
+        if (idx > 0 && !elite) {
+          alert("Slot 2–3 yalnızca Elite üyeler için.");
+          return;
+        }
+        const prefix = "kit";
+        const slots = _kitLogoSlotsMap[prefix] || [];
+        const s = slots[idx];
+        if (!s || !s.logo) {
+          alert("Bu slot boş.");
+          return;
+        }
+        _kitLogoDataMap[prefix] = s.logo;
+        _kitLogoIsEmojiMap[prefix] = !!s.logoEmoji;
+        const img = document.getElementById(prefix + "LogoPreview");
+        if (img) {
+          if (!_kitLogoIsEmojiMap[prefix]) {
+            img.src = s.logo;
+            img.style.display = "inline-block";
+          } else {
+            img.style.display = "none";
+          }
+        }
+        renderKitPreviewFor(prefix);
+      }
+      window.saveKitLogoSlot = saveKitLogoSlot;
+      window.loadKitLogoSlot = loadKitLogoSlot;
+
+      function applyStadiumTheme() {
+        const elite =
+          typeof isEliteMember === "function" ? isEliteMember() : false;
+        const sel = document.getElementById("stadiumThemeSelect");
+        const theme = sel ? sel.value : "classic";
+        if (!elite && theme !== "classic") {
+          if (sel) sel.value = "classic";
+          alert("Stadyum teması Elite üyelik gerektirir.");
+          return;
+        }
+        const fac = document.getElementById("stadiumTabFacility");
+        if (fac) {
+          fac.className = fac.className
+            .replace(/theme-\w+/g, "")
+            .trim();
+          fac.classList.add("theme-" + theme);
+        }
+        try {
+          localStorage.setItem(
+            "em_stadium_theme_" + (managerName || "guest"),
+            theme,
+          );
+        } catch (e) {}
+        if (typeof clubExtras === "undefined") window.clubExtras = {};
+        clubExtras.stadiumTheme = theme;
+      }
+      window.applyStadiumTheme = applyStadiumTheme;
+
+      function applyProfileFrame() {
+        const elite =
+          typeof isEliteMember === "function" ? isEliteMember() : false;
+        const sel = document.getElementById("profileFrameSelect");
+        let frame = sel ? sel.value : "none";
+        if (!elite && frame !== "none") {
+          if (sel) sel.value = "none";
+          frame = "none";
+          alert("Profil çerçevesi Elite üyelik gerektirir.");
+        }
+        const prev = document.getElementById("profileFramePreview");
+        if (prev) {
+          prev.className = "profile-frame frame-" + frame;
+        }
+        // Menü / başlık rozeti
+        document.querySelectorAll(".em-profile-frame").forEach(function (el) {
+          el.className =
+            "em-profile-frame profile-frame frame-" + frame;
+        });
+        try {
+          localStorage.setItem(
+            "em_profile_frame_" + (managerName || "guest"),
+            frame,
+          );
+        } catch (e) {}
+        if (typeof clubExtras === "undefined") window.clubExtras = {};
+        clubExtras.profileFrame = frame;
+      }
+      window.applyProfileFrame = applyProfileFrame;
+
+      function restoreEliteCosmetics() {
+        try {
+          const th = localStorage.getItem(
+            "em_stadium_theme_" + (managerName || "guest"),
+          );
+          const fr = localStorage.getItem(
+            "em_profile_frame_" + (managerName || "guest"),
+          );
+          const selT = document.getElementById("stadiumThemeSelect");
+          const selF = document.getElementById("profileFrameSelect");
+          const elite =
+            typeof isEliteMember === "function" ? isEliteMember() : false;
+          if (selT && th && elite) {
+            selT.value = th;
+            applyStadiumTheme();
+          }
+          if (selF && fr) {
+            selF.value = elite ? fr : "none";
+            applyProfileFrame();
+          }
+        } catch (e) {}
+      }
+      window.restoreEliteCosmetics = restoreEliteCosmetics;
 
       function renderKitPreviewFor(prefix) {
         const canvas = document.getElementById(prefix + "PreviewCanvas");
@@ -9900,6 +10303,15 @@
         ctx.font = "bold 28px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("10", tx + tw / 2, ty + 70);
+        // Animasyon: önizleme img
+        try {
+          const animEl = document.getElementById(prefix + "LogoAnim");
+          const imgP = document.getElementById(prefix + "LogoPreview");
+          const wrap = document.getElementById(prefix + "LogoPreviewWrap");
+          const on = !!(animEl && animEl.checked);
+          if (imgP) imgP.classList.toggle("kit-logo-anim", on);
+          if (wrap) wrap.classList.toggle("kit-logo-anim", on && logoIsEmoji);
+        } catch (e) {}
       }
 
       function onKitLogoFileFor(ev, prefix) {
@@ -12164,8 +12576,105 @@ function canManageStaff() {
       // ---- Dil sistemi (genişletilmiş) ----
       const EM_I18N_BASE = {
         menu_matches: ["Maçlar", "Matches", "Spiele", "Partidos", "Matchs", "Partite", "Jogos", "Wedstrijden", "Mecze", "Матчи"],
+        menu_team: ["Takım", "Team", "Team", "Equipo", "Équipe", "Squadra", "Equipa", "Team", "Drużyna", "Команда"],
+        menu_club: ["Kulüp", "Club", "Klub", "Club", "Club", "Club", "Clube", "Club", "Klub", "Клуб"],
+        menu_community: ["Topluluk", "Community", "Community", "Comunidad", "Communauté", "Community", "Comunidade", "Community", "Społeczność", "Сообщество"],
         menu_tactics: ["Taktikler", "Tactics", "Taktik", "Táctica", "Tactiques", "Tattiche", "Táticas", "Tactiek", "Taktyka", "Тактика"],
         menu_squad: ["Kadro", "Squad", "Kader", "Plantilla", "Effectif", "Rosa", "Elenco", "Selectie", "Kadra", "Состав"],
+        // Alt başlıklar / hub
+        sub_matches: ["Lig · Kupa · Milli · Canlı", "League · Cup · National · Live", "Liga · Pokal · National · Live", "Liga · Copa · Selección · En vivo", "Championnat · Coupe · National · Live", "Campionato · Coppa · Nazionale · Live", "Liga · Taça · Seleção · Ao vivo", "Competitie · Beker · Nationaal · Live", "Liga · Puchar · Reprezentacja · Live", "Лига · Кубок · Сборная · Live"],
+        sub_team: ["Kadro · Taktik · Antrenman · Transfer", "Squad · Tactics · Training · Transfer", "Kader · Taktik · Training · Transfer", "Plantilla · Táctica · Entreno · Traspasos", "Effectif · Tactique · Entraînement · Transfert", "Rosa · Tattica · Allenamento · Trasferimenti", "Elenco · Tática · Treino · Transferências", "Selectie · Tactiek · Training · Transfer", "Kadra · Taktyka · Trening · Transfery", "Состав · Тактика · Тренировка · Трансферы"],
+        sub_club: ["Ekonomi · Stadyum · Altyapı", "Economy · Stadium · Youth", "Finanzen · Stadion · Jugend", "Economía · Estadio · Cantera", "Finances · Stade · Formation", "Economia · Stadio · Giovanili", "Economia · Estádio · Base", "Economie · Stadion · Jeugd", "Finanse · Stadion · Młodzież", "Финансы · Стадион · Академия"],
+        sub_community: ["Forum · Yardım · Elite", "Forum · Help · Elite", "Forum · Hilfe · Elite", "Foro · Ayuda · Elite", "Forum · Aide · Elite", "Forum · Aiuto · Elite", "Fórum · Ajuda · Elite", "Forum · Help · Elite", "Forum · Pomoc · Elite", "Форум · Справка · Elite"],
+        sub_logout: ["Oturumu kapat", "Sign out", "Abmelden", "Cerrar sesión", "Se déconnecter", "Esci", "Terminar sessão", "Uitloggen", "Wyloguj", "Выйти"],
+        hub_matches_t: ["Maçlar", "Matches", "Spiele", "Partidos", "Matchs", "Partite", "Jogos", "Wedstrijden", "Mecze", "Матчи"],
+        hub_matches_h: ["Tüm maç türleri tek yerde", "All match types in one place", "Alle Spielarten an einem Ort", "Todos los tipos de partido en un sitio", "Tous les types de match au même endroit", "Tutti i tipi di partita in un posto", "Todos os tipos de jogo num só sítio", "Alle wedstrijdtypen op één plek", "Wszystkie typy meczów w jednym miejscu", "Все типы матчей в одном месте"],
+        hub_team_t: ["Takım", "Team", "Team", "Equipo", "Équipe", "Squadra", "Equipa", "Team", "Drużyna", "Команда"],
+        hub_team_h: ["Kadro, taktik, gelişim ve transfer", "Squad, tactics, development and transfers", "Kader, Taktik, Entwicklung und Transfers", "Plantilla, táctica, desarrollo y traspasos", "Effectif, tactique, progression et transferts", "Rosa, tattica, crescita e trasferimenti", "Elenco, tática, evolução e transferências", "Selectie, tactiek, ontwikkeling en transfers", "Kadra, taktyka, rozwój i transfery", "Состав, тактика, развитие и трансферы"],
+        hub_club_t: ["Kulüp", "Club", "Klub", "Club", "Club", "Club", "Clube", "Club", "Klub", "Клуб"],
+        hub_club_h: ["Para, tesis ve gençlik sistemi", "Money, facilities and youth system", "Geld, Anlagen und Jugend", "Dinero, instalaciones y cantera", "Argent, infrastructures et formation", "Denaro, strutture e giovanili", "Dinheiro, instalações e base", "Geld, faciliteiten en jeugd", "Pieniądze, obiekty i młodzież", "Деньги, инфраструктура и академия"],
+        hub_league: ["Lig", "League", "Liga", "Liga", "Championnat", "Campionato", "Liga", "Competitie", "Liga", "Лига"],
+        hub_cup: ["Kupa", "Cup", "Pokal", "Copa", "Coupe", "Coppa", "Taça", "Beker", "Puchar", "Кубок"],
+        hub_cl: ["Kıtalar Ligi", "Continental League", "Kontinental", "Continental", "Continental", "Continentale", "Continental", "Continentaal", "Kontynentalna", "Континент"],
+        hub_nat: ["Milli Takımlar", "National Teams", "Nationalmannschaften", "Selecciones", "Équipes nationales", "Nazionali", "Seleções", "Nationale teams", "Reprezentacje", "Сборные"],
+        hub_live: ["Canlı Maçlar", "Live Matches", "Live-Spiele", "En vivo", "Matchs en direct", "Partite live", "Jogos ao vivo", "Live wedstrijden", "Mecze na żywo", "Матчи live"],
+        hub_economy: ["Ekonomi", "Economy", "Finanzen", "Economía", "Finances", "Economia", "Economia", "Economie", "Finanse", "Финансы"],
+        hub_stadium: ["Stadyum", "Stadium", "Stadion", "Estadio", "Stade", "Stadio", "Estádio", "Stadion", "Stadion", "Стадион"],
+        hub_youth: ["Altyapı", "Youth", "Jugend", "Cantera", "Formation", "Giovanili", "Base", "Jeugd", "Młodzież", "Академия"],
+        hub_training: ["Antrenman", "Training", "Training", "Entrenamiento", "Entraînement", "Allenamento", "Treino", "Training", "Trening", "Тренировка"],
+        login_title: ["Elite Manager", "Elite Manager", "Elite Manager", "Elite Manager", "Elite Manager", "Elite Manager", "Elite Manager", "Elite Manager", "Elite Manager", "Elite Manager"],
+        login_sub: ["Çok oyunculu futbol menajerliği · Lig · Kupa · Kıtalar Ligi", "Multiplayer football management · League · Cup · Continental", "Multiplayer-Fußballmanager · Liga · Pokal · Kontinental", "Gestión de fútbol multijugador · Liga · Copa · Continental", "Management football multijoueur · Championnat · Coupe · Continental", "Manager calcistico multiplayer · Campionato · Coppa · Continentale", "Gestão de futebol multijogador · Liga · Taça · Continental", "Multiplayer voetbalmanagement · Competitie · Beker · Continentaal", "Multiplayerowy menedżer piłkarski · Liga · Puchar · Kontynentalna", "Мультиплеерный футбольный менеджер · Лига · Кубок · Континент"],
+        login_user: ["Kullanıcı adı", "Username", "Benutzername", "Usuario", "Nom d'utilisateur", "Nome utente", "Nome de utilizador", "Gebruikersnaam", "Nazwa użytkownika", "Имя пользователя"],
+        login_pass: ["Şifre", "Password", "Passwort", "Contraseña", "Mot de passe", "Password", "Palavra-passe", "Wachtwoord", "Hasło", "Пароль"],
+        login_btn: ["Giriş Yap", "Log in", "Anmelden", "Iniciar sesión", "Connexion", "Accedi", "Entrar", "Inloggen", "Zaloguj", "Войти"],
+        login_register: ["Kayıt Ol", "Register", "Registrieren", "Registrarse", "S'inscrire", "Registrati", "Registar", "Registreren", "Zarejestruj", "Регистрация"],
+        login_forgot: ["Şifremi Unuttum", "Forgot password", "Passwort vergessen", "Olvidé la contraseña", "Mot de passe oublié", "Password dimenticata", "Esqueci a palavra-passe", "Wachtwoord vergeten", "Nie pamiętam hasła", "Забыл пароль"],
+        btn_save: ["Kaydet", "Save", "Speichern", "Guardar", "Enregistrer", "Salva", "Guardar", "Opslaan", "Zapisz", "Сохранить"],
+        btn_cancel: ["İptal", "Cancel", "Abbrechen", "Cancelar", "Annuler", "Annulla", "Cancelar", "Annuleren", "Anuluj", "Отмена"],
+        btn_back: ["Geri", "Back", "Zurück", "Atrás", "Retour", "Indietro", "Voltar", "Terug", "Wstecz", "Назад"],
+        btn_renew: ["Yenile", "Renew", "Verlängern", "Renovar", "Renouveler", "Rinnova", "Renovar", "Verlengen", "Przedłuż", "Продлить"],
+        settings_sound: ["Ses", "Sound", "Ton", "Sonido", "Son", "Suono", "Som", "Geluid", "Dźwięk", "Звук"],
+        settings_notif: ["Bildirimler", "Notifications", "Benachrichtigungen", "Notificaciones", "Notifications", "Notifiche", "Notificações", "Meldingen", "Powiadomienia", "Уведомления"],
+        settings_lang: ["Dil / Language", "Language", "Sprache", "Idioma", "Langue", "Lingua", "Idioma", "Taal", "Język", "Язык"],
+        settings_theme: ["Tema", "Theme", "Design", "Tema", "Thème", "Tema", "Tema", "Thema", "Motyw", "Тема"],
+        settings_theme_dark: ["Koyu", "Dark", "Dunkel", "Oscuro", "Sombre", "Scuro", "Escuro", "Donker", "Ciemny", "Тёмная"],
+        settings_theme_light: ["Açık", "Light", "Hell", "Claro", "Clair", "Chiaro", "Claro", "Licht", "Jasny", "Светлая"],
+        server_online: ["● Sunucu bağlı", "● Server connected", "● Server verbunden", "● Servidor conectado", "● Serveur connecté", "● Server collegato", "● Servidor ligado", "● Server verbonden", "● Serwer połączony", "● Сервер подключён"],
+        server_offline: ["○ Sunucu yok · çevrimdışı mod", "○ No server · offline mode", "○ Kein Server · Offline", "○ Sin servidor · modo offline", "○ Pas de serveur · hors ligne", "○ Nessun server · offline", "○ Sem servidor · offline", "○ Geen server · offline", "○ Brak serwera · offline", "○ Нет сервера · офлайн"],
+        server_check: ["… Bağlantı kontrol ediliyor", "… Checking connection", "… Verbindung wird geprüft", "… Comprobando conexión", "… Vérification de la connexion", "… Controllo connessione", "… A verificar ligação", "… Verbinding controleren", "… Sprawdzanie połączenia", "… Проверка соединения"],
+        // Sayfa başlıkları
+        page_premium: ["Elite Üyelik", "Elite Membership", "Elite Mitgliedschaft", "Membresía Elite", "Adhésion Elite", "Abbonamento Elite", "Assinatura Elite", "Elite-lidmaatschap", "Subskrypcja Elite", "Elite подписка"],
+        page_settings: ["Ayarlar", "Settings", "Einstellungen", "Ajustes", "Paramètres", "Impostazioni", "Definições", "Instellingen", "Ustawienia", "Настройки"],
+        page_help: ["Yardım — Oyunu Öğren", "Help — Learn the game", "Hilfe — Spiel lernen", "Ayuda — Aprende el juego", "Aide — Apprendre le jeu", "Aiuto — Impara il gioco", "Ajuda — Aprende o jogo", "Help — Leer het spel", "Pomoc — Naucz się gry", "Справка — Изучи игру"],
+        page_staff: ["Kulüp Çalışanları", "Club Staff", "Klubpersonal", "Personal del club", "Personnel du club", "Staff del club", "Pessoal do clube", "Clubpersoneel", "Personel klubu", "Персонал клуба"],
+        page_training: ["Antrenman Merkezi", "Training Centre", "Trainingszentrum", "Centro de entrenamiento", "Centre d'entraînement", "Centro allenamento", "Centro de treino", "Trainingscentrum", "Centrum treningowe", "Тренировочный центр"],
+        page_transfer: ["Transfer Piyasası", "Transfer Market", "Transfermarkt", "Mercado de fichajes", "Marché des transferts", "Mercato", "Mercado de transferências", "Transfermarkt", "Rynek transferowy", "Трансферный рынок"],
+        page_search: ["Arama", "Search", "Suche", "Buscar", "Recherche", "Cerca", "Pesquisar", "Zoeken", "Szukaj", "Поиск"],
+        page_community: ["Topluluk", "Community", "Community", "Comunidad", "Communauté", "Community", "Comunidade", "Community", "Społeczność", "Сообщество"],
+        page_economy: ["Ekonomi", "Economy", "Finanzen", "Economía", "Finances", "Economia", "Economia", "Economie", "Finanse", "Финансы"],
+        page_national: ["Milli Takımlar", "National Teams", "Nationalmannschaften", "Selecciones", "Équipes nationales", "Nazionali", "Seleções", "Nationale teams", "Reprezentacje", "Сборные"],
+        page_fixtures: ["Maçlar", "Matches", "Spiele", "Partidos", "Matchs", "Partite", "Jogos", "Wedstrijden", "Mecze", "Матчи"],
+        page_mgr: ["Menajer Profili", "Manager Profile", "Managerprofil", "Perfil del manager", "Profil manager", "Profilo manager", "Perfil do manager", "Managerprofiel", "Profil menedżera", "Профиль менеджера"],
+        page_match_tac: ["Maç İçi Taktik Değişikliği", "In-match tactics", "Taktikwechsel im Spiel", "Cambio táctico en partido", "Changement tactique en match", "Cambio tattica in partita", "Mudança tática em jogo", "Tactiekwijziging in wedstrijd", "Zmiana taktyki w meczu", "Смена тактики в матче"],
+        page_ratings: ["Maç Sonu Oyuncu Değerlendirmeleri", "Post-match player ratings", "Spielerbewertungen", "Valoraciones postpartido", "Notes post-match", "Voti post-partita", "Notas pós-jogo", "Spelerscijfers", "Oceny po meczu", "Оценки после матча"],
+        page_squad: ["Takım Kadrosu", "Squad", "Kader", "Plantilla", "Effectif", "Rosa", "Elenco", "Selectie", "Kadra", "Состав"],
+        page_academy: ["Akademi — Genç Yetenek Merkezi", "Academy — Youth Talent Centre", "Akademie — Jugendzentrum", "Academia — Centro de talentos", "Académie — Centre de talents", "Accademia — Centro talenti", "Academia — Centro de talentos", "Academie — Jeugdtalentcentrum", "Akademia — Centrum talentów", "Академия — Центр талантов"],
+        page_formation: ["Diziliş — Tıkla ve Yer Değiştir", "Formation — Tap to swap", "Aufstellung — Tippen zum Tauschen", "Alineación — Toca para cambiar", "Composition — Touchez pour échanger", "Modulo — Tocca per scambiare", "Formação — Toca para trocar", "Opstelling — Tik om te wisselen", "Ustawienie — Dotknij by zamienić", "Схема — Нажми для замены"],
+        page_special: ["Özel Taktikler", "Special Tactics", "Spezialtaktiken", "Tácticas especiales", "Tactiques spéciales", "Tattiche speciali", "Táticas especiais", "Speciale tactieken", "Taktyki specjalne", "Особые тактики"],
+        page_live: ["Canlı Maçlar", "Live Matches", "Live-Spiele", "Partidos en vivo", "Matchs en direct", "Partite live", "Jogos ao vivo", "Live wedstrijden", "Mecze na żywo", "Матчи live"],
+        page_league: ["Lig", "League", "Liga", "Liga", "Championnat", "Campionato", "Liga", "Competitie", "Liga", "Лига"],
+        page_report: ["Maç Raporu", "Match Report", "Spielbericht", "Informe del partido", "Rapport de match", "Resoconto partita", "Relatório do jogo", "Wedstrijdverslag", "Raport meczowy", "Отчёт о матче"],
+        tab_auction: ["Açık Artırma", "Auction", "Auktion", "Subasta", "Enchères", "Asta", "Leilão", "Veiling", "Aukcja", "Аукцион"],
+        tab_sell: ["Oyuncu Sat", "Sell Player", "Spieler verkaufen", "Vender jugador", "Vendre un joueur", "Vendi giocatore", "Vender jogador", "Speler verkopen", "Sprzedaj zawodnika", "Продать игрока"],
+        tab_bids: ["Tekliflerim", "My Bids", "Meine Gebote", "Mis ofertas", "Mes offres", "Le mie offerte", "As minhas ofertas", "Mijn biedingen", "Moje oferty", "Мои ставки"],
+        tab_quality: ["Kalite", "Quality", "Qualität", "Calidad", "Qualité", "Qualità", "Qualidade", "Kwaliteit", "Jakość", "Качество"],
+        tab_contract: ["Kontrat", "Contract", "Vertrag", "Contrato", "Contrat", "Contratto", "Contrato", "Contract", "Kontrakt", "Контракт"],
+        tab_skills: ["Yetenekler", "Skills", "Fähigkeiten", "Habilidades", "Compétences", "Abilità", "Habilidades", "Vaardigheden", "Umiejętności", "Навыки"],
+        lbl_age: ["Yaş", "Age", "Alter", "Edad", "Âge", "Età", "Idade", "Leeftijd", "Wiek", "Возраст"],
+        lbl_pos: ["Mevki", "Pos", "Pos", "Pos", "Pos", "Ruolo", "Pos", "Pos", "Poz", "Поз"],
+        lbl_value: ["Değer", "Value", "Wert", "Valor", "Valeur", "Valore", "Valor", "Waarde", "Wartość", "Стоимость"],
+        lbl_wage: ["Maaş", "Wage", "Gehalt", "Salario", "Salaire", "Stipendio", "Salário", "Salaris", "Pensja", "Зарплата"],
+        lbl_balance: ["Bakiye", "Balance", "Kontostand", "Saldo", "Solde", "Saldo", "Saldo", "Saldo", "Saldo", "Баланс"],
+        lbl_budget: ["Kulüp Kasası", "Club Budget", "Klubkasse", "Presupuesto", "Budget club", "Cassa club", "Caixa do clube", "Clubkas", "Budżet klubu", "Касса клуба"],
+        msg_confirm: ["Emin misin?", "Are you sure?", "Bist du sicher?", "¿Seguro?", "Confirmer ?", "Sei sicuro?", "Tens a certeza?", "Weet je het zeker?", "Na pewno?", "Уверен?"],
+        msg_saved: ["Kaydedildi", "Saved", "Gespeichert", "Guardado", "Enregistré", "Salvato", "Guardado", "Opgeslagen", "Zapisano", "Сохранено"],
+        msg_loading: ["Yükleniyor...", "Loading...", "Laden...", "Cargando...", "Chargement...", "Caricamento...", "A carregar...", "Laden...", "Ładowanie...", "Загрузка..."],
+        msg_error: ["Bir hata oluştu", "An error occurred", "Ein Fehler ist aufgetreten", "Ha ocurrido un error", "Une erreur est survenue", "Si è verificato un errore", "Ocorreu um erro", "Er is een fout opgetreden", "Wystąpił błąd", "Произошла ошибка"],
+        msg_no_data: ["Veri yok", "No data", "Keine Daten", "Sin datos", "Aucune donnée", "Nessun dato", "Sem dados", "Geen gegevens", "Brak danych", "Нет данных"],
+        msg_offline: ["Çevrimdışı mod", "Offline mode", "Offline-Modus", "Modo sin conexión", "Mode hors ligne", "Modalità offline", "Modo offline", "Offlinemodus", "Tryb offline", "Офлайн режим"],
+        empty_market: ["Uygun oyuncu yok. Piyasayı yenile.", "No players available. Refresh market.", "Keine Spieler. Markt aktualisieren.", "No hay jugadores. Actualiza el mercado.", "Aucun joueur. Actualisez le marché.", "Nessun giocatore. Aggiorna il mercato.", "Sem jogadores. Atualiza o mercado.", "Geen spelers. Vernieuw de markt.", "Brak zawodników. Odśwież rynek.", "Нет игроков. Обновите рынок."],
+        empty_squad: ["Kadro boş", "Squad is empty", "Kader ist leer", "Plantilla vacía", "Effectif vide", "Rosa vuota", "Elenco vazio", "Selectie leeg", "Kadra pusta", "Состав пуст"],
+        btn_list: ["Listele", "List", "Einstellen", "Listar", "Mettre en vente", "Metti in vendita", "Listar", "Aanbieden", "Wystaw", "Выставить"],
+        btn_bid: ["Teklif Ver", "Place Bid", "Bieten", "Pujar", "Enchérir", "Offri", "Licitar", "Bieden", "Licytuj", "Ставка"],
+        btn_withdraw: ["Çek", "Withdraw", "Zurückziehen", "Retirar", "Retirer", "Ritira", "Retirar", "Intrekken", "Wycofaj", "Снять"],
+        btn_hire: ["Al", "Hire", "Einstellen", "Contratar", "Recruter", "Assumi", "Contratar", "Aannemen", "Zatrudnij", "Нанять"],
+        btn_fire: ["Feshet", "Terminate", "Kündigen", "Rescindir", "Résilier", "Rescindi", "Rescindir", "Beëindigen", "Rozwiąż", "Расторгнуть"],
+        btn_train: ["Antrenman Seç", "Select Training", "Training wählen", "Elegir entrenamiento", "Choisir entraînement", "Scegli allenamento", "Escolher treino", "Kies training", "Wybierz trening", "Выбрать тренировку"],
+        btn_refresh: ["Yenile", "Refresh", "Aktualisieren", "Actualizar", "Actualiser", "Aggiorna", "Atualizar", "Vernieuwen", "Odśwież", "Обновить"],
+        pos_gk: ["Kaleci", "Goalkeeper", "Torwart", "Portero", "Gardien", "Portiere", "Guarda-redes", "Keeper", "Bramkarz", "Вратарь"],
+        pos_df: ["Defans", "Defence", "Abwehr", "Defensa", "Défense", "Difesa", "Defesa", "Verdediging", "Obrona", "Защита"],
+        pos_mf: ["Orta saha", "Midfield", "Mittelfeld", "Mediocampo", "Milieu", "Centrocampo", "Meio-campo", "Middenveld", "Pomoc", "Полузащита"],
+        pos_fw: ["Forvet", "Forward", "Sturm", "Delantero", "Attaquant", "Attaccante", "Avançado", "Aanval", "Napad", "Нападение"],
         menu_youth: ["Altyapı", "Youth", "Jugend", "Cantera", "Formation", "Giovanili", "Base", "Jeugd", "Młodzież", "Академия"],
         menu_training: ["Antrenman", "Training", "Training", "Entrenamiento", "Entraînement", "Allenamento", "Treino", "Training", "Trening", "Тренировка"],
         menu_transfer: ["Transfer", "Transfer", "Transfer", "Transferencias", "Transferts", "Trasferimenti", "Transferências", "Transfers", "Transfery", "Трансферы"],
@@ -12352,7 +12861,8 @@ function canManageStaff() {
       // ja / ar / zh için menü ve sık kullanılan anahtarlar (dizi 10 elemanlı olduğunda yedek)
       const EM_I18N_EXTRA = {
         ja: {
-          menu_matches: "試合", menu_tactics: "戦術", menu_squad: "メンバー", menu_youth: "ユース",
+          menu_matches: "試合", menu_team: "チーム", menu_club: "クラブ", menu_community: "コミュニティ",
+          menu_tactics: "戦術", menu_squad: "メンバー", menu_youth: "ユース",
           menu_training: "トレーニング", menu_transfer: "移籍", menu_economy: "経済", menu_stadium: "スタジアム",
           menu_forum: "フォーラム", menu_premium: "エリート会員", menu_help: "ヘルプ", menu_logout: "ログアウト",
           menu_national: "代表チーム", menu_settings: "設定", settings_title: "設定",
@@ -12360,9 +12870,18 @@ function canManageStaff() {
           lang_saved: "言語を保存しました", on: "オン", off: "オフ",
           tab_groups: "グループ", tab_rank: "ランキング", tab_fixtures: "日程", tab_kings: "得点王",
           tab_history: "履歴", tab_stats: "統計", nat_a: "A代表", nat_u21: "U21",
+          sub_matches: "リーグ · カップ · 代表 · ライブ", sub_team: "メンバー · 戦術 · 練習 · 移籍",
+          sub_club: "経済 · スタジアム · ユース", sub_community: "フォーラム · ヘルプ · エリート",
+          sub_logout: "サインアウト", hub_matches_t: "試合", hub_team_t: "チーム", hub_club_t: "クラブ",
+          hub_league: "リーグ", hub_cup: "カップ", hub_nat: "代表", hub_live: "ライブ",
+          hub_economy: "経済", hub_stadium: "スタジアム", hub_youth: "ユース", hub_training: "トレーニング",
+          login_user: "ユーザー名", login_pass: "パスワード", login_btn: "ログイン",
+          login_register: "登録", login_forgot: "パスワードを忘れた",
+          server_online: "● サーバー接続中", server_offline: "○ サーバーなし · オフライン",
         },
         ar: {
-          menu_matches: "المباريات", menu_tactics: "التكتيك", menu_squad: "التشكيلة", menu_youth: "الناشئين",
+          menu_matches: "المباريات", menu_team: "الفريق", menu_club: "النادي", menu_community: "المجتمع",
+          menu_tactics: "التكتيك", menu_squad: "التشكيلة", menu_youth: "الناشئين",
           menu_training: "التدريب", menu_transfer: "الانتقالات", menu_economy: "الاقتصاد", menu_stadium: "الملعب",
           menu_forum: "المنتدى", menu_premium: "عضوية النخبة", menu_help: "المساعدة", menu_logout: "تسجيل الخروج",
           menu_national: "المنتخبات", menu_settings: "الإعدادات", settings_title: "الإعدادات",
@@ -12370,9 +12889,18 @@ function canManageStaff() {
           lang_saved: "تم حفظ اللغة", on: "تشغيل", off: "إيقاف",
           tab_groups: "المجموعات", tab_rank: "الترتيب", tab_fixtures: "الجدول", tab_kings: "الهدافون",
           tab_history: "السجل", tab_stats: "إحصائيات", nat_a: "المنتخب الأول", nat_u21: "تحت 21",
+          sub_matches: "دوري · كأس · منتخب · مباشر", sub_team: "تشكيلة · تكتيك · تدريب · انتقالات",
+          sub_club: "اقتصاد · ملعب · ناشئين", sub_community: "منتدى · مساعدة · نخبة",
+          sub_logout: "تسجيل الخروج", hub_matches_t: "المباريات", hub_team_t: "الفريق", hub_club_t: "النادي",
+          hub_league: "الدوري", hub_cup: "الكأس", hub_nat: "المنتخبات", hub_live: "مباشر",
+          hub_economy: "الاقتصاد", hub_stadium: "الملعب", hub_youth: "الناشئين", hub_training: "التدريب",
+          login_user: "اسم المستخدم", login_pass: "كلمة المرور", login_btn: "دخول",
+          login_register: "تسجيل", login_forgot: "نسيت كلمة المرور",
+          server_online: "● الخادم متصل", server_offline: "○ لا خادم · وضع دون اتصال",
         },
         zh: {
-          menu_matches: "比赛", menu_tactics: "战术", menu_squad: "阵容", menu_youth: "青训",
+          menu_matches: "比赛", menu_team: "球队", menu_club: "俱乐部", menu_community: "社区",
+          menu_tactics: "战术", menu_squad: "阵容", menu_youth: "青训",
           menu_training: "训练", menu_transfer: "转会", menu_economy: "财政", menu_stadium: "球场",
           menu_forum: "论坛", menu_premium: "精英会员", menu_help: "帮助", menu_logout: "退出",
           menu_national: "国家队", menu_settings: "设置", settings_title: "设置",
@@ -12380,6 +12908,14 @@ function canManageStaff() {
           lang_saved: "语言已保存", on: "开", off: "关",
           tab_groups: "小组", tab_rank: "排名", tab_fixtures: "赛程", tab_kings: "射手榜",
           tab_history: "历史", tab_stats: "数据", nat_a: "国家队", nat_u21: "U21",
+          sub_matches: "联赛 · 杯赛 · 国家队 · 直播", sub_team: "阵容 · 战术 · 训练 · 转会",
+          sub_club: "财政 · 球场 · 青训", sub_community: "论坛 · 帮助 · 精英",
+          sub_logout: "退出登录", hub_matches_t: "比赛", hub_team_t: "球队", hub_club_t: "俱乐部",
+          hub_league: "联赛", hub_cup: "杯赛", hub_nat: "国家队", hub_live: "直播",
+          hub_economy: "财政", hub_stadium: "球场", hub_youth: "青训", hub_training: "训练",
+          login_user: "用户名", login_pass: "密码", login_btn: "登录",
+          login_register: "注册", login_forgot: "忘记密码",
+          server_online: "● 服务器已连接", server_offline: "○ 无服务器 · 离线模式",
         },
       };
       const EM_I18N = {};
@@ -12412,6 +12948,35 @@ function canManageStaff() {
         applyMenuLanguage();
         try {
           renderHelpContent();
+        } catch (e) {}
+        // Tüm bilinen sayfa başlıklarını yenile
+        try {
+          [
+            "page-premium",
+            "page-settings",
+            "page-help",
+            "page-staff",
+            "page-training",
+            "page-transfer",
+            "page-search",
+            "page-community",
+            "page-economy",
+            "page-national",
+            "page-fixtures-hub",
+            "page-manager-profile",
+            "page-match-tactics",
+            "page-ratings",
+            "page-subs",
+            "page-youth",
+            "page-tactics",
+            "page-live",
+            "page-match-report",
+            "page-matches-hub",
+            "page-team-hub",
+            "page-club-hub",
+          ].forEach(function (pid) {
+            applyPageLanguage(pid);
+          });
         } catch (e) {}
         try {
           if (typeof pushNotification === "function")
@@ -12458,31 +13023,71 @@ function canManageStaff() {
       function applyMenuLanguage() {
         try {
           const map = [
-            ["goToMatchesHub()", "menu_matches"],
-            ["goToTactics()", "menu_tactics"],
-            ["goToSubs()", "menu_squad"],
-            ["goToYouth()", "menu_youth"],
-            ["goToTraining()", "menu_training"],
-            ["goToTransfer()", "menu_transfer"],
-            ["goToEconomy()", "menu_economy"],
-            ["goToStadium()", "menu_stadium"],
-            ["goToForum()", "menu_forum"],
-            ["goToPremium()", "menu_premium"],
-            ["goToHelp()", "menu_help"],
-            ["logoutUser()", "menu_logout"],
-            ["goToNationalTeams()", "menu_national"],
-            ["goToSettings()", "menu_settings"],
+            ["goToMatchesHub()", "menu_matches", "sub_matches"],
+            ["goToTeamHub()", "menu_team", "sub_team"],
+            ["goToClubHub()", "menu_club", "sub_club"],
+            ["goToCommunity()", "menu_community", "sub_community"],
+            ["goToTactics()", "menu_tactics", null],
+            ["goToSubs()", "menu_squad", null],
+            ["goToYouth()", "menu_youth", null],
+            ["goToTraining()", "menu_training", null],
+            ["goToTransfer()", "menu_transfer", null],
+            ["goToEconomy()", "menu_economy", null],
+            ["goToStadium()", "menu_stadium", null],
+            ["goToStadium('facility')", "hub_stadium", null],
+            ["goToStadium('youth')", "hub_youth", null],
+            ["goToForum()", "menu_forum", null],
+            ["goToPremium()", "menu_premium", null],
+            ["goToHelp()", "menu_help", null],
+            ["logoutUser()", "menu_logout", "sub_logout"],
+            ["goToNationalTeams()", "menu_national", null],
+            ["goToLeagueHub()", "hub_league", null],
+            ["goToCupHub()", "hub_cup", null],
+            ["goToCLHub()", "hub_cl", null],
+            ["goToLiveMatches()", "hub_live", null],
+            ["goToSettings()", "menu_settings", null],
           ];
           map.forEach(function (pair) {
             const el = document.querySelector(
               '.menu-item[onclick="' + pair[0] + '"] .title',
             );
             if (el) el.innerText = t(pair[1]);
+            if (pair[2]) {
+              const sub = document.querySelector(
+                '.menu-item[onclick="' + pair[0] + '"] .subtitle',
+              );
+              if (sub) sub.innerText = t(pair[2]);
+            }
           });
           document.querySelectorAll("[data-i18n]").forEach(function (el) {
             const key = el.getAttribute("data-i18n");
             if (key) el.innerText = t(key);
           });
+          document.querySelectorAll("[data-i18n-placeholder]").forEach(function (el) {
+            const key = el.getAttribute("data-i18n-placeholder");
+            if (key) el.setAttribute("placeholder", t(key));
+          });
+          // Hub başlıkları
+          const setTxt = function (sel, val) {
+            const el = document.querySelector(sel);
+            if (el) el.innerText = val;
+          };
+          setTxt("#page-matches-hub .tactics-title", "📅 " + t("hub_matches_t"));
+          setTxt("#page-matches-hub .formation-hint", t("hub_matches_h"));
+          setTxt("#page-team-hub .tactics-title", "👥 " + t("hub_team_t"));
+          setTxt("#page-team-hub .formation-hint", t("hub_team_h"));
+          setTxt("#page-club-hub .tactics-title", "🏟️ " + t("hub_club_t"));
+          setTxt("#page-club-hub .formation-hint", t("hub_club_h"));
+          // Giriş ekranı
+          setTxt("#loginForm h1", t("login_title"));
+          setTxt("#loginForm .subtitle", t("login_sub"));
+          const lu = document.querySelector('label[for="loginUsername"]');
+          const lp = document.querySelector('label[for="loginPassword"]');
+          if (lu) lu.innerText = t("login_user");
+          if (lp) lp.innerText = t("login_pass");
+          const lb = document.getElementById("loginBtn");
+          if (lb) lb.innerText = t("login_btn");
+          // Ayarlar
           const st = document.querySelector("#page-settings .tactics-title");
           if (st) st.innerText = "⚙️ " + t("settings_title");
           const ht = document.querySelector("#page-help .tactics-title");
@@ -12497,6 +13102,22 @@ function canManageStaff() {
             const notifOn = localStorage.getItem("em_notif") !== "off";
             nb.innerText = notifOn ? t("on") : t("off");
           }
+          // Sunucu durumu metni
+          try {
+            if (typeof window.__emIsServerOnline === "function") {
+              const on = window.__emIsServerOnline();
+              const el1 = document.getElementById("loginServerStatus");
+              const el2 = document.getElementById("emServerStatus");
+              const txt = on ? t("server_online") : t("server_offline");
+              const col = on ? "#4ade80" : "#f87171";
+              [el1, el2].forEach(function (el) {
+                if (el) {
+                  el.innerText = txt;
+                  el.style.color = col;
+                }
+              });
+            }
+          } catch (e) {}
           document.querySelectorAll("#nationalSubTabs .nat-subtab").forEach(function (b) {
             const sub = b.getAttribute("data-sub");
             const keyMap = {
@@ -12515,6 +13136,61 @@ function canManageStaff() {
           if (natU) natU.innerText = t("nat_u21");
         } catch (e) {}
       }
+      /** Sayfa açılınca başlıkları ve data-i18n alanlarını güncelle */
+      function applyPageLanguage(pageId) {
+        try {
+          applyMenuLanguage();
+          const titleMap = {
+            "page-premium": ["#page-premium .tactics-title", "⭐ ", "page_premium"],
+            "page-settings": ["#page-settings .tactics-title", "⚙️ ", "page_settings"],
+            "page-help": ["#page-help .tactics-title", "❓ ", "page_help"],
+            "page-staff": ["#page-staff .tactics-title", "👔 ", "page_staff"],
+            "page-training": ["#page-training .tactics-title", "💪 ", "page_training"],
+            "page-transfer": ["#page-transfer .tactics-title", "💰 ", "page_transfer"],
+            "page-search": ["#page-search .tactics-title", "🔍 ", "page_search"],
+            "page-community": ["#page-community .tactics-title", "💬 ", "page_community"],
+            "page-economy": ["#page-economy .tactics-title", "💶 ", "page_economy"],
+            "page-national": ["#page-national .tactics-title", "🏳️ ", "page_national"],
+            "page-fixtures-hub": ["#fixturesHubTitle", "📅 ", "page_fixtures"],
+            "page-manager-profile": ["#mgrProfilePageTitle", "👤 ", "page_mgr"],
+            "page-match-tactics": ["#page-match-tactics .tactics-title", "⚡ ", "page_match_tac"],
+            "page-ratings": ["#page-ratings .tactics-title", "", "page_ratings"],
+            "page-subs": ["#page-subs .tactics-title", "", "page_squad"],
+            "page-youth": ["#page-youth .tactics-title", "🌱 ", "page_academy"],
+            "page-tactics": ["#page-tactics .tactics-title", "", "page_formation"],
+            "page-live": ["#page-live .tactics-title", "📡 ", "page_live"],
+            "page-match-report": ["#mrTitle", "📋 ", "page_report"],
+            "page-matches-hub": ["#page-matches-hub .tactics-title", "📅 ", "hub_matches_t"],
+            "page-team-hub": ["#page-team-hub .tactics-title", "👥 ", "hub_team_t"],
+            "page-club-hub": ["#page-club-hub .tactics-title", "🏟️ ", "hub_club_t"],
+          };
+          const spec = titleMap[pageId];
+          if (spec) {
+            const el = document.querySelector(spec[0]);
+            if (el) el.innerText = (spec[1] || "") + t(spec[2]);
+          }
+          // Transfer sekmeleri
+          if (pageId === "page-transfer") {
+            document.querySelectorAll("#transferTabs .transfer-tab, #page-transfer .sub-tab").forEach(function (b) {
+              const tx = (b.innerText || "").toLowerCase();
+              if (tx.indexOf("açık") >= 0 || tx.indexOf("auction") >= 0) b.innerText = t("tab_auction");
+              else if (tx.indexOf("sat") >= 0 || tx.indexOf("sell") >= 0) b.innerText = t("tab_sell");
+              else if (tx.indexOf("teklif") >= 0 || tx.indexOf("bid") >= 0) b.innerText = t("tab_bids");
+            });
+          }
+          // Kadro sekmeleri
+          if (pageId === "page-subs") {
+            document.querySelectorAll("#page-subs .squad-tab, #page-subs [data-squad-tab]").forEach(function (b) {
+              const k = b.getAttribute("data-squad-tab") || "";
+              if (k === "skills" || /yetenek|skill/i.test(b.innerText)) b.innerText = t("tab_skills");
+              else if (k === "quality" || /kalite|quality/i.test(b.innerText)) b.innerText = t("tab_quality");
+              else if (k === "contract" || /kontrat|contract/i.test(b.innerText)) b.innerText = t("tab_contract");
+            });
+          }
+        } catch (e) {}
+      }
+      window.applyPageLanguage = applyPageLanguage;
+
       window.setGameLanguage = setGameLanguage;
       window.t = t;
       window.renderHelpContent = renderHelpContent;
@@ -12523,6 +13199,8 @@ function canManageStaff() {
         setTimeout(function () {
           applyMenuLanguage();
           renderHelpContent();
+          if (typeof currentPageId !== "undefined" && currentPageId)
+            applyPageLanguage(currentPageId);
         }, 0);
       } catch (e) {}
       function toggleSoundFromSettings() {
@@ -12571,7 +13249,16 @@ function canManageStaff() {
         const st = getPremiumStatus();
         const box = document.getElementById("premiumStatusBox");
         const plans = document.getElementById("premiumPlans");
+        const payNote = document.getElementById("premiumPayNote");
+        if (payNote && !payNote.dataset.locked) {
+          payNote.innerText =
+            "Ödeme: Stripe (canlı) veya demo onay. Günlük ödül Elite fark etmeksizin aynıdır (25.000 € + seri×5.000 €).";
+        }
         if (box) {
+          let dailyHtml =
+            '<div id="premiumDailyBox" style="margin-top:10px;padding:10px;background:#020617;border-radius:10px;border:1px solid #334155;font-size:12px;color:#94a3b8;">' +
+            '🎁 Günlük ödül: <button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;margin-left:6px;" onclick="claimDailyFromPremiumPage()">Ödülü al</button>' +
+            '<span id="premiumDailyHint" style="margin-left:8px;">25.000 € + seri×5.000 €</span></div>';
           if (st.active) {
             const planLabel =
               st.plan === "trial"
@@ -12596,12 +13283,62 @@ function canManageStaff() {
               daysLeft +
               " gün · Bitiş: " +
               new Date(st.until).toLocaleDateString("tr-TR") +
-              "</div></div>";
+              '</div><div style="font-size:11px;color:#64748b;margin-top:6px;">Avantajlar: forma/logo, 2. takım, isim değişikliği, Elite rozeti. Günlük ödül herkesle aynı.</div>' +
+              dailyHtml +
+              "</div>";
           } else {
             box.innerHTML =
-              '<div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;color:#94a3b8;font-size:13px;">Deneme süren bitti. Elite ile forma &amp; logo (kulüp), ikinci takım, takım/stadyum adı değiştirme devam eder. Günlük ödül herkesle aynıdır.</div>';
+              '<div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;color:#94a3b8;font-size:13px;">Elite kapalı veya deneme bitti. Forma &amp; logo, ikinci takım, takım/stadyum adı Elite ile açılır. <b style="color:#e2e8f0;">Günlük ödül herkesle aynıdır</b>.' +
+              dailyHtml +
+              "</div>";
           }
+          // Sunucudan günlük durum
+          try {
+            if (typeof apiFetch === "function") {
+              apiFetch("/api/premium/daily-status")
+                .then(function (ds) {
+                  const h = document.getElementById("premiumDailyHint");
+                  if (!h || !ds) return;
+                  if (ds.claimedToday) {
+                    h.innerText =
+                      "Bugün alındı · seri " +
+                      (ds.streak || 0) +
+                      " · yarın tekrar";
+                  } else {
+                    h.innerText =
+                      "Alınabilir: +" +
+                      Number(ds.amountIfClaim || 30000).toLocaleString(
+                        "tr-TR",
+                      ) +
+                      " € · seri " +
+                      (ds.streak || 1);
+                  }
+                })
+                .catch(function () {});
+            }
+          } catch (e) {}
         }
+        window.claimDailyFromPremiumPage = async function () {
+          try {
+            if (typeof window.__emClaimDailyRewardServer === "function") {
+              const r = await window.__emClaimDailyRewardServer({});
+              if (r && r.ok) {
+                alert(
+                  "Günlük ödül: +" +
+                    Number(r.amount).toLocaleString("tr-TR") +
+                    " € (seri " +
+                    r.streak +
+                    ")",
+                );
+              } else {
+                alert((r && r.error) || "Bugün zaten alındı");
+              }
+            }
+            renderPremiumPage();
+          } catch (e) {
+            alert(e.message || "Ödül alınamadı");
+          }
+        };
         if (!plans) return;
         const list = [
           {
@@ -12650,7 +13387,9 @@ function canManageStaff() {
               '<ul style="margin:12px 0 0;padding-left:18px;font-size:12px;color:#cbd5e1;line-height:1.6;">' +
               "<li>Transfer listesinde öne çıkma</li>" +
               "<li><b>İkinci takım yönetim hakkı</b></li>" +
-              "<li><b>Kulüp forma &amp; logo tasarımı</b></li>" +
+              "<li><b>Kulüp forma &amp; logo</b> · ekstra amblem + 3 slot + animasyon</li>" +
+              "<li><b>Transfer gelişmiş filtre</b> (yaş / pot / kalite aralığı)</li>" +
+              "<li><b>Stadyum teması</b> + <b>profil çerçevesi</b></li>" +
               "<li>Takım / stadyum adı değiştirme</li>" +
               "<li>Özel Elite rozeti</li>" +
               "<li style='color:#94a3b8;'>Günlük ödül herkesle aynı</li>" +
@@ -15449,12 +16188,16 @@ function canManageStaff() {
       function startTransferAuctionTicker() {
         if (transferAuctionTimer) return;
         transferAuctionTimer = setInterval(() => {
+          // Sekme gizliyse sadece biten ihaleleri çöz; DOM çizme
+          try {
+            if (document.hidden) {
+              resolveExpiredAuctions();
+              return;
+            }
+          } catch (e) {}
           resolveExpiredAuctions();
           const page = document.getElementById("page-transfer");
           if (page && page.classList.contains("active")) {
-            // Kullanıcı "Oyuncu Sat" formundaki fiyat/süre alanlarıyla
-            // etkileşimdeyken listeyi yeniden çizme — aksi halde açık
-            // olan "Süre" seçim kutusu her saniye kapanır/sıfırlanır.
             const active = document.activeElement;
             const isEditingSellForm =
               active &&
@@ -16027,6 +16770,33 @@ function canManageStaff() {
         const ageF = ageEl ? ageEl.value : "";
         const qEl = document.getElementById("transferQualityFilter");
         const qMin = qEl && qEl.value ? parseInt(qEl.value, 10) : 0;
+        const potEl = document.getElementById("transferPotFilter");
+        const potMin = potEl && potEl.value ? parseFloat(potEl.value) : 0;
+        // Elite gelişmiş panel
+        const eliteBox = document.getElementById("transferEliteFilters");
+        const isEliteTf =
+          typeof isEliteMember === "function" ? isEliteMember() : false;
+        if (eliteBox) eliteBox.style.display = isEliteTf ? "flex" : "none";
+        const minAgeEl = document.getElementById("transferMinAge");
+        const maxAgeEl = document.getElementById("transferMaxAge");
+        const minPotEl = document.getElementById("transferMinPot");
+        const minQEl = document.getElementById("transferMinQ");
+        const eliteMinAge =
+          isEliteTf && minAgeEl && minAgeEl.value
+            ? parseInt(minAgeEl.value, 10)
+            : null;
+        const eliteMaxAge =
+          isEliteTf && maxAgeEl && maxAgeEl.value
+            ? parseInt(maxAgeEl.value, 10)
+            : null;
+        const eliteMinPot =
+          isEliteTf && minPotEl && minPotEl.value
+            ? parseFloat(minPotEl.value)
+            : null;
+        const eliteMinQ =
+          isEliteTf && minQEl && minQEl.value
+            ? parseFloat(minQEl.value)
+            : null;
 
         function filterRows(rows) {
           return rows.filter(function (r) {
@@ -16047,6 +16817,20 @@ function canManageStaff() {
             if (qMin) {
               const q = calculatePlayerQuality(p);
               if (q < qMin) return false;
+            }
+            if (potMin) {
+              const pot = calculatePlayerPotential(p);
+              if (pot < potMin) return false;
+            }
+            if (eliteMinAge != null && !isNaN(eliteMinAge) && age < eliteMinAge)
+              return false;
+            if (eliteMaxAge != null && !isNaN(eliteMaxAge) && age > eliteMaxAge)
+              return false;
+            if (eliteMinPot != null && !isNaN(eliteMinPot)) {
+              if (calculatePlayerPotential(p) < eliteMinPot) return false;
+            }
+            if (eliteMinQ != null && !isNaN(eliteMinQ)) {
+              if (calculatePlayerQuality(p) < eliteMinQ) return false;
             }
             return true;
           });
@@ -16095,11 +16879,21 @@ function canManageStaff() {
             list.innerHTML =
               '<div style="color:#64748b;font-size:12px;text-align:center;padding:10px;">Uygun oyuncu yok. Piyasayı yenile.</div>';
           } else {
-            list.innerHTML = rows
+            // Performans: ilk 60 satır (DOM şişmesin)
+            const LIMIT = 60;
+            const slice = rows.slice(0, LIMIT);
+            let html = slice
               .map(function (r) {
                 return renderTransferMarketRow(r.p, r.idx);
               })
               .join("");
+            if (rows.length > LIMIT) {
+              html +=
+                '<div style="text-align:center;color:#64748b;font-size:11px;padding:8px;">+' +
+                (rows.length - LIMIT) +
+                " oyuncu daha · filtreyi daralt</div>";
+            }
+            list.innerHTML = html;
           }
         }
 
@@ -17010,7 +17804,7 @@ function canManageStaff() {
           onConfirmed();
           return;
         }
-        addLog("📺 VAR İncelemesi başladı (" + teamName + ")...", "tactics-log");
+        addLog(ml("var_start", { team: teamName }), "tactics-log");
         setTimeout(() => {
           if (matchEnded) {
             onConfirmed();
@@ -17020,13 +17814,10 @@ function canManageStaff() {
           if (overturned) {
             const reason =
               VAR_REASONS[Math.floor(Math.random() * VAR_REASONS.length)];
-            addLog(
-              "🚫 VAR KARARI: Gol iptal edildi! (" + reason + ")",
-              "penalty",
-            );
+            addLog(ml("var_no_goal") + " (" + reason + ")", "penalty");
             onCancelled();
           } else {
-            addLog("✅ VAR KARARI: Gol onaylandı, sayılıyor!", "tactics-log");
+            addLog(ml("var_goal"), "tactics-log");
             onConfirmed();
           }
         }, 1900);
@@ -17200,26 +17991,71 @@ function canManageStaff() {
        * Toplam gol bandı ~2.2–2.8 (eşit maçlarda)
        */
       const MATCH_BALANCE = {
-        homeAdv: 0.045, // saldırı payına ev avantajı
-        attackMin: 0.16,
-        attackMax: 0.84,
-        goalBase: 0.235,
-        goalSkill: 0.18,
-        goalGap: 0.16,
-        goalMin: 0.09,
-        goalMax: 0.55,
-        // Hızlı sim (poisson lambda)
-        lambdaBase: 1.22,
-        lambdaGap: 38, // diff/38 → gol beklentisi
-        lambdaHome: 0.14,
-        lambdaMin: 0.3,
-        lambdaMax: 3.15,
+        homeAdv: 0.04, // saldırı payına ev avantajı
+        attackMin: 0.22,
+        attackMax: 0.78,
+        goalBase: 0.22,
+        goalSkill: 0.15,
+        goalGap: 0.12,
+        goalMin: 0.08,
+        goalMax: 0.4, // tek şutta aşırı gol şansı kesildi
+        // Hızlı sim (poisson lambda) — tipik 1.1–1.4 gol/takım
+        lambdaBase: 1.18,
+        lambdaGap: 42,
+        lambdaHome: 0.12,
+        lambdaMin: 0.35,
+        lambdaMax: 2.6,
         // Top kaybı
         turnBase: 0.11,
-        turnGap: 0.16,
-        turnMin: 0.04,
-        turnMax: 0.46,
+        turnGap: 0.14,
+        turnMin: 0.05,
+        turnMax: 0.42,
       };
+
+      // Maç logları: EN + ES DE IT PT FR (5 futbol ülkesi) + TR
+      const MATCH_LOG = {
+        match_start: { tr: "⚽ Maç başladı!", en: "⚽ Kick-off!", es: "⚽ ¡Comienza el partido!", de: "⚽ Anpfiff!", it: "⚽ Inizio partita!", pt: "⚽ Começa o jogo!", fr: "⚽ Coup d'envoi !" },
+        match_end: { tr: "🏁 Maç bitti: {home} {hs} - {as} {away}", en: "🏁 Full time: {home} {hs} - {as} {away}", es: "🏁 Final: {home} {hs} - {as} {away}", de: "🏁 Abpfiff: {home} {hs} - {as} {away}", it: "🏁 Fine partita: {home} {hs} - {as} {away}", pt: "🏁 Fim de jogo: {home} {hs} - {as} {away}", fr: "🏁 Fin du match : {home} {hs} - {as} {away}" },
+        goal: { tr: "⚽ GOL! {scorer}{assist} ({min}') — {hs}-{as}", en: "⚽ GOAL! {scorer}{assist} ({min}') — {hs}-{as}", es: "⚽ ¡GOL! {scorer}{assist} ({min}') — {hs}-{as}", de: "⚽ TOR! {scorer}{assist} ({min}') — {hs}-{as}", it: "⚽ GOL! {scorer}{assist} ({min}') — {hs}-{as}", pt: "⚽ GOL! {scorer}{assist} ({min}') — {hs}-{as}", fr: "⚽ BUT ! {scorer}{assist} ({min}') — {hs}-{as}" },
+        assist: { tr: " (Asist: {name})", en: " (Assist: {name})", es: " (Asistencia: {name})", de: " (Vorlage: {name})", it: " (Assist: {name})", pt: " (Assistência: {name})", fr: " (Passe décisive : {name})" },
+        shot_wide: { tr: "Şut auta gitti ({name})", en: "Shot goes wide ({name})", es: "Tiro fuera ({name})", de: "Schuss daneben ({name})", it: "Tiro fuori ({name})", pt: "Remate para fora ({name})", fr: "Tir à côté ({name})" },
+        shot_blocked: { tr: "Şut bloklandı ({name})", en: "Shot blocked ({name})", es: "Tiro bloqueado ({name})", de: "Schuss geblockt ({name})", it: "Tiro bloccato ({name})", pt: "Remate bloqueado ({name})", fr: "Tir bloqué ({name})" },
+        shot_post: { tr: "Şut direğin yanından ({name})", en: "Shot just past the post ({name})", es: "Tiro rozando el poste ({name})", de: "Schuss knapp am Pfosten vorbei ({name})", it: "Tiro a lato del palo ({name})", pt: "Remate ao lado do poste ({name})", fr: "Tir près du poteau ({name})" },
+        save: { tr: "Kurtarış! {gk} ({name} şutu)", en: "Save! {gk} (shot by {name})", es: "¡Parada! {gk} (tiro de {name})", de: "Parade! {gk} (Schuss von {name})", it: "Parata! {gk} (tiro di {name})", pt: "Defesa! {gk} (remate de {name})", fr: "Arrêt ! {gk} (tir de {name})" },
+        shot_gk: { tr: "Şut kalecide ({name})", en: "Shot saved by keeper ({name})", es: "Tiro al portero ({name})", de: "Schuss auf den Torwart ({name})", it: "Tiro sul portiere ({name})", pt: "Remate no guarda-redes ({name})", fr: "Tir sur le gardien ({name})" },
+        yellow: { tr: "Sarı kart: {name}", en: "Yellow card: {name}", es: "Tarjeta amarilla: {name}", de: "Gelbe Karte: {name}", it: "Cartellino giallo: {name}", pt: "Cartão amarelo: {name}", fr: "Carton jaune : {name}" },
+        red: { tr: "Kırmızı kart: {name}", en: "Red card: {name}", es: "Tarjeta roja: {name}", de: "Rote Karte: {name}", it: "Cartellino rosso: {name}", pt: "Cartão vermelho: {name}", fr: "Carton rouge : {name}" },
+        second_yellow: { tr: "İkinci sarı → kırmızı: {name}", en: "Second yellow → red: {name}", es: "Segunda amarilla → roja: {name}", de: "Gelb-Rot: {name}", it: "Doppia ammonizione → rosso: {name}", pt: "Segundo amarelo → vermelho: {name}", fr: "Deuxième jaune → rouge : {name}" },
+        injury: { tr: "Sakatlık: {name}", en: "Injury: {name}", es: "Lesión: {name}", de: "Verletzung: {name}", it: "Infortunio: {name}", pt: "Lesão: {name}", fr: "Blessure : {name}" },
+        half_time: { tr: "45' Devre Arası / İkinci Yarı Başladı!", en: "45' Half-time / Second half begins!", es: "45' Descanso / ¡Comienza la segunda parte!", de: "45' Halbzeit / Zweite Hälfte beginnt!", it: "45' Intervallo / Inizia il secondo tempo!", pt: "45' Intervalo / Começa a segunda parte!", fr: "45' Mi-temps / Début de la seconde période !" },
+        pen_goal: { tr: "{min}' PENALTI GOLÜ! {name}", en: "{min}' PENALTY GOAL! {name}", es: "{min}' ¡GOL DE PENALTI! {name}", de: "{min}' ELFMETERTOR! {name}", it: "{min}' GOL SU RIGORE! {name}", pt: "{min}' GOL DE PENÁLTI! {name}", fr: "{min}' BUT SUR PÉNALTY ! {name}" },
+        shot_out: { tr: "{min}' ŞUT AUTA ÇIKTI! {name}", en: "{min}' SHOT GOES OUT! {name}", es: "{min}' ¡TIRO FUERA! {name}", de: "{min}' SCHUSS INS AUS! {name}", it: "{min}' TIRO FUORI! {name}", pt: "{min}' REMATE PARA FORA! {name}", fr: "{min}' TIR EN DEHORS ! {name}" },
+        var_start: { tr: "📺 VAR İncelemesi başladı ({team})...", en: "📺 VAR check started ({team})...", es: "📺 Revisión VAR iniciada ({team})...", de: "📺 VAR-Überprüfung gestartet ({team})...", it: "📺 Controllo VAR iniziato ({team})...", pt: "📺 Revisão do VAR iniciada ({team})...", fr: "📺 Vérification VAR lancée ({team})..." },
+        var_goal: { tr: "✅ VAR KARARI: Gol onaylandı, sayılıyor!", en: "✅ VAR DECISION: Goal confirmed!", es: "✅ DECISIÓN VAR: ¡Gol confirmado!", de: "✅ VAR-ENTSCHEIDUNG: Tor bestätigt!", it: "✅ DECISIONE VAR: Gol confermato!", pt: "✅ DECISÃO DO VAR: Golo confirmado!", fr: "✅ DÉCISION VAR : But confirmé !" },
+        var_no_goal: { tr: "❌ VAR KARARI: Gol iptal!", en: "❌ VAR DECISION: Goal disallowed!", es: "❌ DECISIÓN VAR: ¡Gol anulado!", de: "❌ VAR-ENTSCHEIDUNG: Tor aberkannt!", it: "❌ DECISIONE VAR: Gol annullato!", pt: "❌ DECISÃO DO VAR: Golo anulado!", fr: "❌ DÉCISION VAR : But refusé !" },
+        turnover: { tr: "{team} topu kazandı.", en: "{team} wins the ball.", es: "{team} recupera el balón.", de: "{team} erobert den Ball.", it: "{team} conquista il pallone.", pt: "{team} recupera a bola.", fr: "{team} récupère le ballon." },
+      };
+      function ml(key, vars) {
+        let lang = "en";
+        try {
+          lang =
+            typeof getGameLang === "function"
+              ? getGameLang()
+              : localStorage.getItem("em_lang") || "en";
+        } catch (e) {}
+        const row = MATCH_LOG[key];
+        if (!row) return key;
+        let s = row[lang] || row.en || row.tr || key;
+        if (vars) {
+          Object.keys(vars).forEach(function (k) {
+            s = s
+              .split("{" + k + "}")
+              .join(String(vars[k] != null ? vars[k] : ""));
+          });
+        }
+        return s;
+      }
+      window.ml = ml;
 
       /** İki güç arasındaki normalize fark: (a-b)/ölçek → kabaca -1..+1 */
       function strengthGap(attStr, defStr) {
@@ -17488,7 +18324,7 @@ function canManageStaff() {
         processPlannedInstructions(matchMinute);
         if (matchMinute === 45) {
           inMajorAction = true;
-          addLog("45' Devre Arası / İkinci Yarı Başladı!", "tactics-log");
+          addLog(ml("half_time"), "tactics-log");
           centerKickoff("away");
           return;
         }
@@ -17541,7 +18377,7 @@ function canManageStaff() {
                     minute: matchMinute,
                   });
                   addLog(
-                    matchMinute + "' PENALTI GOLÜ! " + striker.name,
+                    ml("pen_goal", { min: matchMinute, name: striker.name }),
                     "penalty",
                   );
                   updateStatsDisplay();
@@ -17646,10 +18482,7 @@ function canManageStaff() {
                 200 + (Math.random() > 0.5 ? 60 : -60),
               );
               addLog(
-                matchMinute +
-                  "' ŞUT AUTA ÇIKTI! " +
-                  striker.name +
-                  " · Out atışı...",
+                ml("shot_out", { min: matchMinute, name: striker.name }),
                 "save",
               );
               updateStatsDisplay();
@@ -18237,21 +19070,87 @@ function canManageStaff() {
         ctx.fill();
       }
 
+      // Saha zemini önbelleği — gradyan her karede yeniden çizilmesin
+      var _pitchCacheCanvas = null;
+      var _pitchCacheW = 0;
+      var _pitchCacheH = 0;
+      var _emRenderScheduled = false;
+      function scheduleRender() {
+        if (_emRenderScheduled) return;
+        _emRenderScheduled = true;
+        requestAnimationFrame(function () {
+          _emRenderScheduled = false;
+          render();
+        });
+      }
+
       function render() {
-        if (!canvas || !ctx) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawPitchDetails();
+        // Sekme gizli veya maç sayfası değilse seyrek kontrol (CPU)
+        try {
+          const matchPage = document.getElementById("page-match");
+          _emOnMatchPage = !!(
+            matchPage &&
+            matchPage.classList &&
+            matchPage.classList.contains("active")
+          );
+        } catch (e) {
+          _emOnMatchPage = true;
+        }
+        if (!_emPageVisible || (!_emOnMatchPage && !matchStarted)) {
+          _emRafPaused = true;
+          setTimeout(scheduleRender, 300);
+          return;
+        }
+        _emRafPaused = false;
+        if (!canvas || !ctx) {
+          scheduleRender();
+          return;
+        }
+        const needPitchRebuild =
+          !_pitchCacheCanvas ||
+          _pitchCacheW !== canvas.width ||
+          _pitchCacheH !== canvas.height;
+        if (needPitchRebuild) {
+          // Ana canvas'a çiz → offscreen kopyala
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          drawPitchDetails();
+          try {
+            _pitchCacheCanvas = document.createElement("canvas");
+            _pitchCacheCanvas.width = canvas.width;
+            _pitchCacheCanvas.height = canvas.height;
+            _pitchCacheW = canvas.width;
+            _pitchCacheH = canvas.height;
+            _pitchCacheCanvas.getContext("2d").drawImage(canvas, 0, 0);
+          } catch (e) {
+            _pitchCacheCanvas = null;
+          }
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          try {
+            ctx.drawImage(_pitchCacheCanvas, 0, 0);
+          } catch (e) {
+            drawPitchDetails();
+          }
+        }
         if (!matchEnded) ball.update();
-        teamConfig.home.players.forEach((p) => {
+        const homePl = teamConfig.home.players || [];
+        const awayPl = teamConfig.away.players || [];
+        for (let i = 0; i < homePl.length; i++) {
+          const p = homePl[i];
+          if (!p) continue;
           const posCoords = transformCoords(p.x, p.y);
           drawPlayer(posCoords.x, posCoords.y, true, p.number, isGkPos(p.pos));
-        });
-        teamConfig.away.players.forEach((p) => {
+        }
+        for (let i = 0; i < awayPl.length; i++) {
+          const p = awayPl[i];
+          if (!p) continue;
           const posCoords = transformCoords(p.x, p.y);
           drawPlayer(posCoords.x, posCoords.y, false, p.number, isGkPos(p.pos));
-        });
+        }
         const ballPos = transformCoords(ball.x, ball.y);
-        const trailPos = ball.trail.map((t) => transformCoords(t.x, t.y));
+        const trailPos = (ball.trail || []).map(function (t) {
+          return transformCoords(t.x, t.y);
+        });
         drawFootballBall(ballPos.x, ballPos.y, trailPos);
         if (goalAnnouncement.active) {
           const remaining = goalAnnouncement.expiresAt - Date.now();
@@ -18285,7 +19184,7 @@ function canManageStaff() {
             ctx.restore();
           }
         }
-        requestAnimationFrame(render);
+        scheduleRender();
       }
 
       // ============================================================
@@ -18744,9 +19643,9 @@ function canManageStaff() {
           (currentReferee && currentReferee.strictness) || 1;
         ["home", "away"].forEach((side) => {
           const team = side === "home" ? teamConfig.home : teamConfig.away;
-          // Kart oranı düşürüldü (daha az sarı/kırmızı)
-          let cardChance = 0.022 * refStrictness;
-          if (team.customTactics?.chokePress === "aktif") cardChance += 0.01;
+          // Kart oranı: maç başına makul sarı/kırmızı
+          let cardChance = 0.014 * refStrictness;
+          if (team.customTactics?.chokePress === "aktif") cardChance += 0.006;
           if (Math.random() < cardChance) {
             const candidate = pickWeightedByTackle(team);
             if (!candidate || candidate.sentOff) return;
@@ -19642,8 +20541,8 @@ function canManageStaff() {
                 const pressingResistance =
                   oppMidAvg.tackle * 0.5 + oppMidAvg.stamina * 0.5;
                 if (passingPower > pressingResistance) {
-                  attributeDelta.midfield += 2.2;
-                  attributeDelta.attack += 1.0;
+                  attributeDelta.midfield += 1.4;
+                  attributeDelta.attack += 0.6;
                   logMessage =
                     team.name + " Özel: Ritmik Pas Kontrolü başarıyla kuruldu!";
                 } else {
@@ -19664,7 +20563,7 @@ function canManageStaff() {
                 const defContainment =
                   oppDefAvg.positioning * 0.6 + oppDefAvg.tackle * 0.4;
                 if (flankScore > defContainment) {
-                  attributeDelta.attack += 2.5;
+                  attributeDelta.attack += 1.5;
                   logMessage =
                     team.name + " Özel: Çevik Kanat Akını savunmayı ipe dizdi!";
                 } else {
@@ -19686,8 +20585,8 @@ function canManageStaff() {
                   (oppTotals.finishing + oppTotals.technique) /
                   opponent.players.length;
                 if (wallScore > oppAttackScore) {
-                  attributeDelta.defense += 2.8;
-                  attributeDelta.gk += 1.0;
+                  attributeDelta.defense += 1.6;
+                  attributeDelta.gk += 0.6;
                   logMessage =
                     team.name + " Özel: Dinamik Alan Kademesi hattı kapattı!";
                 } else {
@@ -19708,8 +20607,8 @@ function canManageStaff() {
                   (oppTotals.passing + oppTotals.vision) /
                   opponent.players.length;
                 if (pressForce > opponentBuildUp) {
-                  attributeDelta.midfield += 2.0;
-                  attributeDelta.defense += 1.2;
+                  attributeDelta.midfield += 1.2;
+                  attributeDelta.defense += 0.7;
                   logMessage =
                     team.name +
                     " Özel: Merkezi Boğucu Pres rakibe nefes aldırmıyor!";
@@ -19733,11 +20632,11 @@ function canManageStaff() {
                     (Number(oppGk.positioning) || 10) * 0.4
                   : 10;
                 if (finishingScore > gkScore) {
-                  attributeDelta.attack += 3.0;
+                  attributeDelta.attack += 1.7;
                   logMessage =
                     team.name + " Özel: Plaseli Bitiricilik kaleciyi avladı!";
                 } else {
-                  attributeDelta.attack -= 1.2;
+                  attributeDelta.attack -= 0.7;
                   logMessage =
                     team.name +
                     " Özel: Net pozisyonda kaleci gole izin vermedi.";
@@ -19753,8 +20652,8 @@ function canManageStaff() {
                   (Number(teamGk.handling) || 10) * 0.25;
                 const oppFwd = oppTotals.finishing * 0.5 + oppTotals.pace * 0.5;
                 if (gkScore > oppFwd * 0.85) {
-                  attributeDelta.gk += 2.6;
-                  attributeDelta.defense += 1.2;
+                  attributeDelta.gk += 1.4;
+                  attributeDelta.defense += 0.7;
                   logMessage =
                     team.name +
                     " Özel: Kaleci Çıkışı hatayı önledi, savunma toparlandı!";
@@ -19791,8 +20690,8 @@ function canManageStaff() {
                   const oppMarking =
                     oppMidAvg.tackle * 0.6 + oppMidAvg.positioning * 0.4;
                   if (pmScore > oppMarking) {
-                    attributeDelta.midfield += 2.8;
-                    attributeDelta.attack += 1.5;
+                    attributeDelta.midfield += 1.5;
+                    attributeDelta.attack += 0.8;
                     logMessage =
                       team.name +
                       " Özel: Derin Oyun Kurucu (" +
@@ -19839,9 +20738,9 @@ function canManageStaff() {
                 const mySum = topTwoSum(teamTotals);
                 const oppSum = topTwoSum(oppTotals);
                 if (mySum > oppSum) {
-                  attributeDelta.attack += 1.5;
-                  attributeDelta.midfield += 1.5;
-                  attributeDelta.defense += 1.2;
+                  attributeDelta.attack += 0.9;
+                  attributeDelta.midfield += 0.9;
+                  attributeDelta.defense += 0.7;
                   logMessage =
                     team.name +
                     " Özel: İkili Üstünlük — en güçlü iki skill rakibi geçti!";
@@ -21353,7 +22252,8 @@ function canManageStaff() {
         syncBallToValidHolder();
       });
     </script>
-  <script src="/socket.io/socket.io.js"></script>
-<script src="/multiplayer-client.js"></script>
+  <!-- defer: HTML parse bittikten sonra yükle — ilk boyamayı engellemez -->
+  <script src="/socket.io/socket.io.js" defer></script>
+  <script src="/multiplayer-client.js" defer></script>
 </body>
 </html>

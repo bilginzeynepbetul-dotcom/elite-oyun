@@ -254,23 +254,49 @@
         " · " +
         when +
         (f.status === "live" ? " · CANLI" : "");
-      btn.innerText =
-        f.status === "live"
-          ? "📡 Canlı İzle"
-          : f.status === "finished"
-            ? "📋 Özet"
-            : "⏳ Saati Bekle / İzle";
+      if (f.status === "live") {
+        btn.innerText = "📡 Canlı İzle";
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.onclick = function (e) {
+          if (e) e.stopPropagation();
+          watchFixture(f.id);
+        };
+      } else if (f.status === "finished") {
+        btn.innerText = "📋 Sonraki maç";
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.onclick = function (e) {
+          if (e) e.stopPropagation();
+          refreshNextMatchFromServer().catch(function () {});
+        };
+      } else {
+        const left = Math.max(0, new Date(f.kickoffAt).getTime() - Date.now());
+        const m = Math.floor(left / 60000);
+        btn.innerText =
+          left <= 0
+            ? "▶ İzlemeye Gir"
+            : "⏳ " + m + " dk · İzle";
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.onclick = function (e) {
+          if (e) e.stopPropagation();
+          watchFixture(f.id);
+        };
+      }
+    } else {
+      title.innerText = "Fikstür yok";
+      meta.innerText =
+        "Lig fikstürü yok — kayıt/giriş sonrası otomatik oluşur.";
+      btn.innerText = "Lig hazırla";
       btn.disabled = false;
       btn.style.opacity = "1";
       btn.onclick = function (e) {
         if (e) e.stopPropagation();
-        watchFixture(f.id);
+        ensureLeagueReady().then(function () {
+          refreshNextMatchFromServer().catch(function () {});
+        });
       };
-    } else {
-      title.innerText = "Fikstür yok";
-      meta.innerText = "Lig fikstürü henüz oluşmadı.";
-      btn.innerText = "—";
-      btn.disabled = true;
     }
   }
 
@@ -443,26 +469,79 @@
 
     socket.on("match:ended", async (state) => {
       try {
-        addLog(
-          "🏁 Maç bitti: " + state.score.home + " - " + state.score.away,
-          "match-end",
-        );
+        const hs = (state && state.score && state.score.home) || 0;
+        const as = (state && state.score && state.score.away) || 0;
+        try {
+          if (typeof ml === "function") {
+            addLog(
+              ml("match_end", {
+                home: "",
+                away: "",
+                hs: hs,
+                as: as,
+              }),
+              "match-end",
+            );
+          } else {
+            addLog("🏁 Full time: " + hs + " - " + as, "match-end");
+          }
+        } catch (e0) {
+          addLog("🏁 " + hs + " - " + as, "match-end");
+        }
         const status = document.getElementById("matchStatus");
-        if (status) status.innerText = "🏁 Maç bitti";
+        if (status) status.innerText = "🏁 " + hs + " - " + as;
+        // Skor panosu
+        try {
+          const scoreBoard = document.getElementById("scoreBoard");
+          if (scoreBoard) {
+            const hn =
+              (state.players &&
+                state.players.home &&
+                (state.players.home.username || state.players.home.teamName)) ||
+              "Home";
+            const an =
+              (state.players &&
+                state.players.away &&
+                (state.players.away.username || state.players.away.teamName)) ||
+              "Away";
+            scoreBoard.innerText = hn + " " + hs + " - " + as + " " + an;
+          }
+        } catch (e1) {}
+        // Özet katmanı
+        try {
+          const ov = document.getElementById("matchSummaryOverlay");
+          const msScore = document.getElementById("msScore");
+          const msResult = document.getElementById("msResult");
+          if (msScore) msScore.innerText = hs + " - " + as;
+          if (msResult) {
+            if (hs > as) msResult.innerText = "Home win";
+            else if (as > hs) msResult.innerText = "Away win";
+            else msResult.innerText = "Draw";
+          }
+          if (ov) ov.classList.add("active");
+        } catch (e2) {}
         if (window._emWatchingFixtureId) {
           try {
             window.lastPlayedFixtureId = window._emWatchingFixtureId;
             if (typeof lastPlayedFixtureId !== "undefined") {
               lastPlayedFixtureId = window._emWatchingFixtureId;
             }
-          } catch (e2) {}
+          } catch (e3) {}
         }
         if (window._emWatchPoll) {
           clearInterval(window._emWatchPoll);
           window._emWatchPoll = null;
         }
+        matchStarted = false;
+        window._emWatchingFixtureId = null;
       } catch (e) {}
-      await syncAllFromServer();
+      // Maç sonucu bildirim DEĞİL — sadece senkron
+      try {
+        await refreshNextMatchFromServer();
+      } catch (e) {}
+      try {
+        await syncAllFromServer();
+      } catch (e) {}
     });
   }
 
@@ -610,13 +689,30 @@
     if (socket) socket.emit("fixture:watch", { fixtureId });
     window._emWatchingFixtureId = fixtureId;
 
-    // Saat gelene kadar periyodik yeniden abone (scheduler maçı başlatınca state gelir)
+    // Saat gelene kadar yeniden abone + geri sayım (1 sn)
     if (window._emWatchPoll) clearInterval(window._emWatchPoll);
     window._emWatchPoll = setInterval(function () {
       if (!window._emWatchingFixtureId || !socket) return;
       socket.emit("fixture:watch", { fixtureId: window._emWatchingFixtureId });
-      refreshNextMatchFromServer().catch(function () {});
-    }, 10000);
+    }, 3000);
+    // Geri sayım metni
+    if (window._emCountdownTimer) clearInterval(window._emCountdownTimer);
+    window._emCountdownTimer = setInterval(function () {
+      try {
+        if (!window._emWatchingFixtureId) return;
+        const f =
+          (_emFixtureCache && _emFixtureCache[window._emWatchingFixtureId]) ||
+          _emNextFixture;
+        if (!f || f.status === "live" || f.status === "finished") return;
+        const status = document.getElementById("matchStatus");
+        if (!status || !f.kickoffAt) return;
+        const left = Math.max(0, new Date(f.kickoffAt).getTime() - Date.now());
+        const m = Math.floor(left / 60000);
+        const s = Math.floor((left % 60000) / 1000);
+        status.innerText =
+          "⏳ " + m + ":" + String(s).padStart(2, "0") + " · kick-off";
+      } catch (e) {}
+    }, 1000);
   }
   // ------------------------------------------------------------
   // Maç içi taktik/değişiklik panelini yerel simülasyondan koparıp
@@ -752,6 +848,15 @@
   let _cupBracketCache = null;
 
   async function fetchCupBracket() {
+    // Ülke kupası yoksa otomatik üret (kulüp ülkesi)
+    try {
+      await apiFetch("/api/cup/generate", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+    } catch (e) {
+      console.warn("[em] cup generate", e);
+    }
     const data = await apiFetch("/api/cup/bracket");
     _cupBracketCache = data;
     return data;
@@ -1185,17 +1290,32 @@
 
   async function afterServerLogin(data) {
     managerName = data.user.username;
+    // Sunucu üye numarası (hesap kimliği)
     try {
-      if (typeof ensureUserNo === "function") ensureUserNo(managerName);
-    } catch (e) {}
+      const srvNo =
+        (data.user && data.user.userNo) ||
+        (data.account && data.account.userNo) ||
+        null;
+      if (srvNo != null) {
+        managerNo = Number(srvNo);
+        localStorage.setItem(
+          "em_user_no_" + String(managerName).toLowerCase(),
+          String(managerNo),
+        );
+      } else if (typeof ensureUserNo === "function") {
+        ensureUserNo(managerName);
+      }
+    } catch (e) {
+      try {
+        if (typeof ensureUserNo === "function") ensureUserNo(managerName);
+      } catch (e2) {}
+    }
     const noStr =
       typeof managerNo !== "undefined" &&
       managerNo &&
       typeof formatUserNo === "function"
         ? " · " + formatUserNo(managerNo)
-        : data.user && data.user.id
-          ? " · U" + data.user.id
-          : "";
+        : "";
     const set = (id, v) => {
       const el = document.getElementById(id);
       if (el) el.innerText = v;
@@ -1213,9 +1333,7 @@
           managerNo &&
           typeof formatUserNo === "function"
             ? formatUserNo(managerNo)
-            : data.user && data.user.id
-              ? "U" + data.user.id
-              : "—";
+            : "—";
     } catch (e) {}
     try {
       loginOverlay.classList.add("hidden");
@@ -1254,6 +1372,7 @@
 
   async function handleServerRegister() {
     const username = (document.getElementById("regUsername") || {}).value?.trim();
+    const email = (document.getElementById("regEmail") || {}).value?.trim();
     const password = (document.getElementById("regPassword") || {}).value;
     const securityQuestion = (
       document.getElementById("regSecurityQuestion") || {}
@@ -1262,9 +1381,22 @@
       document.getElementById("regSecurityAnswer") || {}
     ).value?.trim();
     const errorEl = document.getElementById("registerError");
-    if (!username || !password || password.length < 6) {
+    if (!username || username.length < 3) {
+      if (errorEl) errorEl.innerText = "Kullanıcı adı en az 3 karakter olmalı.";
+      return;
+    }
+    if (!password || password.length < 6) {
+      if (errorEl) errorEl.innerText = "Şifre en az 6 karakter olmalı.";
+      return;
+    }
+    if (!securityQuestion || securityQuestion.length < 5) {
       if (errorEl)
-        errorEl.innerText = "Kullanıcı adı gir, şifre en az 6 karakter olmalı.";
+        errorEl.innerText =
+          "Güvenlik sorusu zorunlu (şifre unutunca lazım, en az 5 karakter).";
+      return;
+    }
+    if (!securityAnswer || securityAnswer.length < 2) {
+      if (errorEl) errorEl.innerText = "Güvenlik sorusu cevabını yaz.";
       return;
     }
     if (errorEl) errorEl.innerText = "Kayıt oluşturuluyor...";
@@ -1274,13 +1406,24 @@
         body: JSON.stringify({
           username,
           password,
+          email: email || null,
           teamName: username + " SK",
-          securityQuestion: securityQuestion || null,
-          securityAnswer: securityAnswer || null,
+          securityQuestion,
+          securityAnswer,
         }),
       });
       setToken(data.token);
       localStorage.setItem(CLUB_KEY, JSON.stringify(data.club || null));
+      // Sunucu üye no'sunu kalıcı tut
+      try {
+        if (data.user && data.user.userNo != null) {
+          localStorage.setItem(
+            "em_user_no_" + String(username).toLowerCase(),
+            String(data.user.userNo),
+          );
+          if (typeof managerNo !== "undefined") managerNo = data.user.userNo;
+        }
+      } catch (e) {}
       if (errorEl) errorEl.innerText = "";
       await afterServerLogin(data);
     } catch (e) {
@@ -2516,10 +2659,39 @@
       }
     };
 
-    // Bildirimler
+    // Maç sonucu / spam bildirim filtresi
+    function isMatchResultNotif(text, category) {
+      const low = String(text || "").toLowerCase();
+      const catLow = String(category || "").toLowerCase();
+      if (
+        catLow === "maç" ||
+        catLow === "mac" ||
+        catLow.indexOf("maç") >= 0 ||
+        catLow.indexOf("match") >= 0
+      )
+        return true;
+      if (/\b\d+\s*[-–:]\s*\d+\b/.test(low)) return true;
+      if (
+        low.indexOf("maç sonucu") >= 0 ||
+        low.indexOf("full time") >= 0 ||
+        low.indexOf("maç bitti") >= 0 ||
+        low.indexOf("yeniden simülasyon") >= 0
+      )
+        return true;
+      if (
+        low.indexOf(" vs ") >= 0 &&
+        (low.indexOf("kazan") >= 0 ||
+          low.indexOf("beraber") >= 0 ||
+          low.indexOf("win") >= 0 ||
+          low.indexOf("draw") >= 0)
+      )
+        return true;
+      return false;
+    }
+
+    // Bildirimler — maç sonucu yazılmaz
     window.pushNotification = function (icon, text, time) {
-      // Lokal gösterim + sunucuya yazmak için endpoint yok (sunucu pushNotification kendi çağırır)
-      // Client-side anlık: gameNotifications
+      if (isMatchResultNotif(text, time)) return;
       try {
         if (typeof gameNotifications !== "undefined") {
           gameNotifications.unshift({
@@ -2542,8 +2714,9 @@
       let notifs = [];
       try {
         const data = await apiFetch("/api/notifications");
-        notifs = data.notifications || [];
-        // okundu işaretle
+        notifs = (data.notifications || []).filter(function (n) {
+          return !isMatchResultNotif(n.text, n.category || n.time);
+        });
         try {
           await apiFetch("/api/notifications/read", {
             method: "POST",
@@ -2553,10 +2726,10 @@
       } catch (err) {
         console.warn("[em] notifs", err);
       }
-      // Lokal gameNotifications ile birleştir
       try {
         if (typeof gameNotifications !== "undefined") {
           gameNotifications.forEach(function (n) {
+            if (isMatchResultNotif(n.text, n.time)) return;
             notifs.push({
               icon: n.icon,
               text: n.text,
@@ -2569,7 +2742,7 @@
       if (list) {
         if (!notifs.length) {
           list.innerHTML =
-            '<div style="color:#64748b;text-align:center;padding:8px;">Bildirim yok.</div>';
+            '<div style="color:#64748b;text-align:center;padding:8px;">Bildirim yok.<br/><span style="font-size:11px;">Transfer, teklif, skill — maç sonuçları burada yok.</span></div>';
         } else {
           list.innerHTML = notifs
             .map(function (n) {
@@ -2599,7 +2772,7 @@
       }
     };
 
-    // Okunmamış bildirim rozeti poll
+    // Okunmamış bildirim rozeti poll (30 sn — performans)
     if (!window._emNotifPoll) {
       window._emNotifPoll = setInterval(async function () {
         if (!getToken()) return;
@@ -2611,7 +2784,7 @@
             else dot.classList.remove("active");
           }
         } catch (e) {}
-      }, 15000);
+      }, 30000);
     }
   }
 
@@ -3047,7 +3220,7 @@
     const names =
       typeof COUNTRY_NAMES !== "undefined" && Array.isArray(COUNTRY_NAMES)
         ? COUNTRY_NAMES
-        : ["Türkiye", "Almanya", "Fransa", "İspanya", "İngiltere", "İtalya", "Portekiz", "Hollanda", "Belçika", "Hırvatistan", "Polonya", "Danimarka", "İsviçre", "Avusturya", "İsveç", "Sırbistan"];
+        : ["Türkiye", "Almanya", "Fransa", "İspanya", "İngiltere", "İtalya", "Portekiz", "Hollanda", "Belçika", "Hırvatistan", "Polonya", "Danimarka", "İsviçre", "Avusturya", "İsveç", "Sırbistan", "İsrail", "Yunanistan", "Romanya", "Bulgaristan", "Bosna-Hersek", "Arnavutluk", "Kuzey Makedonya", "Karadağ", "Kosova", "Slovenya"];
     const flagFn =
       typeof countryFlag === "function" ? countryFlag : function () { return "🏳️"; };
     const leagues =
@@ -3915,6 +4088,15 @@
   window.goToNationalTeams = async function () {
     hideMainMenuAndShowBack();
     switchPage("page-national");
+    // Fikstür yoksa kulüp ülkesi için A + U21 dostluk üret
+    try {
+      await apiFetch("/api/national/ensure-fixtures", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+    } catch (e) {
+      console.warn("[em] national ensure-fixtures", e);
+    }
     // A sekmesi aktif görünsün
     const tabA = document.getElementById("natTabA");
     const tabU21 = document.getElementById("natTabU21");
@@ -4417,20 +4599,31 @@
     return _emServerOnline;
   }
   function updateServerStatusUI() {
-    const el =
-      document.getElementById("emServerStatus") ||
-      document.getElementById("loginServerStatus");
-    if (!el) return;
-    if (_emServerOnline === true) {
-      el.innerText = "● Sunucu bağlı";
-      el.style.color = "#4ade80";
-    } else if (_emServerOnline === false) {
-      el.innerText = "○ Sunucu yok · çevrimdışı mod";
-      el.style.color = "#f87171";
-    } else {
-      el.innerText = "… Bağlantı kontrol ediliyor";
-      el.style.color = "#94a3b8";
-    }
+    const tt =
+      typeof window.t === "function"
+        ? window.t
+        : function (k) {
+            return k;
+          };
+    const txt =
+      _emServerOnline === true
+        ? tt("server_online")
+        : _emServerOnline === false
+          ? tt("server_offline")
+          : tt("server_check");
+    const col =
+      _emServerOnline === true
+        ? "#4ade80"
+        : _emServerOnline === false
+          ? "#f87171"
+          : "#94a3b8";
+    ["emServerStatus", "loginServerStatus"].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.innerText = txt;
+        el.style.color = col;
+      }
+    });
   }
   window.__emProbeServer = probeServerHealth;
 
@@ -4671,21 +4864,43 @@
     }
   };
 
-  window.__emClaimDailyRewardServer = async function () {
+  window.__emClaimDailyRewardServer = async function (opts) {
+    opts = opts || {};
     try {
       const res = await apiFetch("/api/premium/daily-reward", {
         method: "POST",
         body: JSON.stringify({}),
       });
-      if (res && res.ok && res.balance != null && typeof clubBudget !== "undefined") {
-        clubBudget = res.balance;
+      if (res && res.ok && res.balance != null) {
         try {
+          if (typeof clubBudget !== "undefined") clubBudget = res.balance;
+          if (typeof teamConfig !== "undefined" && teamConfig.home)
+            teamConfig.home.budget = res.balance;
           if (typeof updateBudgetUI === "function") updateBudgetUI();
+          if (typeof updateMenuBudget === "function") updateMenuBudget();
         } catch (e) {}
+        if (opts.notify !== false && typeof pushNotification === "function") {
+          pushNotification(
+            "🎁",
+            "Günlük ödül: +" +
+              Number(res.amount || 0).toLocaleString("tr-TR") +
+              " € · seri " +
+              (res.streak || 1),
+            "Ödül",
+          );
+        }
       }
       return res;
     } catch (e) {
+      if (
+        e &&
+        (e.code === "ALREADY_CLAIMED" ||
+          (e.message || "").indexOf("zaten") >= 0)
+      ) {
+        return { ok: false, code: "ALREADY_CLAIMED" };
+      }
       console.warn("[em] daily reward", e);
+      if (opts.quiet) return { ok: false, error: e.message };
       throw e;
     }
   };
@@ -4708,13 +4923,21 @@
     if (typeof _renameTeam === "function") return _renameTeam(name);
   };
 
-  // after login load kit
+  // after login: kit + günlük ödül (bir kez/gün)
   try {
     const _al = afterServerLogin;
     afterServerLogin = async function (data) {
       await _al(data);
       try {
         await window.__emLoadKitServer();
+      } catch (e) {}
+      try {
+        if (typeof window.__emClaimDailyRewardServer === "function") {
+          await window.__emClaimDailyRewardServer({ quiet: true });
+        }
+      } catch (e) {}
+      try {
+        if (typeof renderPremiumPage === "function") renderPremiumPage();
       } catch (e) {}
     };
   } catch (e) {}
