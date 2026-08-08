@@ -2302,15 +2302,23 @@
     }
     list.innerHTML = posts
       .map(function (p, idx) {
+        const safeUser =
+          typeof adminAcEscape === "function"
+            ? adminAcEscape(p.user || "?")
+            : String(p.user || "?");
+        const safeText =
+          typeof adminAcEscape === "function"
+            ? adminAcEscape(p.text || "")
+            : String(p.text || "");
         return (
           '<div style="padding:12px;margin-bottom:8px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">' +
           '<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><b style="color:#38bdf8;">' +
-          (p.user || "?") +
+          safeUser +
           '</b><span style="color:#64748b;font-size:11px;">' +
           (p.time || "") +
           "</span></div>" +
           '<div style="color:#e2e8f0;font-size:13px;">' +
-          (p.text || "") +
+          safeText +
           (canMod
             ? '<div style="margin-top:6px;"><button type="button" class="sub-btn" style="width:auto;padding:2px 8px;font-size:10px;background:#7f1d1d;" onclick="deleteForumPostAt(' +
               idx +
@@ -2384,13 +2392,17 @@
           } else {
             sel.innerHTML = _emRecipients
               .map(function (u) {
+                const safeUsername =
+                  typeof adminAcEscape === "function"
+                    ? adminAcEscape(u.username || u.userId)
+                    : String(u.username || u.userId || "").replace(/"/g, "&quot;");
                 return (
                   '<option value="' +
                   u.userId +
                   '" data-username="' +
-                  (u.username || "").replace(/"/g, "") +
+                  safeUsername +
                   '">' +
-                  (u.username || u.userId) +
+                  safeUsername +
                   "</option>"
                 );
               })
@@ -2514,11 +2526,15 @@
         } else {
           list.innerHTML = notifs
             .map(function (n) {
+              const safeText =
+                typeof adminAcEscape === "function"
+                  ? adminAcEscape(n.text || "")
+                  : String(n.text || "");
               return (
                 '<div class="team-player-row"><span style="font-size:16px;margin-right:8px;">' +
                 (n.icon || "🔔") +
                 '</span><span style="flex:1;color:#cbd5e1;font-size:12.5px;">' +
-                (n.text || "") +
+                safeText +
                 '</span><span style="color:#64748b;font-size:10px;">' +
                 (n.time || "") +
                 "</span></div>"

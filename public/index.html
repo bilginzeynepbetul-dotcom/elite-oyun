@@ -10838,7 +10838,7 @@
               '<div class="team-player-row" style="align-items:flex-start;"><div style="flex:1;"><div style="font-weight:700;color:#e2e8f0;font-size:12.5px;">' +
               label +
               '</div><div style="color:#94a3b8;font-size:12px;margin-top:2px;">' +
-              m.text +
+              (typeof adminAcEscape === "function" ? adminAcEscape(m.text) : String(m.text || "")) +
               '</div></div><span style="color:#64748b;font-size:10px;white-space:nowrap;margin-left:8px;">' +
               m.time +
               "</span></div>"
@@ -11384,10 +11384,15 @@
           }
           const ac = document.getElementById("adminAntiCheatPanel");
           if (ac) {
+            // Güvenlik: bu panel yalnızca sunucunun doğruladığı admin durumuna
+            // göre gösterilir. canManageStaff() localStorage tabanlı bir
+            // istemci-taraflı roldür ve biri kendi tarayıcısından
+            // localStorage.setItem('em_staff_roles_v1', ...) ile bu rolü
+            // sahte olarak ekleyebilir; bu yüzden anti-cheat panelinin
+            // görünürlüğüne asla dahil edilmemeli.
             const isAd =
-              (typeof window.__emIsServerAdmin === "function" &&
-                window.__emIsServerAdmin()) ||
-              (typeof canManageStaff === "function" && canManageStaff());
+              typeof window.__emIsServerAdmin === "function" &&
+              window.__emIsServerAdmin();
             ac.style.display = isAd ? "block" : "none";
             if (isAd && typeof adminAcRefresh === "function") adminAcRefresh();
           }
