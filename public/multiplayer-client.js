@@ -1185,18 +1185,45 @@
 
   async function afterServerLogin(data) {
     managerName = data.user.username;
+    try {
+      if (typeof ensureUserNo === "function") ensureUserNo(managerName);
+    } catch (e) {}
+    const noStr =
+      typeof managerNo !== "undefined" &&
+      managerNo &&
+      typeof formatUserNo === "function"
+        ? " · " + formatUserNo(managerNo)
+        : data.user && data.user.id
+          ? " · U" + data.user.id
+          : "";
     const set = (id, v) => {
       const el = document.getElementById(id);
       if (el) el.innerText = v;
     };
-    set("usernameDisplay", managerName);
-    set("menuUsername", managerName);
+    set("usernameDisplay", managerName + noStr);
+    set("menuUsername", managerName + noStr);
     set("menuAvatar", managerName.charAt(0).toUpperCase());
     set("mgrProfileUsername", managerName);
     set("mgrProfileAvatar", managerName.charAt(0).toUpperCase());
     try {
+      const uno = document.getElementById("mgrProfileUserNo");
+      if (uno)
+        uno.innerText =
+          typeof managerNo !== "undefined" &&
+          managerNo &&
+          typeof formatUserNo === "function"
+            ? formatUserNo(managerNo)
+            : data.user && data.user.id
+              ? "U" + data.user.id
+              : "—";
+    } catch (e) {}
+    try {
       loginOverlay.classList.add("hidden");
       showMainMenu();
+    } catch (e) {}
+    _emServerOnline = true;
+    try {
+      updateServerStatusUI();
     } catch (e) {}
     connectSocket();
     await syncAllFromServer();
@@ -3098,8 +3125,8 @@
         suffix +
         "</div>";
       html +=
-        '<div class="formation-hint" style="margin-bottom:8px;">Torba sistemi: sıralamaya göre 4 torba · her gruba her torbadan 1 takım. ' +
-        '<button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;margin-left:6px;" onclick="redrawNationalPots()">Yeniden kura</button></div>';
+        '<div class="formation-hint" style="margin-bottom:8px;">Torba sistemi: sıralamaya göre 4 torba · her gruba her torbadan 1 takım. Kura sonucu grupları yeniden rastgele çeker (sıralama/torba aynı kalır). ' +
+        '<button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;margin-left:6px;" onclick="redrawNationalPots()" title="Grupları torbalardan yeniden rastgele dağıt">Yeniden kura</button></div>';
       // Torba görünümü
       const pots = getNationalPots(rows);
       html +=
@@ -3685,7 +3712,91 @@
           .join("") +
         "</div></div>";
 
-      html += '<div class="youth-section-title" style="margin-top:6px;">Özel Taktikler</div>';
+      // Önce yedek/kadro listesi, sonra özel taktikler (yerleri değiştirildi)
+    }
+
+    html += (state.squad || []).length
+      ? '<div class="youth-section-title" style="margin-top:8px;">Kadro / Yedekler' +
+        (t.isMeManager && _natSelectedSlot !== null
+          ? ' <span style="color:#facc15;font-weight:400;font-size:11px;">— yerleştirmek için bir oyuncuya tıkla</span>'
+          : "") +
+        "</div>" +
+        state.squad
+          .map((p) => {
+            const slotIdx = _natLineup.findIndex((s) => s.playerId === p.playerId);
+            const isSel = slotIdx !== -1;
+            const badge = isSel
+              ? '<span style="color:#4ade80;font-size:10px;">İLK11 · ' + _natLineup[slotIdx].pos + "</span>"
+              : '<span style="color:#64748b;font-size:10px;">YEDEK</span>';
+            const controls = natAbilityBadge(p.overall);
+            const rowClick = t.isMeManager
+              ? ' onclick="placeNationalPlayer(\'' + p.playerId + '\')" style="cursor:pointer;"'
+              : "";
+            // Tüm yetenekler yan yana (kaydırmalı)
+            const skillKeys = [
+              "pace",
+              "passing",
+              "finishing",
+              "tackle",
+              "vision",
+              "dribbling",
+              "stamina",
+              "strength",
+              "technique",
+              "agility",
+              "positioning",
+              "reflex",
+              "handling",
+            ];
+            const skillHtml =
+              '<div style="display:flex;flex-wrap:nowrap;gap:3px;overflow-x:auto;max-width:100%;margin-top:3px;padding-bottom:2px;">' +
+              skillKeys
+                .map(function (sk) {
+                  const val = Math.round(Number(p[sk]) || Number(p.skills && p.skills[sk]) || 0);
+                  const lab =
+                    typeof SKILL_LABELS_TR !== "undefined" && SKILL_LABELS_TR[sk]
+                      ? SKILL_LABELS_TR[sk]
+                      : sk.slice(0, 3).toUpperCase();
+                  return (
+                    '<span style="flex-shrink:0;font-size:9px;padding:1px 4px;border-radius:4px;background:rgba(51,65,85,0.4);color:#94a3b8;">' +
+                    lab +
+                    " <b style=\"color:#e2e8f0;\">" +
+                    val +
+                    "</b></span>"
+                  );
+                })
+                .join("") +
+              "</div>";
+            return (
+              '<div' +
+              rowClick +
+              ' style="padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.35);font-size:12px;color:#e2e8f0;' +
+              (rowClick ? "cursor:pointer;" : "") +
+              '">' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">' +
+              "<span>" +
+              p.name +
+              " · " +
+              p.pos +
+              ' <span style="color:#94a3b8;">(' +
+              p.clubName +
+              ", " +
+              fmtNatOverall(p.overall) +
+              ")</span></span>" +
+              '<span style="display:flex;gap:6px;align-items:center;white-space:nowrap;" onclick="event.stopPropagation()">' +
+              badge +
+              controls +
+              "</span></div>" +
+              skillHtml +
+              "</div>"
+            );
+          })
+          .join("")
+      : '<div style="color:#64748b;font-size:12px;padding:8px;">Henüz çağrılmış oyuncu yok.</div>';
+
+    if (t.isMeManager) {
+      // Özel taktikler yedeklerden sonra
+      html += '<div class="youth-section-title" style="margin-top:12px;">Özel Taktikler</div>';
       html += (typeof TACTIC_LABELS !== "undefined" ? Object.keys(TACTIC_LABELS) : [])
         .map((key) => {
           const natTactics = _natCustomTactics[_natCategory] || {};
@@ -3771,49 +3882,7 @@
           )
           .join("") +
         "</select></div></div>";
-    }
 
-    html += (state.squad || []).length
-      ? '<div class="youth-section-title">Kadro' +
-        (t.isMeManager && _natSelectedSlot !== null
-          ? ' <span style="color:#facc15;font-weight:400;font-size:11px;">— yerleştirmek için bir oyuncuya tıkla</span>'
-          : "") +
-        "</div>" +
-        state.squad
-          .map((p) => {
-            const slotIdx = _natLineup.findIndex((s) => s.playerId === p.playerId);
-            const isSel = slotIdx !== -1;
-            const badge = isSel
-              ? '<span style="color:#4ade80;font-size:10px;">İLK11 · ' + _natLineup[slotIdx].pos + "</span>"
-              : '<span style="color:#64748b;font-size:10px;">YEDEK</span>';
-            const controls = natAbilityBadge(p.overall);
-            const rowClick = t.isMeManager
-              ? ' onclick="placeNationalPlayer(\'' + p.playerId + '\')" style="cursor:pointer;"'
-              : "";
-            return (
-              '<div' +
-              rowClick +
-              ' style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.35);font-size:12px;color:#e2e8f0;' +
-              (rowClick ? "cursor:pointer;" : "") +
-              '">' +
-              "<span>" +
-              p.name +
-              " · " +
-              p.pos +
-              ' <span style="color:#94a3b8;">(' +
-              p.clubName +
-              ", " +
-              fmtNatOverall(p.overall) +
-              ')</span></span><span style="display:flex;gap:6px;align-items:center;white-space:nowrap;" onclick="event.stopPropagation()">' +
-              badge +
-              controls +
-              "</span></div>"
-            );
-          })
-          .join("")
-      : '<div style="color:#64748b;font-size:12px;padding:8px;">Henüz çağrılmış oyuncu yok.</div>';
-
-    if (t.isMeManager) {
       html +=
         '<div class="formation-hint" style="margin-top:6px;">Kadroya oyuncu eklemek için <b>👥 Tüm Oyuncular</b> sekmesine geç.</div>';
       html +=
@@ -4121,10 +4190,11 @@
     return null;
   }
 
-  // Diziliş kuralı: en az 3 defans, 2 orta saha, 1 forvet;
-  // orta bölgede (DM+MF+OMC) en fazla 3 oyuncu.
+  // Diziliş kuralı: en az 3 defans, 2 orta saha, 1 forvet.
+  // MC / DM / OMC / DC her birinde en fazla 3 oyuncu.
+  // Orta saha (kanatlar dahil) toplam üst sınırı yok.
   const NAT_MIN_LINE_COUNTS = { def: 3, mid: 2, fw: 1 };
-  const NAT_MAX_LINE_COUNTS = { mid: 3 };
+  const NAT_MAX_PER_POS = { MC: 3, DM: 3, OMC: 3, OM: 3, DC: 3 };
 
   window.handleNationalPitchClick = function (kind, index, zx, zy, zpos) {
     if (_natSelectedSlot === null) {
@@ -4193,27 +4263,28 @@
         renderNationalManage();
         return;
       }
-      // Orta bölge (MC/DM/OMC) üst sınırı — kanat ML/MR bu sayıya dahil değil
-      let projectedCenterMid = 0;
-      const centerKeys = ["MC", "DM", "OMC", "OM"];
-      _natLineup.forEach((s, idx) => {
-        if (!s) return;
-        let pos = String(s.pos || "").toUpperCase();
-        if (idx === _natSelectedSlot) pos = String(zpos || "").toUpperCase();
-        if (centerKeys.includes(pos)) projectedCenterMid++;
-      });
-      if (
-        NAT_MAX_LINE_COUNTS.mid != null &&
-        projectedCenterMid > NAT_MAX_LINE_COUNTS.mid
-      ) {
-        alert(
-          "Milli diziliş: orta bölgede (MC/DM/OMC) en fazla " +
-            NAT_MAX_LINE_COUNTS.mid +
-            " oyuncu olabilir.",
-        );
-        _natSelectedSlot = null;
-        renderNationalManage();
-        return;
+      // MC / DM / OMC / DC pozisyon başına üst sınır
+      const toPosUp = String(zpos || "").toUpperCase();
+      if (NAT_MAX_PER_POS[toPosUp] != null) {
+        let countAtPos = 0;
+        _natLineup.forEach((s, idx) => {
+          if (!s) return;
+          let pos = String(s.pos || "").toUpperCase();
+          if (idx === _natSelectedSlot) pos = toPosUp;
+          if (pos === toPosUp) countAtPos++;
+        });
+        if (countAtPos > NAT_MAX_PER_POS[toPosUp]) {
+          alert(
+            "Milli diziliş: " +
+              toPosUp +
+              " mevkisinde en fazla " +
+              NAT_MAX_PER_POS[toPosUp] +
+              " oyuncu olabilir.",
+          );
+          _natSelectedSlot = null;
+          renderNationalManage();
+          return;
+        }
       }
     }
     slot.x = zx;
@@ -4309,8 +4380,90 @@
   }
   rewireInMatchControls();
   tryAutoLogin();
-})();
 
+  // ---- Sunucu bağlantı durumu (öncelik 1) ----
+  let _emServerOnline = null; // null=bilinmiyor, true/false
+  window.__emIsServerOnline = function () {
+    return !!_emServerOnline;
+  };
+  async function probeServerHealth() {
+    try {
+      const res = await fetch(API_BASE + "/health", { method: "GET" });
+      _emServerOnline = res.ok;
+    } catch (e) {
+      _emServerOnline = false;
+    }
+    updateServerStatusUI();
+    return _emServerOnline;
+  }
+  function updateServerStatusUI() {
+    const el =
+      document.getElementById("emServerStatus") ||
+      document.getElementById("loginServerStatus");
+    if (!el) return;
+    if (_emServerOnline === true) {
+      el.innerText = "● Sunucu bağlı";
+      el.style.color = "#4ade80";
+    } else if (_emServerOnline === false) {
+      el.innerText = "○ Sunucu yok · çevrimdışı mod";
+      el.style.color = "#f87171";
+    } else {
+      el.innerText = "… Bağlantı kontrol ediliyor";
+      el.style.color = "#94a3b8";
+    }
+  }
+  window.__emProbeServer = probeServerHealth;
+
+  // Giriş: sunucu varsa online, yoksa yerel (offline) kariyer
+  async function handleSmartLogin() {
+    const username = (document.getElementById("loginUsername") || {}).value?.trim();
+    const password = (document.getElementById("loginPassword") || {}).value;
+    const errorEl = document.getElementById("loginError");
+    if (!username) {
+      if (errorEl) errorEl.innerText = "Kullanıcı adı gerekli.";
+      return;
+    }
+    const online = await probeServerHealth();
+    if (online) {
+      return handleServerLogin();
+    }
+    // Offline fallback
+    if (errorEl)
+      errorEl.innerText =
+        "Sunucu yok — yerel kariyer açılıyor (çok oyunculu kapalı).";
+    try {
+      if (typeof completeLogin === "function") completeLogin(username);
+      else if (typeof window.completeLogin === "function")
+        window.completeLogin(username);
+    } catch (e) {
+      if (errorEl) errorEl.innerText = e.message || "Yerel giriş başarısız.";
+    }
+  }
+  async function handleSmartRegister() {
+    const online = await probeServerHealth();
+    if (online) return handleServerRegister();
+    const username = (document.getElementById("regUsername") || {}).value?.trim();
+    const errorEl = document.getElementById("registerError");
+    if (!username) {
+      if (errorEl) errorEl.innerText = "Kullanıcı adı gerekli.";
+      return;
+    }
+    if (errorEl)
+      errorEl.innerText =
+        "Sunucu yok — yerel hesap açılıyor (çok oyunculu kapalı).";
+    try {
+      if (typeof completeLogin === "function") completeLogin(username);
+    } catch (e) {
+      if (errorEl) errorEl.innerText = e.message || "Yerel kayıt başarısız.";
+    }
+  }
+  rewireButton("loginBtn", handleSmartLogin);
+  rewireButton("registerBtn", handleSmartRegister);
+  wireEnterSubmit(["loginUsername", "loginPassword"], handleSmartLogin);
+  probeServerHealth();
+  setInterval(function () {
+    probeServerHealth();
+  }, 60000);
 
   window.__emSaveClubTeamServer = async function (team) {
     try {
@@ -4841,3 +4994,5 @@
       } catch (e) {}
     };
   } catch (e) {}
+
+})();

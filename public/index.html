@@ -151,6 +151,35 @@
         border-color: #38bdf8;
         color: #0f172a;
       }
+      /* Açık temada sabit koyu renkli yazıları okunur yap */
+      body.theme-light .youth-section-title,
+      body.theme-light .modal-title,
+      body.theme-light .modal-subtitle,
+      body.theme-light .clickable-player,
+      body.theme-light .clickable-team,
+      body.theme-light [style*="color:#e2e8f0"],
+      body.theme-light [style*="color: #e2e8f0"],
+      body.theme-light [style*="color:#cbd5e1"],
+      body.theme-light [style*="color: #cbd5e1"] {
+        color: #0f172a !important;
+      }
+      body.theme-light [style*="color:#94a3b8"],
+      body.theme-light [style*="color: #94a3b8"],
+      body.theme-light [style*="color:#64748b"],
+      body.theme-light [style*="color: #64748b"] {
+        color: #475569 !important;
+      }
+      body.theme-light [style*="background:#0f172a"],
+      body.theme-light [style*="background: #0f172a"],
+      body.theme-light [style*="background:#1e293b"],
+      body.theme-light [style*="background: #1e293b"] {
+        background: #f1f5f9 !important;
+        border-color: #cbd5e1 !important;
+      }
+      body.theme-light .formation-token-label {
+        color: #0f172a !important;
+        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+      }
       body.theme-dark {
         color-scheme: dark;
       }
@@ -2041,6 +2070,7 @@
           <p class="subtitle">
             Çok oyunculu futbol menajerliği · Lig · Kupa · Kıtalar Ligi
           </p>
+          <div id="loginServerStatus" style="font-size:12px;text-align:center;margin:-4px 0 10px;color:#94a3b8;">… Bağlantı kontrol ediliyor</div>
           <label class="field-label" for="loginUsername">Kullanıcı adı</label>
           <input
             type="text"
@@ -2194,6 +2224,7 @@
       <div class="main-menu-container">
         <div class="main-menu-header">
           <h1><span class="em-brand-mark">⚽</span><span class="em-brand-text">Elite</span><span class="em-brand-sub">Manager</span></h1>
+          <div id="emServerStatus" title="Sunucu durumu" style="font-size:11px;color:#94a3b8;margin:0 6px 0 auto;white-space:nowrap;">…</div>
           <div style="display: flex; align-items: center; gap: 8px">
             <button
               class="header-icon-btn"
@@ -2349,14 +2380,7 @@
             <div class="icon-badge">💪</div>
             <div class="text-wrap">
               <div class="title">Antrenman</div>
-              <div class="subtitle">Kondisyon &amp; gelişim</div>
-            </div>
-          </div>
-          <div class="menu-item" onclick="goToClubStaff()">
-            <div class="icon-badge">👔</div>
-            <div class="text-wrap">
-              <div class="title">Çalışanlar</div>
-              <div class="subtitle">Antrenör · Doktor</div>
+              <div class="subtitle">Gelişim · Çalışanlar</div>
             </div>
           </div>
           <div class="menu-item" onclick="goToTransfer()">
@@ -2366,39 +2390,18 @@
               <div class="subtitle">Açık artırma</div>
             </div>
           </div>
-          <div class="menu-item" onclick="goToEconomy()">
-            <div class="icon-badge">💶</div>
-            <div class="text-wrap">
-              <div class="title">Ekonomi</div>
-              <div class="subtitle">Gelir &amp; gider</div>
-            </div>
-          </div>
-          <div class="menu-item" onclick="goToStadium()">
+          <div class="menu-item" onclick="goToClubHub()">
             <div class="icon-badge">🏟️</div>
             <div class="text-wrap">
-              <div class="title">Stadyum</div>
-              <div class="subtitle">Koltuk · Bilet · Altyapı</div>
+              <div class="title">Kulüp</div>
+              <div class="subtitle">Ekonomi · Stadyum · Altyapı</div>
             </div>
           </div>
-          <div class="menu-item" onclick="goToForum()">
+          <div class="menu-item" onclick="goToCommunity()">
             <div class="icon-badge">💬</div>
             <div class="text-wrap">
-              <div class="title">Forum</div>
-              <div class="subtitle">Topluluk</div>
-            </div>
-          </div>
-          <div class="menu-item" onclick="goToPremium()">
-            <div class="icon-badge">⭐</div>
-            <div class="text-wrap">
-              <div class="title">Elite Üyelik</div>
-              <div class="subtitle">Haftalık · Aylık · Yıllık</div>
-            </div>
-          </div>
-          <div class="menu-item" onclick="goToHelp()">
-            <div class="icon-badge">❓</div>
-            <div class="text-wrap">
-              <div class="title">Yardım</div>
-              <div class="subtitle">Oyunu öğren</div>
+              <div class="title">Topluluk</div>
+              <div class="subtitle">Forum · Yardım · Elite</div>
             </div>
           </div>
           <div class="menu-item" onclick="logoutUser()">
@@ -2417,14 +2420,14 @@
         <div class="tactics-title">⭐ Elite Üyelik</div>
         <div class="formation-hint">
           Tüm kullanıcılar 14 gün ücretsiz Elite dener (forma, 2. takım, takım/stadyum adı). Sonra haftalık / aylık / yıllık plan.
-          Ödeme sunucu üzerinden doğrulanır (Stripe veya demo onay). Forma &amp; logo, ikinci takım, günlük ödül x2.
+          Ödeme sunucu üzerinden doğrulanır (Stripe veya demo onay). Forma &amp; logo, ikinci takım, transfer önceliği.
         </div>
         <div id="premiumStatusBox" style="margin-bottom:14px;"></div>
         <div id="premiumPayNote" style="font-size:12px;color:#94a3b8;margin-bottom:10px;text-align:center;"></div>
         <div id="premiumPlans" style="display:grid;gap:12px;"></div>
         <div style="margin-top:18px;padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;font-size:12px;color:#94a3b8;">
           <b style="color:#e2e8f0;">Günlük giriş ödülü</b><br/>
-          Her gün oyuna girince bütçe + küçük hediye. Elite üyelerde ödül x2.
+          Her gün oyuna girince bütçe + küçük hediye. Elite üye de aynı tutarı alır.
           Seri bozulursa sıfırlanır.
         </div>
       </div>
@@ -2477,20 +2480,6 @@
               <div style="font-size:12px;color:#94a3b8;">Yeni maçlarda 1x veya 2x</div>
             </div>
             <button type="button" class="sub-btn" id="settingsMatchSpeedBtn" style="width:auto;padding:8px 14px;" onclick="toggleDefaultMatchSpeed()">1x</button>
-          </div>
-          <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-weight:700;color:#e2e8f0;">Maç öncesi onay</div>
-              <div style="font-size:12px;color:#94a3b8;">Maça başlamadan önce sor</div>
-            </div>
-            <button type="button" class="sub-btn" id="settingsConfirmMatchBtn" style="width:auto;padding:8px 14px;" onclick="toggleConfirmBeforeMatch()">Kapalı</button>
-          </div>
-          <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-weight:700;color:#e2e8f0;">Otomatik kariyer kaydı</div>
-              <div style="font-size:12px;color:#94a3b8;">Her önemli işlemden sonra kaydet</div>
-            </div>
-            <button type="button" class="sub-btn" id="settingsAutoSaveBtn" style="width:auto;padding:8px 14px;" onclick="toggleAutoSave()">Açık</button>
           </div>
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
             <div>
@@ -2590,13 +2579,13 @@
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
             <div style="font-weight:800;color:#f472b6;margin-bottom:6px;">🎁 Günlük giriş ödülü</div>
             <div style="font-size:13px;color:#cbd5e1;line-height:1.55;">
-              Her gün oyuna girdiğinde bir kereye mahsus bütçe ödülü kazanırsın. Üst üste her gün girdikçe "seri"n artar ve ödül büyür; bir gün ara verirsen seri sıfırlanır ve tekrar 1'den başlar. Elite üyelerde ödül miktarı x2'dir.
+              Her gün oyuna girdiğinde bir kereye mahsus bütçe ödülü kazanırsın (temel 25.000 € + seri×5.000 €). Üst üste her gün girdikçe "seri"n artar ve ödül büyür; bir gün ara verirsen seri sıfırlanır ve tekrar 1'den başlar. Elite üye de aynı tutarı alır.
             </div>
           </div>
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
             <div style="font-weight:800;color:#fb923c;margin-bottom:6px;">⭐ Elite Üyelik</div>
             <div style="font-size:13px;color:#cbd5e1;line-height:1.55;">
-              Forma &amp; logo (kulüp), ikinci takım, günlük ödülde x2 gibi ek avantajlar sağlar. Ayarlar sayfasından dilediğin zaman durumunu kontrol edebilirsin.
+              Forma &amp; logo (kulüp), ikinci takım, transfer önceliği ve stadyum/takım adı gibi ek avantajlar sağlar. Günlük ödül tutarı herkesle aynıdır. Ayarlar veya Elite sayfasından durumunu kontrol edebilirsin.
             </div>
           </div>
         </div>
@@ -2691,7 +2680,7 @@
         <div id="staffCoachesList"></div>
 
         <div class="youth-section-title" style="margin-top:18px;">🩺 Doktorlar</div>
-        <div class="formation-hint" style="margin-bottom:8px;">Sakatlık iyileşme süresini kısaltır. Max 3 · seviye yükseldikçe etki artar.<br/>
+        <div class="formation-hint" style="margin-bottom:8px;">
           Sadece <b>1 kulüp doktoru</b> alınabilir. Seviye yükseldikçe sakatlık iyileşme süresi kısalır.
         </div>
         <div style="margin-bottom:8px;">
@@ -2714,10 +2703,13 @@
     <div id="page-training" class="page">
       <div class="report-container">
         <div class="tactics-title">💪 Antrenman Merkezi</div>
-        <button type="button" class="sub-btn" style="width:100%;margin-bottom:10px;background:linear-gradient(90deg,#059669,#10b981);font-weight:800;" onclick="saveTrainingPlan()">💾 Antrenmanı Kaydet</button>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <button type="button" class="sub-btn" style="flex:1;min-width:140px;background:linear-gradient(90deg,#059669,#10b981);font-weight:800;" onclick="saveTrainingPlan()">💾 Antrenmanı Kaydet</button>
+          <button type="button" class="sub-btn" style="width:auto;padding:8px 14px;background:#334155;font-weight:700;" onclick="goToClubStaff()">👔 Çalışanlar</button>
+        </div>
         <div class="formation-hint">
           Skill artışı maç oynanınca da artar. Antrenör seviyesi ve uzmanlığı gelişimi etkiler (Sv.5 = %100, Sv.1 ≈ %35).
-          Kondisyon 70 altı = daha az gelişim.
+          Kondisyon 70 altı = daha az gelişim. Antrenör / doktor için Çalışanlar’a git.
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
           <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;" onclick="trainingSelectAll(true)">Hepsini seç</button>
@@ -2737,115 +2729,18 @@
             <option value="reflex">Refleks</option>
             <option value="handling">Top Tutma</option>
           </select>
-          <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#1d4ed8;" onclick="trainingApplyBulkSkill()">Aynı antrenmanı seç</button>
+          <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#1d4ed8;" onclick="trainingApplyBulkSkill()">Seçilenlere uygula</button>
         </div>
-        <div
-          style="
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 12px;
-          "
-        >
-          <div
-            style="
-              background: #0f172a;
-              border: 1px solid #2c3a52;
-              border-radius: 12px;
-              padding: 12px;
-            "
-          >
-            <div style="font-size: 11px; color: #94a3b8">Kulüp Kasası</div>
-            <div
-              style="font-size: 18px; font-weight: 800; color: #4ade80"
-              id="trainingBudgetDisplay"
-            >
-              5.000.000 €
-            </div>
-          </div>
-          <div
-            style="
-              background: #0f172a;
-              border: 1px solid #2c3a52;
-              border-radius: 12px;
-              padding: 12px;
-            "
-          >
-            <div style="font-size: 11px; color: #94a3b8">Antrenör</div>
-            <div
-              style="font-size: 15px; font-weight: 700; color: #e2e8f0"
-              id="coachNameDisplay"
-            >
-              —
-            </div>
-            <div style="font-size: 12px; color: #38bdf8; margin-top: 2px">
-              Seviye <span id="coachLevelDisplay">1</span> · Maaş
-              <span id="coachSalaryDisplay">0</span> €/hf
-            </div>
-          </div>
-        </div>
-        <div
-          style="
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 8px;
-          "
-        >
-          <div>
-            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px">
-              Antrenör uzmanlık skill
-            </div>
-            <select
-              id="coachSkillSelect"
-              style="
-                width: 100%;
-                padding: 8px;
-                border-radius: 8px;
-                background: #0f172a;
-                color: #e2e8f0;
-                border: 1px solid #334155;
-                font-size: 12px;
-              "
-            ></select>
-          </div>
-          <div>
-            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px">
-              Antrenör seviyesi (1–5)
-            </div>
-            <select
-              id="coachLevelSelect"
-              style="
-                width: 100%;
-                padding: 8px;
-                border-radius: 8px;
-                background: #0f172a;
-                color: #e2e8f0;
-                border: 1px solid #334155;
-                font-size: 12px;
-              "
-            >
-              <option value="1">Seviye 1 (%35 verim)</option>
-              <option value="2">Seviye 2 (%51 verim)</option>
-              <option value="3">Seviye 3 (%68 verim)</option>
-              <option value="4">Seviye 4 (%84 verim)</option>
-              <option value="5">Seviye 5 (%100 verim)</option>
-            </select>
-          </div>
-        </div>
-        <button
-          class="sub-btn"
-          style="width: 100%; padding: 8px; margin-bottom: 8px"
-          onclick="applyCoachSettings()"
-        >
-          Antrenör Ekle / Güncelle
-        </button>
-        <div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px; text-align: center">
-          En fazla 8 antrenör · Farklı skill · İsme tıklayarak sözleşmeyi feshedebilirsin · Maaş haftalık
-        </div>
-        <div id="clubCoachesList" style="margin-bottom: 10px"></div>
+        <!-- Gizli alanlar: eski kod uyumu (antrenör alımı Çalışanlar sayfasında) -->
+        <select id="coachSkillSelect" style="display:none"></select>
+        <select id="coachLevelSelect" style="display:none"><option value="1">1</option></select>
+        <div id="clubCoachesList" style="display:none"></div>
         <select id="coachHireSelect" style="display: none"></select>
         <select id="coachHireSelectLegacy" style="display: none"></select>
+        <div id="trainingBudgetDisplay" style="display:none"></div>
+        <div id="coachNameDisplay" style="display:none"></div>
+        <span id="coachLevelDisplay" style="display:none"></span>
+        <span id="coachSalaryDisplay" style="display:none"></span>
         <div
           id="trainingResultNote"
           style="
@@ -3149,10 +3044,16 @@
 
     <div id="page-stadium" class="page">
       <div class="report-container">
-        <div class="tactics-title" id="stadiumPageTitle">🏟️ Stadyum</div>
+        <div class="tactics-title" id="stadiumPageTitle">🏟️ Kulüp</div>
         <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;" id="stadiumMainTabs">
           <button type="button" class="sub-btn stadium-main-tab active" data-stab="facility" style="width:auto;padding:7px 14px;font-size:12px;" onclick="showStadiumTab('facility')">🏟️ Tesis</button>
+          <button type="button" class="sub-btn stadium-main-tab" data-stab="economy" style="width:auto;padding:7px 14px;font-size:12px;background:#334155;" onclick="showStadiumTab('economy')">💶 Ekonomi</button>
           <button type="button" class="sub-btn stadium-main-tab" data-stab="youth" style="width:auto;padding:7px 14px;font-size:12px;background:#334155;" onclick="showStadiumTab('youth')">🌱 Altyapı</button>
+        </div>
+        <div id="stadiumTabEconomy" style="display:none;">
+          <div class="formation-hint" style="margin-bottom:8px;">Gelir, gider ve kasa özeti · Detaylı defter aşağıda</div>
+          <div id="stadiumEconomyEmbed"></div>
+          <button type="button" class="sub-btn" style="width:100%;margin-top:8px;background:#334155;" onclick="goToEconomy()">💶 Tam ekonomi sayfası</button>
         </div>
         <div id="stadiumTabFacility">
         <div class="modal-stats" style="margin-top: 6px">
@@ -3233,32 +3134,46 @@
     <!-- ===== SAYFA: FORUM (yer tutucu) ===== -->
     <div id="page-forum" class="page">
       <div class="report-container">
-        <div class="tactics-title">💬 Forum</div>
-        <div id="forumModHint" class="formation-hint" style="display:none;margin-bottom:8px;">Moderasyon: gönderilere tıklayarak silebilirsin.</div>
-        <div style="display: flex; gap: 8px; margin-bottom: 10px">
-          <input
-            id="forumPostInput"
-            maxlength="200"
-            placeholder="Konu yaz..."
-            style="
-              flex: 1;
-              padding: 10px;
-              border-radius: 8px;
-              background: #0f172a;
-              color: #e2e8f0;
-              border: 1px solid #334155;
-              font-size: 13px;
-            "
-          />
-          <button
-            class="sub-btn"
-            style="width: auto; padding: 8px 14px"
-            onclick="addForumPost()"
-          >
-            Paylaş
-          </button>
+        <div class="tactics-title">💬 Topluluk</div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;" id="communityTabs">
+          <button type="button" class="sub-btn community-tab active" data-ctab="forum" style="width:auto;padding:7px 14px;font-size:12px;" onclick="showCommunityTab('forum')">Forum</button>
+          <button type="button" class="sub-btn community-tab" data-ctab="help" style="width:auto;padding:7px 14px;font-size:12px;background:#334155;" onclick="showCommunityTab('help')">❓ Yardım</button>
+          <button type="button" class="sub-btn community-tab" data-ctab="elite" style="width:auto;padding:7px 14px;font-size:12px;background:#334155;" onclick="showCommunityTab('elite')">⭐ Elite</button>
         </div>
-        <div id="forumPostsList"></div>
+        <div id="communityForumPane">
+          <div id="forumModHint" class="formation-hint" style="display:none;margin-bottom:8px;">Moderasyon: gönderilere tıklayarak silebilirsin.</div>
+          <div style="display: flex; gap: 8px; margin-bottom: 10px">
+            <input
+              id="forumPostInput"
+              maxlength="200"
+              placeholder="Konu yaz..."
+              style="
+                flex: 1;
+                padding: 10px;
+                border-radius: 8px;
+                background: #0f172a;
+                color: #e2e8f0;
+                border: 1px solid #334155;
+                font-size: 13px;
+              "
+            />
+            <button
+              class="sub-btn"
+              style="width: auto; padding: 8px 14px"
+              onclick="addForumPost()"
+            >
+              Paylaş
+            </button>
+          </div>
+          <div id="forumPostsList"></div>
+        </div>
+        <div id="communityHelpPane" style="display:none;">
+          <div id="communityHelpBody"></div>
+        </div>
+        <div id="communityElitePane" style="display:none;">
+          <div class="formation-hint" style="margin-bottom:10px;">Elite üyelik planları ve avantajlar</div>
+          <button type="button" class="sub-btn" style="width:100%;background:linear-gradient(90deg,#f59e0b,#eab308);font-weight:800;color:#0f172a;" onclick="goToPremium()">⭐ Elite sayfasına git</button>
+        </div>
       </div>
     </div>
 
@@ -3473,7 +3388,8 @@
           <div class="info">
             <div class="name" id="mgrProfileUsername">admin</div>
             <div class="rank">
-              🏆 Sıralama puanı: <span id="mgrProfileRank">1200</span>
+              No: <span id="mgrProfileUserNo">—</span>
+              · 🏆 Sıralama: <span id="mgrProfileRank">1200</span>
               <span id="mgrProfileEliteBadge" style="display:none;margin-left:6px;color:#facc15;font-weight:800;">⭐ Elite</span>
             </div>
           </div>
@@ -5143,6 +5059,62 @@
       let countdown = 10;
       let countdownInterval = null;
       let managerName = "Misafir";
+      let managerNo = null; // genel üye no (örn. U10042)
+
+      // ---- Kalıcı numara serileri (kullanıcı / oyuncu) ----
+      function nextUserNo() {
+        try {
+          let n = parseInt(localStorage.getItem("em_user_no_seq") || "10000", 10);
+          if (!n || n < 10000) n = 10000;
+          n += 1;
+          localStorage.setItem("em_user_no_seq", String(n));
+          return n;
+        } catch (e) {
+          return 10000 + Math.floor(Math.random() * 90000);
+        }
+      }
+      function nextPlayerNo() {
+        try {
+          let n = parseInt(localStorage.getItem("em_player_no_seq") || "200000", 10);
+          if (!n || n < 200000) n = 200000;
+          n += 1;
+          localStorage.setItem("em_player_no_seq", String(n));
+          return n;
+        } catch (e) {
+          return 200000 + Math.floor(Math.random() * 800000);
+        }
+      }
+      function ensureUserNo(username) {
+        const key = "em_user_no_" + String(username || "guest").toLowerCase();
+        try {
+          let no = localStorage.getItem(key);
+          if (!no) {
+            no = String(nextUserNo());
+            localStorage.setItem(key, no);
+          }
+          managerNo = parseInt(no, 10);
+          return managerNo;
+        } catch (e) {
+          if (!managerNo) managerNo = nextUserNo();
+          return managerNo;
+        }
+      }
+      function ensurePlayerNo(p) {
+        if (!p) return null;
+        if (p.playerNo != null && p.playerNo !== "") return p.playerNo;
+        p.playerNo = nextPlayerNo();
+        return p.playerNo;
+      }
+      function formatUserNo(n) {
+        return "U" + String(n || "?");
+      }
+      function formatPlayerNo(n) {
+        return "P" + String(n || "?");
+      }
+      window.ensureUserNo = ensureUserNo;
+      window.ensurePlayerNo = ensurePlayerNo;
+      window.formatUserNo = formatUserNo;
+      window.formatPlayerNo = formatPlayerNo;
       const STARTING_BUDGET = 5000000;
       let clubBudget = STARTING_BUDGET;
       const financeLedger = [];
@@ -5441,12 +5413,12 @@
         handling: "Top Tutma",
       };
       function populateCoachHireSelect() {
-        const skillSel = document.getElementById("coachSkillSelect");
         const skills = Object.keys(SKILL_LABELS_FOR_COACH);
-        if (skillSel) {
+        function fillSkillSelect(el) {
+          if (!el) return;
           const curSkill =
-            skillSel.value || (clubCoach && clubCoach.skill) || "strength";
-          skillSel.innerHTML = skills
+            el.value || (clubCoach && clubCoach.skill) || "strength";
+          el.innerHTML = skills
             .map(
               (s) =>
                 '<option value="' +
@@ -5459,6 +5431,8 @@
             )
             .join("");
         }
+        fillSkillSelect(document.getElementById("coachSkillSelect"));
+        fillSkillSelect(document.getElementById("staffCoachSkillSelect"));
         const bulk = document.getElementById("bulkTrainSkillSelect");
         if (bulk) {
           const cur = bulk.value || (clubCoach && clubCoach.skill) || "stamina";
@@ -5488,9 +5462,15 @@
         const map = { 1: 2500, 2: 5000, 3: 9000, 4: 15000, 5: 25000 };
         return map[level] || 2500;
       }
-      function applyCoachSettings() {
-        const skillSel = document.getElementById("coachSkillSelect");
-        const lvSel = document.getElementById("coachLevelSelect");
+      function applyCoachSettings(opts) {
+        opts = opts || {};
+        // Öncelik: Çalışanlar sayfası select'leri, yoksa gizli training select
+        const skillSel =
+          document.getElementById("staffCoachSkillSelect") ||
+          document.getElementById("coachSkillSelect");
+        const lvSel =
+          document.getElementById("staffCoachLevelSelect") ||
+          document.getElementById("coachLevelSelect");
         const skill = skillSel ? skillSel.value : "strength";
         const level = Math.max(
           1,
@@ -5498,11 +5478,24 @@
         );
         const salary = coachSalaryForLevel(level);
         if (!Array.isArray(clubCoaches)) clubCoaches = clubCoach ? [clubCoach] : [];
-        // Aynı skill varsa güncelle, yoksa ekle (max 8)
         const existing = clubCoaches.findIndex((c) => c.skill === skill);
+        // Aynı skill'den ikinci antrenör alınamaz
+        if (existing >= 0 && !opts.allowUpdate) {
+          alert(
+            "Bu uzmanlıkta zaten bir antrenör var (" +
+              (clubCoaches[existing].name || skill) +
+              "). Aynı skill'den birden fazla alınamaz. Önce feshet veya seviye güncellemek için mevcut antrenörü çıkar.",
+          );
+          return false;
+        }
         const coach = {
-          id: "user_coach_" + skill + "_" + level,
-          name: (typeof randomCoachName === "function" ? randomCoachName(typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "Türkiye") : ((SKILL_LABELS_FOR_COACH[skill] || skill) + " Antrenörü")),
+          id: "user_coach_" + skill + "_" + level + "_" + Date.now(),
+          name:
+            typeof randomCoachName === "function"
+              ? randomCoachName(
+                  typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "Türkiye",
+                )
+              : (SKILL_LABELS_FOR_COACH[skill] || skill) + " Antrenörü",
           level: level,
           salary: salary,
           skill: skill,
@@ -5512,11 +5505,25 @@
           clubCoaches[existing] = coach;
         } else {
           if (clubCoaches.length >= 8) {
-            const note = document.getElementById("trainingResultNote");
-            if (note)
-              note.innerText =
-                "En fazla 8 antrenör. Önce birini çıkar veya mevcut skill'i güncelle.";
-            return;
+            alert("En fazla 8 antrenör. Önce birinin sözleşmesini feshet.");
+            return false;
+          }
+          // İmza bedeli
+          const signing = salary * 2;
+          if (typeof clubBudget === "number" && clubBudget < signing) {
+            alert("Yetersiz bütçe. İmza bedeli: " + formatMoney(signing));
+            return false;
+          }
+          if (typeof clubBudget === "number") {
+            clubBudget -= signing;
+            try {
+              if (typeof addFinanceEntry === "function")
+                addFinanceEntry(
+                  "gider",
+                  "Antrenör imza · " + coach.skillLabel,
+                  -signing,
+                );
+            } catch (e) {}
           }
           clubCoaches.push(coach);
         }
@@ -5524,7 +5531,9 @@
         updateBudgetUI();
         populateCoachHireSelect();
         renderClubCoachesList();
-        const note = document.getElementById("trainingResultNote");
+        const note =
+          document.getElementById("staffPageNote") ||
+          document.getElementById("trainingResultNote");
         if (note)
           note.innerText =
             coach.skillLabel +
@@ -5532,16 +5541,19 @@
             level +
             " · Maaş " +
             formatMoney(salary) +
-            "/hf · Antrenör sayısı: " +
+            "/hf · Antrenör: " +
             clubCoaches.length +
             "/8";
         if (typeof pushNotification === "function")
           pushNotification(
             "👔",
             coach.skillLabel + " Sv." + level + " kadroda",
-            "Antrenman",
+            "Çalışanlar",
           );
-        renderTrainingSquadList();
+        try {
+          if (typeof saveCareer === "function") saveCareer(false);
+        } catch (e) {}
+        return true;
       }
       function hireSelectedCoach() {
         applyCoachSettings();
@@ -6239,6 +6251,7 @@
 
       function completeLogin(username) {
         managerName = username;
+        ensureUserNo(username);
         const loaded = loadCareer(username);
         if (!loaded) {
           clubBudget = STARTING_BUDGET;
@@ -6253,8 +6266,21 @@
           managerFormHistory = [];
           addFinanceEntry("gelir", "Başlangıç kasası", STARTING_BUDGET);
         }
-        document.getElementById("usernameDisplay").innerText = username;
-        document.getElementById("menuUsername").innerText = username;
+        // Mevcut kadrodaki oyuncularda numara yoksa ver
+        try {
+          const all = [].concat(
+            (teamConfig.home && teamConfig.home.players) || [],
+            (teamConfig.home && teamConfig.home.bench) || [],
+          );
+          all.forEach(function (p) {
+            ensurePlayerNo(p);
+          });
+        } catch (e) {}
+        const unameWithNo =
+          username +
+          (managerNo ? " · " + formatUserNo(managerNo) : "");
+        document.getElementById("usernameDisplay").innerText = unameWithNo;
+        document.getElementById("menuUsername").innerText = unameWithNo;
         try {
           updateMenuClubNat();
         } catch (e) {}
@@ -6380,6 +6406,16 @@
         switchPage("page-economy");
         renderEconomyPage();
       }
+      function goToClubHub() {
+        hideMainMenuAndShowBack();
+        switchPage("page-stadium");
+        showStadiumTab("facility");
+        updateStadiumUI();
+        try {
+          if (typeof refreshEliteRenameUI === "function") refreshEliteRenameUI();
+        } catch (e) {}
+      }
+      window.goToClubHub = goToClubHub;
       function renderEconomyPage() {
         updateBudgetUI();
         const list = document.getElementById("economyLedgerList");
@@ -9321,20 +9357,25 @@
       }
       window.changePlayerShirtNumber = changePlayerShirtNumber;
 
+      // Kadro skill sırası: GK → DF → MC → FV
       const SQUAD_SKILL_COLS = [
-        { key: "pace", abbr: "HIZ" },
-        { key: "passing", abbr: "PAS" },
-        { key: "finishing", abbr: "BİT" },
-        { key: "tackle", abbr: "MÜD" },
-        { key: "vision", abbr: "GÖR" },
-        { key: "dribbling", abbr: "TOP" },
-        { key: "stamina", abbr: "DAY" },
-        { key: "strength", abbr: "GÜÇ" },
-        { key: "technique", abbr: "TEK" },
-        { key: "agility", abbr: "ÇEV" },
-        { key: "positioning", abbr: "POZ" },
-        { key: "reflex", abbr: "REF" },
-        { key: "handling", abbr: "TUT" },
+        // GK
+        { key: "reflex", abbr: "REF", group: "GK" },
+        { key: "handling", abbr: "TUT", group: "GK" },
+        // DF
+        { key: "tackle", abbr: "MÜD", group: "DF" },
+        { key: "positioning", abbr: "POZ", group: "DF" },
+        { key: "strength", abbr: "GÜÇ", group: "DF" },
+        // MC
+        { key: "passing", abbr: "PAS", group: "MC" },
+        { key: "vision", abbr: "GÖR", group: "MC" },
+        { key: "stamina", abbr: "DAY", group: "MC" },
+        { key: "technique", abbr: "TEK", group: "MC" },
+        // FV
+        { key: "finishing", abbr: "BİT", group: "FV" },
+        { key: "pace", abbr: "HIZ", group: "FV" },
+        { key: "dribbling", abbr: "TOP", group: "FV" },
+        { key: "agility", abbr: "ÇEV", group: "FV" },
       ];
 
       function renderSquadRosterPage(side) {
@@ -9375,16 +9416,32 @@
           ";gap:4px;align-items:center;color:#64748b;font-size:10px;font-weight:700;padding:6px 4px;border-bottom:1px solid #2c3a52;margin-bottom:2px;position:sticky;top:0;background:#0b1220;z-index:1;";
         let headHtml =
           '<span title="Forma numarası">No</span><span>İsim</span><span>Mevki</span><span style="text-align:center;">Yaş</span>';
+        let lastGroup = "";
         SQUAD_SKILL_COLS.forEach(function (sk) {
           const full =
             (typeof SKILL_LABELS_TR !== "undefined" && SKILL_LABELS_TR[sk.key]) ||
             sk.key;
+          const grp = sk.group || "";
+          const color =
+            grp === "GK"
+              ? "#38bdf8"
+              : grp === "DF"
+                ? "#4ade80"
+                : grp === "MC"
+                  ? "#facc15"
+                  : grp === "FV"
+                    ? "#f472b6"
+                    : "#94a3b8";
           headHtml +=
-            '<span style="text-align:center;" title="' +
+            '<span style="text-align:center;color:' +
+            color +
+            ';" title="' +
+            (grp ? grp + " · " : "") +
             full +
             '">' +
             sk.abbr +
             "</span>";
+          lastGroup = grp;
         });
         head.innerHTML = headHtml;
         table.appendChild(head);
@@ -9421,7 +9478,11 @@
           nameCell.className = "clickable-player";
           nameCell.style.cssText =
             "color:#e2e8f0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;cursor:pointer;";
+          ensurePlayerNo(p);
           nameCell.innerHTML =
+            '<span style="color:#64748b;font-size:10px;font-weight:600;margin-right:4px;">' +
+            formatPlayerNo(p.playerNo) +
+            "</span>" +
             p.name +
             (p.injured
               ? ' <span style="color:#f87171;font-size:10px;font-weight:700;" title="Sakat">🤕' +
@@ -9569,7 +9630,8 @@
       }
 
       function showStadiumTab(tab) {
-        const t = tab === "youth" ? "youth" : "facility";
+        const t =
+          tab === "youth" ? "youth" : tab === "economy" ? "economy" : "facility";
         document.querySelectorAll("#stadiumMainTabs .stadium-main-tab").forEach(function (btn) {
           const on = btn.getAttribute("data-stab") === t;
           btn.classList.toggle("active", on);
@@ -9577,12 +9639,29 @@
         });
         const fac = document.getElementById("stadiumTabFacility");
         const you = document.getElementById("stadiumTabYouth");
+        const eco = document.getElementById("stadiumTabEconomy");
         if (fac) fac.style.display = t === "facility" ? "block" : "none";
         if (you) you.style.display = t === "youth" ? "block" : "none";
+        if (eco) eco.style.display = t === "economy" ? "block" : "none";
         const title = document.getElementById("stadiumPageTitle");
         if (title)
           title.innerText =
-            t === "youth" ? "🌱 Altyapı · Akademi" : "🏟️ Stadyum";
+            t === "youth"
+              ? "🌱 Altyapı · Akademi"
+              : t === "economy"
+                ? "💶 Ekonomi"
+                : "🏟️ Kulüp · Tesis";
+        if (t === "economy") {
+          try {
+            if (typeof updateBudgetUI === "function") updateBudgetUI();
+            if (typeof renderFinanceLedger === "function") renderFinanceLedger();
+            const embed = document.getElementById("stadiumEconomyEmbed");
+            const src = document.querySelector("#page-economy .report-container");
+            if (embed && src) {
+              embed.innerHTML = src.innerHTML;
+            }
+          } catch (e) {}
+        }
         if (t === "youth") {
           ensureYouthHostedInStadium();
           try {
@@ -10031,10 +10110,54 @@
 
 
       function goToForum() {
+        goToCommunity("forum");
+      }
+      function goToCommunity(tab) {
         hideMainMenuAndShowBack();
         switchPage("page-forum");
-        renderForum();
+        const t =
+          tab === "help" ? "help" : tab === "elite" ? "elite" : "forum";
+        showCommunityTab(t);
       }
+      function showCommunityTab(tab) {
+        const t =
+          tab === "help" ? "help" : tab === "elite" ? "elite" : "forum";
+        document.querySelectorAll("#communityTabs .community-tab").forEach(function (btn) {
+          const on = btn.getAttribute("data-ctab") === t;
+          btn.classList.toggle("active", on);
+          btn.style.background = on ? "" : "#334155";
+        });
+        const fp = document.getElementById("communityForumPane");
+        const hp = document.getElementById("communityHelpPane");
+        const ep = document.getElementById("communityElitePane");
+        if (fp) fp.style.display = t === "forum" ? "block" : "none";
+        if (hp) hp.style.display = t === "help" ? "block" : "none";
+        if (ep) ep.style.display = t === "elite" ? "block" : "none";
+        if (t === "forum") {
+          try {
+            renderForum();
+          } catch (e) {}
+        } else if (t === "help") {
+          const body = document.getElementById("communityHelpBody");
+          const helpPage = document.getElementById("page-help");
+          if (body && helpPage) {
+            // Yardım içeriğini kopyala
+            const src = helpPage.querySelector(".report-container");
+            if (src) body.innerHTML = src.innerHTML;
+          } else if (body) {
+            try {
+              if (typeof renderHelpContent === "function") renderHelpContent();
+              const helpSrc = document.querySelector("#page-help .report-container");
+              if (helpSrc) body.innerHTML = helpSrc.innerHTML;
+            } catch (e) {
+              body.innerHTML =
+                '<div class="formation-hint">Yardım içeriği yüklenemedi. Ayarlar menüsünden de erişebilirsin.</div>';
+            }
+          }
+        }
+      }
+      window.goToCommunity = goToCommunity;
+      window.showCommunityTab = showCommunityTab;
       let _viewingManagerUser = null; // null = kendin
 
       function goToManagerProfile() {
@@ -10113,6 +10236,11 @@
           if (selfOnly) selfOnly.style.display = "block";
           const u = me;
           set("mgrProfileUsername", u);
+          ensureUserNo(u);
+          set(
+            "mgrProfileUserNo",
+            managerNo ? formatUserNo(managerNo) : "—",
+          );
           set("mgrProfileTeam", (teamConfig.home && teamConfig.home.name) || "—");
           set(
             "mgrProfileNat",
@@ -10434,43 +10562,51 @@
             '<div style="color:#64748b;text-align:center;padding:16px;">Kadro boş.</div>';
           return;
         }
-        let html =
-          '<div style="display:grid;grid-template-columns:1fr auto auto auto auto auto;gap:6px 8px;font-size:11px;color:#94a3b8;padding:0 4px 6px;border-bottom:1px solid #2c3a52;margin-bottom:6px;"><span>Oyuncu</span><span>Değer</span><span>Süre</span><span>Maaş/hf</span><span>Bitiş</span><span></span></div>';
+        let html = "";
         all.forEach(function (p) {
           const safeId = String(p.id != null ? p.id : "").replace(/'/g, "");
           const val =
             typeof estimatePlayerValue === "function"
               ? estimatePlayerValue(p)
               : p.marketValue || 0;
+          const money =
+            typeof formatMoney === "function"
+              ? formatMoney(val)
+              : val + " €";
+          const wageStr =
+            typeof formatMoney === "function"
+              ? formatMoney(p.wage || 0)
+              : (p.wage || 0) + " €";
           html +=
-            '<div style="display:grid;grid-template-columns:1fr auto auto auto auto auto;gap:6px 8px;align-items:center;padding:10px 8px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:12px;color:#e2e8f0;">' +
-            '<span class="clickable-player" style="cursor:pointer;" onclick="(function(){var t=teamConfig.home;var all=[].concat(t.players||[],t.bench||[]);var pl=all.find(function(x){return String(x.id)===\'' +
+            '<div style="padding:12px 10px;margin-bottom:8px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;color:#e2e8f0;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
+            '<span class="clickable-player" style="cursor:pointer;font-weight:700;font-size:13px;" onclick="(function(){var t=teamConfig.home;var all=[].concat(t.players||[],t.bench||[]);var pl=all.find(function(x){return String(x.id)===\'' +
             safeId +
             "';});if(pl&&typeof showPlayerProfile==='function')showPlayerProfile(pl,t.name);})()\">" +
-            "<b>#" +
+            "#" +
             (p.number || "?") +
             " " +
             (p.name || "?") +
-            '</b> <span style="color:#64748b;">' +
+            ' <span style="color:#64748b;font-weight:500;font-size:11px;">' +
             (p.pos || "") +
             "</span></span>" +
-            '<span style="color:#38bdf8;font-weight:700;">' +
-            (typeof formatMoney === "function" ? formatMoney(val) : val + " €") +
-            "</span>" +
-            '<span style="color:#e2e8f0;font-weight:600;">' +
-            (p.contractYears || 1) +
-            " yıl</span>" +
-            '<span style="color:#facc15;">' +
-            (typeof formatMoney === "function"
-              ? formatMoney(p.wage || 0)
-              : (p.wage || 0) + " €") +
-            "</span>" +
-            '<span style="color:#94a3b8;">' +
-            (p.contractEnd || "—") +
-            "</span>" +
-            '<button type="button" class="sub-btn" style="width:auto;padding:4px 8px;font-size:10px;background:#065f46;" onclick="event.stopPropagation();renewPlayerContract(\'' +
+            '<button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;background:#065f46;" onclick="event.stopPropagation();renewPlayerContract(\'' +
             safeId +
-            "')\">Yenile</button></div>";
+            "')\">Yenile</button></div>" +
+            '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 10px;text-align:left;">' +
+            '<div><div style="font-size:10px;color:#64748b;margin-bottom:2px;">Değer</div><div style="font-size:12px;font-weight:700;color:#38bdf8;">' +
+            money +
+            "</div></div>" +
+            '<div><div style="font-size:10px;color:#64748b;margin-bottom:2px;">Süre</div><div style="font-size:12px;font-weight:600;">' +
+            (p.contractYears || 1) +
+            " yıl</div></div>" +
+            '<div><div style="font-size:10px;color:#64748b;margin-bottom:2px;">Maaş/hf</div><div style="font-size:12px;font-weight:700;color:#facc15;">' +
+            wageStr +
+            "</div></div>" +
+            '<div><div style="font-size:10px;color:#64748b;margin-bottom:2px;">Bitiş</div><div style="font-size:12px;font-weight:600;color:#94a3b8;">' +
+            (p.contractEnd || "—") +
+            "</div></div>" +
+            "</div></div>";
         });
         container.innerHTML = html;
       }
@@ -10559,7 +10695,8 @@
         if (dc) dc.innerText = (clubDoctors || []).length;
         // skill select
         const skillSel = document.getElementById("staffCoachSkillSelect");
-        if (skillSel && skillSel.options.length === 0) {
+        if (skillSel) {
+          const prev = skillSel.value;
           const skills = [
             ["pace", "Hız"],
             ["passing", "Pas"],
@@ -10577,7 +10714,15 @@
           ];
           skillSel.innerHTML = skills
             .map(function (x) {
-              return '<option value="' + x[0] + '">' + x[1] + "</option>";
+              return (
+                '<option value="' +
+                x[0] +
+                '"' +
+                (x[0] === prev ? " selected" : "") +
+                ">" +
+                x[1] +
+                "</option>"
+              );
             })
             .join("");
         }
@@ -10651,19 +10796,21 @@
       function hireStaffCoach() {
         const skillSel = document.getElementById("staffCoachSkillSelect");
         const lvSel = document.getElementById("staffCoachLevelSelect");
-        // sync to training selects if present
-        const tSkill = document.getElementById("coachSkillSelect");
-        const tLv = document.getElementById("coachLevelSelect");
-        if (tSkill && skillSel) tSkill.value = skillSel.value;
-        if (tLv && lvSel) tLv.value = lvSel.value;
-        if (skillSel && tSkill) {
-          // ensure training select has option
+        if (!skillSel || !skillSel.value) {
+          // Select boşsa doldur
+          if (typeof renderClubStaffPage === "function") renderClubStaffPage();
         }
-        if (typeof applyCoachSettings === "function") applyCoachSettings();
-        else if (typeof hireSelectedCoach === "function") hireSelectedCoach();
+        if (!skillSel || !skillSel.value) {
+          alert("Uzmanlık skill seçilemedi. Sayfayı yenileyip tekrar dene.");
+          return;
+        }
+        const ok =
+          typeof applyCoachSettings === "function"
+            ? applyCoachSettings({ allowUpdate: false })
+            : false;
         renderClubStaffPage();
         const note = document.getElementById("staffPageNote");
-        if (note) note.innerText = "Antrenör işlemi uygulandı.";
+        if (note && ok) note.innerText = "Antrenör alındı.";
       }
       window.hireStaffCoach = hireStaffCoach;
 
@@ -11227,12 +11374,29 @@
       // Önemli olay bildirimleri (skill, transfer, teklif, ödül…)
       function pushNotification(icon, text, category) {
         const cat = category || "Olay";
-        // Spam filtre: kaydet / yükle mesajlarını atla
+        // Spam filtre: kaydet / yükle / maç sonucu mesajlarını atla
         const low = String(text || "").toLowerCase();
+        const catLow = String(cat || "").toLowerCase();
         if (
           low.indexOf("kariyer kaydedildi") >= 0 ||
           low.indexOf("kayıtlı kariyer") >= 0 ||
           low.indexOf("kariyer yüklendi") >= 0
+        ) {
+          return;
+        }
+        // Maç sonuçları bildirimlerde görünmesin
+        if (
+          catLow === "maç" ||
+          catLow === "mac" ||
+          catLow.indexOf("maç") >= 0 ||
+          /\b\d+\s*[-–:]\s*\d+\b/.test(low) ||
+          low.indexOf("maç sonucu") >= 0 ||
+          low.indexOf("yeniden simülasyon") >= 0 ||
+          (low.indexOf(" vs ") >= 0 &&
+            (low.indexOf("kazan") >= 0 ||
+              low.indexOf("beraber") >= 0 ||
+              low.indexOf("mağlub") >= 0 ||
+              low.indexOf("galib") >= 0))
         ) {
           return;
         }
@@ -11293,7 +11457,7 @@
         return "em_daily_" + String(managerName || "guest").toLowerCase();
       }
       function checkDailyReward() {
-        // Online: sunucu doğrular (Elite x2 orada hesaplanır)
+        // Online: sunucu doğrular (Elite de aynı tutar)
         if (typeof window.__emClaimDailyRewardServer === "function") {
           window
             .__emClaimDailyRewardServer()
@@ -11316,8 +11480,7 @@
                     : res.amount + " €") +
                   " · Seri " +
                   (res.streak || 1) +
-                  " gün" +
-                  (res.elite ? " (Elite x2)" : ""),
+                  " gün",
                 "Ödül",
               );
               try {
@@ -11343,9 +11506,8 @@
           else data.streak = 1;
           data.last = today;
           localStorage.setItem(key, JSON.stringify(data));
-          const premium = getPremiumStatus();
-          let amount = 25000 + data.streak * 5000;
-          if (premium.active) amount = Math.round(amount * 2);
+          // Elite üye de aynı günlük ödülü alır (x2 yok)
+          const amount = 25000 + data.streak * 5000;
           if (typeof clubBudget === "number") clubBudget += amount;
           else if (teamConfig.home) {
             teamConfig.home.budget = (teamConfig.home.budget || 0) + amount;
@@ -11358,8 +11520,7 @@
                 : amount + " €") +
               " · Seri " +
               data.streak +
-              " gün" +
-              (premium.active ? " (Elite x2)" : ""),
+              " gün",
             "Ödül",
           );
           try {
@@ -11724,7 +11885,10 @@
                 : "Koyu";
           const panel = document.getElementById("staffRolesPanel");
           if (panel) {
-            const show = typeof canManageStaff === "function" && canManageStaff();
+            // Sadece sunucu doğrulamalı admin görsün
+            const show =
+              typeof window.__emIsServerAdmin === "function" &&
+              window.__emIsServerAdmin();
             panel.style.display = show ? "block" : "none";
             if (show && typeof renderStaffRolesList === "function")
               renderStaffRolesList();
@@ -12029,16 +12193,16 @@ function canManageStaff() {
         nat_u21: ["U21", "U21", "U21", "Sub-21", "U21", "U21", "Sub-21", "U21", "U21", "U21"],
         help_start_t: ["Başlangıç", "Getting started", "Start", "Inicio", "Début", "Inizio", "Início", "Start", "Start", "Старт"],
         help_start: [
-          "Kulübünü seç, kadroyu incele, taktiği ayarla. İlk maçını oynamadan önce diziliş ve oyun stilini belirle. Geri tuşu her zaman bir önceki sayfaya döner; kariyer cihazına otomatik kaydedilir.",
-          "Pick your club, review the squad, set tactics before the first match. Back always returns to the previous page; career auto-saves on device.",
-          "Wähle deinen Klub, prüfe den Kader, stelle die Taktik ein. Zurück führt immer zur vorherigen Seite; der Karrierestand wird lokal gespeichert.",
-          "Elige club, revisa plantilla y táctica. Atrás vuelve a la página anterior; la carrera se guarda en el dispositivo.",
-          "Choisis ton club, regarde l'effectif, règle la tactique. Retour = page précédente ; carrière sauvegardée localement.",
-          "Scegli club, rosa e tattica. Indietro torna alla pagina precedente; carriera salvata sul dispositivo.",
-          "Escolhe o clube, vê o elenco e a tática. Voltar regressa à página anterior; carreira guardada no dispositivo.",
-          "Kies club, selectie en tactiek. Terug gaat naar de vorige pagina; carrière wordt lokaal opgeslagen.",
-          "Wybierz klub, kadrę i taktykę. Wstecz wraca do poprzedniej strony; kariera zapisuje się lokalnie.",
-          "Выберите клуб, состав и тактику. Назад — предыдущая страница; карьера сохраняется на устройстве.",
+          "Giriş yaptıktan sonra ana menüden kulübünü yönetirsin. Önce Kadro sekmesinde oyuncuları, kalite yıldızlarını ve kontratları incele. Taktik sayfasında diziliş, pas/oyun stili, hücum yönü ve özel taktikleri ayarla. İlk maçından önce en az 3 defans, 2 orta saha, 1 forvet ve kaleci zorunludur. Geri tuşu her zaman bir önceki sayfaya döner; kariyer cihazına otomatik kaydedilir.",
+          "After login you manage your club from the main menu. Check Squad for players, quality stars and contracts. On Tactics set formation, pass/game style, attack direction and special tactics. Before your first match you need at least 3 defenders, 2 midfielders, 1 forward and a goalkeeper. Back always returns to the previous page; career auto-saves on device.",
+          "Nach dem Login verwaltest du den Klub im Hauptmenü. Prüfe Kader, Qualitätssterne und Verträge. Unter Taktik stellst du Formation, Pass-/Spielstil, Angriffsrichtung und Sondertaktiken ein. Vor dem ersten Spiel brauchst du mind. 3 Abwehr, 2 Mittelfeld, 1 Sturm und einen Torwart. Zurück führt immer zur vorherigen Seite; Karriere wird lokal gespeichert.",
+          "Tras entrar gestionas el club desde el menú. Revisa plantilla, estrellas de calidad y contratos. En Táctica ajusta formación, estilo, dirección de ataque y tácticas especiales. Antes del primer partido necesitas al menos 3 defensas, 2 mediocampistas, 1 delantero y portero. Atrás vuelve a la página anterior; la carrera se guarda en el dispositivo.",
+          "Après connexion, gère ton club depuis le menu. Vérifie l'effectif, les étoiles de qualité et les contrats. Dans Tactique, règle formation, style, direction d'attaque et tactiques spéciales. Avant le 1er match : au moins 3 défenseurs, 2 milieux, 1 attaquant et un gardien. Retour = page précédente ; carrière sauvegardée localement.",
+          "Dopo l'accesso gestisci il club dal menu. Controlla rosa, stelle qualità e contratti. In Tattica imposta formazione, stile, direzione d'attacco e tattiche speciali. Prima della prima partita servono almeno 3 difensori, 2 centrocampisti, 1 attaccante e un portiere. Indietro torna alla pagina precedente; carriera salvata sul dispositivo.",
+          "Após o login gere o clube no menu. Veja o elenco, estrelas de qualidade e contratos. Em Tática defina formação, estilo, direção de ataque e táticas especiais. Antes do 1.º jogo precisa de pelo menos 3 defesas, 2 médios, 1 avançado e um guarda-redes. Voltar regressa à página anterior; carreira guardada no dispositivo.",
+          "Na inloggen beheer je de club via het menu. Check selectie, kwaliteitssterren en contracten. Bij Tactiek stel je formatie, stijl, aanvalsrichting en speciale tactieken in. Voor de eerste wedstrijd: minstens 3 verdedigers, 2 middenvelders, 1 aanvaller en een keeper. Terug gaat naar de vorige pagina; carrière wordt lokaal opgeslagen.",
+          "Po zalogowaniu zarządzasz klubem z menu. Sprawdź kadrę, gwiazdki jakości i kontrakty. W Taktyce ustaw formację, styl, kierunek ataku i specjalne taktyki. Przed pierwszym meczem potrzebujesz min. 3 obrońców, 2 pomocników, 1 napastnika i bramkarza. Wstecz wraca do poprzedniej strony; kariera zapisuje się lokalnie.",
+          "После входа управляйте клубом из меню. Проверьте состав, звёзды качества и контракты. В Тактике задайте схему, стиль, направление атаки и особые тактики. Перед первым матчем нужно минимум 3 защитника, 2 полузащитника, 1 нападающий и вратарь. Назад — предыдущая страница; карьера сохраняется на устройстве.",
         ],
         help_match_t: ["Maçlar", "Matches", "Spiele", "Partidos", "Matchs", "Partite", "Jogos", "Wedstrijden", "Mecze", "Матчи"],
         help_match: [
@@ -12120,45 +12284,104 @@ function canManageStaff() {
         ],
         help_daily_t: ["Günlük ödül", "Daily reward", "Tagesbonus", "Recompensa diaria", "Récompense quotidienne", "Ricompensa giornaliera", "Recompensa diária", "Dagelijkse beloning", "Codzienna nagroda", "Ежедневная награда"],
         help_daily: [
-          "Her gün bir kez bütçe ödülü. Seri günlerde ödül artar; bir gün kaçırırsan seri sıfırlanır. Elite üyede x2.",
-          "One budget reward per day. Streaks increase the amount; missing a day resets. Elite members get x2.",
-          "Ein Budgetbonus pro Tag. Serie erhöht den Betrag; ein verpasster Tag setzt zurück. Elite x2.",
-          "Una recompensa al día. Rachas aumentan; fallar un día reinicia. Elite x2.",
-          "Une récompense/jour. Séries augmentent ; un jour manqué remet à zéro. Elite x2.",
-          "Una al giorno. Serie aumenta; giorno perso azzera. Elite x2.",
-          "Uma por dia. Sequências aumentam; falhar um dia reinicia. Elite x2.",
-          "Eén per dag. Reeks verhoogt; gemiste dag reset. Elite x2.",
-          "Jedna dziennie. Serie rosną; pominięty dzień zeruje. Elite x2.",
-          "Одна в день. Серия растёт; пропуск сбрасывает. Elite x2.",
+          "Her gün bir kez bütçe ödülü alırsın (temel 25.000 € + seri×5.000 €). Üst üste girdiğin her gün seri artar ve ödül büyür; bir gün kaçırırsan seri 1'e döner. Elite üye de aynı tutarı alır.",
+          "One budget reward per day (base 25,000 € + streak×5,000 €). Consecutive days raise the amount; missing a day resets the streak to 1. Elite members get the same amount.",
+          "Ein Budgetbonus pro Tag (Basis 25.000 € + Serie×5.000 €). Serie erhöht den Betrag; ein verpasster Tag setzt auf 1 zurück. Elite erhält denselben Betrag.",
+          "Una recompensa al día (base 25.000 € + racha×5.000 €). Las rachas aumentan; fallar un día reinicia a 1. Elite recibe lo mismo.",
+          "Une récompense/jour (base 25 000 € + série×5 000 €). Les séries augmentent ; un jour manqué remet à 1. Elite reçoit le même montant.",
+          "Una al giorno (base 25.000 € + serie×5.000 €). La serie aumenta; giorno perso azzera a 1. Elite riceve lo stesso.",
+          "Uma por dia (base 25.000 € + sequência×5.000 €). Sequências aumentam; falhar um dia reinicia a 1. Elite recebe o mesmo.",
+          "Eén per dag (basis 25.000 € + reeks×5.000 €). Reeks verhoogt; gemiste dag reset naar 1. Elite krijgt hetzelfde.",
+          "Jedna dziennie (baza 25.000 € + seria×5.000 €). Serie rosną; pominięty dzień zeruje do 1. Elite dostaje to samo.",
+          "Одна в день (база 25.000 € + серия×5.000 €). Серия растёт; пропуск сбрасывает до 1. Elite получает ту же сумму.",
         ],
         help_elite_t: ["Elite Üyelik", "Elite Membership", "Elite Mitgliedschaft", "Membresía Elite", "Adhésion Elite", "Abbonamento Elite", "Assinatura Elite", "Elite-lidmaatschap", "Subskrypcja Elite", "Elite подписка"],
         help_elite: [
-          "Kulüp forma/logo, ikinci takım, transfer önceliği, günlük ödül x2. Durumu Ayarlar'dan kontrol edebilirsin.",
-          "Club kit/logo, second team, transfer priority, daily reward x2. Check status in Settings.",
-          "Klubtrikot/Logo, zweites Team, Transferpriorität, Tagesbonus x2.",
-          "Kit/logo, segundo equipo, prioridad de traspasos, recompensa x2.",
-          "Maillot/logo, 2e équipe, priorité transferts, récompense x2.",
-          "Kit/logo, seconda squadra, priorità trasferimenti, ricompensa x2.",
-          "Kit/logo, segunda equipa, prioridade de transferências, recompensa x2.",
-          "Shirt/logo, tweede team, beloning x2.",
-          "Strój/logo, druga drużyna, priorytet transferów, nagroda x2.",
-          "Форма/лого, вторая команда, приоритет трансферов, награда x2.",
+          "Kulüp forma ve logo düzenleme, ikinci takım, transfer önceliği ve stadyum/takım adı gibi ekstra özellikler. Günlük ödül tutarı herkesle aynıdır. Durumu Ayarlar veya Elite sayfasından kontrol edebilirsin.",
+          "Club kit & logo editing, second team, transfer priority and stadium/team rename. Daily reward amount is the same for everyone. Check status in Settings or Elite page.",
+          "Klubtrikot & Logo, zweites Team, Transferpriorität, Stadion-/Teamname. Tagesbonus für alle gleich. Status in Einstellungen oder Elite.",
+          "Kit y logo del club, segundo equipo, prioridad de traspasos y renombre. La recompensa diaria es igual para todos. Estado en Ajustes o Elite.",
+          "Maillot & logo, 2e équipe, priorité transferts, renommage stade/équipe. Récompense quotidienne identique pour tous. Statut dans Paramètres ou Elite.",
+          "Kit e logo, seconda squadra, priorità trasferimenti, rinomina. Ricompensa giornaliera uguale per tutti. Stato in Impostazioni o Elite.",
+          "Kit e logo, segunda equipa, prioridade de transferências, renomear. Recompensa diária igual para todos. Estado em Definições ou Elite.",
+          "Shirt & logo, tweede team, transferprioriteit, hernoemen. Dagelijkse beloning voor iedereen gelijk. Status in Instellingen of Elite.",
+          "Strój i logo, druga drużyna, priorytet transferów, zmiana nazwy. Codzienna nagroda taka sama dla wszystkich. Status w Ustawieniach lub Elite.",
+          "Форма и лого, вторая команда, приоритет трансферов, переименование. Ежедневная награда у всех одинаковая. Статус в Настройках или Elite.",
         ],
         help_tips_t: ["İpuçları", "Tips", "Tipps", "Consejos", "Astuces", "Consigli", "Dicas", "Tips", "Wskazówki", "Советы"],
         help_tips: [
-          "Kondisyonu yüksek tut; doğru mevkiye diz. Ev sahibi hafif avantajlıdır. Kupa ve milli maçlar lig günlerinden ayrıdır. Dil seçimi Ayarlar'dan tüm arayüze yansır.",
-          "Keep condition high; play players in natural roles. Home side has a slight edge. Cup and national days differ from league days. Language in Settings applies across the UI.",
-          "Kondition hoch halten; natürliche Positionen. Heimvorteil. Sprache in den Einstellungen gilt für die UI.",
-          "Mantén la condición; posiciones naturales. Ligera ventaja local. Idioma en Ajustes.",
-          "Bonne condition ; postes naturels. Léger avantage domicile. Langue dans Paramètres.",
-          "Condizione alta; ruoli naturali. Vantaggio casa. Lingua nelle Impostazioni.",
-          "Condição alta; posições naturais. Vantagem de casa. Idioma nas Definições.",
-          "Conditie hoog; natuurlijke posities. Thuisvoordeel. Taal in Instellingen.",
-          "Wysoka kondycja; naturalne pozycje. Lekka przewaga gospodarzy. Język w Ustawieniach.",
-          "Высокая кондиция; родные позиции. Домашнее преимущество. Язык в Настройках.",
+          "Kondisyonu yüksek tut; doğru mevkiye diz. Ev sahibi hafif avantajlıdır. Kupa ve milli maçlar lig günlerinden ayrıdır. Dil seçimi Ayarlar'dan menü ve yardım metinlerine yansır. Oyuncu no (P…) ve üye no (U…) profillerde görünür.",
+          "Keep condition high; play players in natural roles. Home side has a slight edge. Cup and national days differ from league days. Language in Settings applies to menu and help. Player no (P…) and user no (U…) appear on profiles.",
+          "Kondition hoch halten; natürliche Positionen. Heimvorteil. Sprache gilt für Menü und Hilfe. Spieler-Nr. (P…) und Nutzer-Nr. (U…) in Profilen.",
+          "Mantén la condición; posiciones naturales. Ventaja local. Idioma en menú y ayuda. Nº jugador (P…) y usuario (U…) en perfiles.",
+          "Bonne condition ; postes naturels. Avantage domicile. Langue pour menu et aide. N° joueur (P…) et membre (U…) sur les profils.",
+          "Condizione alta; ruoli naturali. Vantaggio casa. Lingua su menu e aiuto. N. giocatore (P…) e utente (U…) nei profili.",
+          "Condição alta; posições naturais. Vantagem de casa. Idioma no menu e ajuda. N.º jogador (P…) e membro (U…) nos perfis.",
+          "Conditie hoog; natuurlijke posities. Thuisvoordeel. Taal voor menu en help. Speler-nr. (P…) en lid-nr. (U…) op profielen.",
+          "Wysoka kondycja; naturalne pozycje. Przewaga gospodarzy. Język w menu i pomocy. Nr gracza (P…) i użytkownika (U…) w profilach.",
+          "Высокая кондиция; родные позиции. Домашнее преимущество. Язык для меню и справки. № игрока (P…) и участника (U…) в профилях.",
+        ],
+        help_squad_t: ["Kadro & Kontrat", "Squad & contracts", "Kader & Verträge", "Plantilla y contratos", "Effectif & contrats", "Rosa e contratti", "Elenco e contratos", "Selectie & contracten", "Kadra i kontrakty", "Состав и контракты"],
+        help_squad: [
+          "Kadro sekmesinde mevki, yaş ve tüm yetenekler yan yana (kaydırarak) listelenir. Kalite sekmesinde 1–8 yıldız gösterilir. Kontrat sekmesinde değer, süre, maaş ve bitiş tarihi oyuncu adının altında hizalıdır; Yenile ile süre uzatılır (onay istenir).",
+          "Squad lists position, age and all skills side by side (scroll). Quality tab shows 1–8 stars. Contracts tab shows value, length, wage and end date under each name; Renew extends the deal (asks for confirmation).",
+          "Kader zeigt Position, Alter und alle Skills nebeneinander (scrollbar). Qualitätssterne 1–8. Verträge: Wert, Dauer, Gehalt und Ende; Verlängern mit Bestätigung.",
+          "La plantilla muestra posición, edad y habilidades (desplazable). Calidad 1–8 estrellas. Contratos: valor, duración, salario y fin; Renovar pide confirmación.",
+          "L'effectif liste poste, âge et skills (défilement). Qualité 1–8 étoiles. Contrats : valeur, durée, salaire, fin ; Renouveler demande confirmation.",
+          "La rosa elenca ruolo, età e skill (scorrimento). Qualità 1–8 stelle. Contratti: valore, durata, stipendio, fine; Rinnova chiede conferma.",
+          "O elenco mostra posição, idade e skills (deslize). Qualidade 1–8 estrelas. Contratos: valor, duração, salário, fim; Renovar pede confirmação.",
+          "Selectie toont positie, leeftijd en skills (scroll). Kwaliteit 1–8 sterren. Contracten: waarde, duur, loon, einde; Verlengen vraagt bevestiging.",
+          "Kadra pokazuje pozycję, wiek i skill (przewijanie). Jakość 1–8 gwiazdek. Kontrakty: wartość, czas, pensja, koniec; Przedłuż prosi o potwierdzenie.",
+          "Состав: позиция, возраст и все навыки (прокрутка). Качество 1–8 звёзд. Контракты: стоимость, срок, зарплата, конец; Продлить с подтверждением.",
+        ],
+        help_tactics_t: ["Taktik & Özel Taktik", "Tactics & special", "Taktik & Spezial", "Táctica y especiales", "Tactique & spéciales", "Tattica e speciali", "Tática e especiais", "Tactiek & speciaal", "Taktyka i specjalne", "Тактика и особые"],
+        help_tactics: [
+          "Dizilişte kaleci kaleden çıkarılamaz. Kulüp ve milli için min. 3 defans / 2 orta / 1 forvet. Milli takımda MC, DMC, OMC ve DC mevkilerinde en fazla 3 oyuncu. Özel taktikler maç içinde skill karşılaştırmasıyla devreye girer (ℹ️ ile detay). Hücum yönü tüm taktik panellerinde seçilebilir. Yeniden kura: milli elemelerde torba sıralamasına göre grupları rastgele yeniden çeker.",
+          "Goalkeeper cannot leave the goal. Club and national need min. 3 DF / 2 MF / 1 FW. National caps MC, DMC, OMC, DC at 3. Special tactics trigger in-match via skill comparisons (ℹ️ for details). Attack direction is on every tactics panel. Redraw pots: randomly re-draws national qualifying groups from ranking pots.",
+          "Torwart bleibt im Tor. Min. 3 Abwehr / 2 Mittelfeld / 1 Sturm. National max. 3 auf MC/DMC/OMC/DC. Sondertaktiken per Skill-Vergleich. Angriffsrichtung überall. Neu losen: Quali-Gruppen aus Töpfen neu ziehen.",
+          "El portero no sale de la portería. Mín. 3 DF / 2 MED / 1 DEL. Nacional máx. 3 en MC/DMC/OMC/DC. Tácticas especiales por skills. Dirección de ataque en todos los paneles. Nueva sorteo: reordena grupos de clasificación.",
+          "Gardien fixe. Min. 3 DEF / 2 MIL / 1 ATT. National max 3 en MC/DMC/OMC/DC. Tactiques spéciales par skills. Direction d'attaque partout. Nouveau tirage : regroupe les pots de qualif.",
+          "Portiere fisso. Min 3 DIF / 2 CC / 1 ATT. Nazionale max 3 su MC/DMC/OMC/DC. Tattiche speciali per skill. Direzione d'attacco ovunque. Nuovo sorteggio: rimescola i gironi.",
+          "Guarda-redes fixo. Mín. 3 DEF / 2 MED / 1 AVA. Nacional máx. 3 em MC/DMC/OMC/DC. Táticas especiais por skills. Direção de ataque em todos os painéis. Novo sorteio: refaz grupos.",
+          "Keeper blijft. Min. 3 VER / 2 MID / 1 AAN. Nationaal max 3 op MC/DMC/OMC/DC. Speciale tactieken via skills. Aanvalsrichting overal. Opnieuw loten: kwalificatiegroepen opnieuw.",
+          "Bramkarz w bramce. Min. 3 OB / 2 POM / 1 NAP. Reprezentacja max 3 na MC/DMC/OMC/DC. Specjalne taktyki przez skille. Kierunek ataku wszędzie. Ponowny los: grupy eliminacji od nowa.",
+          "Вратарь в воротах. Мин. 3 ЗАЩ / 2 ПЗ / 1 НАП. В сборной макс. 3 на MC/DMC/OMC/DC. Особые тактики по скиллам. Направление атаки везде. Пережеребьёвка: группы отбора заново.",
         ],
       };
       const EM_LANG_ORDER = ["tr", "en", "de", "es", "fr", "it", "pt", "nl", "pl", "ru", "ja", "ar", "zh"];
+      // ja / ar / zh için menü ve sık kullanılan anahtarlar (dizi 10 elemanlı olduğunda yedek)
+      const EM_I18N_EXTRA = {
+        ja: {
+          menu_matches: "試合", menu_tactics: "戦術", menu_squad: "メンバー", menu_youth: "ユース",
+          menu_training: "トレーニング", menu_transfer: "移籍", menu_economy: "経済", menu_stadium: "スタジアム",
+          menu_forum: "フォーラム", menu_premium: "エリート会員", menu_help: "ヘルプ", menu_logout: "ログアウト",
+          menu_national: "代表チーム", menu_settings: "設定", settings_title: "設定",
+          help_title: "ヘルプ — ゲームを学ぶ", help_hint: "詳細ガイド · 全システム",
+          lang_saved: "言語を保存しました", on: "オン", off: "オフ",
+          tab_groups: "グループ", tab_rank: "ランキング", tab_fixtures: "日程", tab_kings: "得点王",
+          tab_history: "履歴", tab_stats: "統計", nat_a: "A代表", nat_u21: "U21",
+        },
+        ar: {
+          menu_matches: "المباريات", menu_tactics: "التكتيك", menu_squad: "التشكيلة", menu_youth: "الناشئين",
+          menu_training: "التدريب", menu_transfer: "الانتقالات", menu_economy: "الاقتصاد", menu_stadium: "الملعب",
+          menu_forum: "المنتدى", menu_premium: "عضوية النخبة", menu_help: "المساعدة", menu_logout: "تسجيل الخروج",
+          menu_national: "المنتخبات", menu_settings: "الإعدادات", settings_title: "الإعدادات",
+          help_title: "المساعدة — تعلّم اللعبة", help_hint: "دليل مفصّل · كل الأنظمة",
+          lang_saved: "تم حفظ اللغة", on: "تشغيل", off: "إيقاف",
+          tab_groups: "المجموعات", tab_rank: "الترتيب", tab_fixtures: "الجدول", tab_kings: "الهدافون",
+          tab_history: "السجل", tab_stats: "إحصائيات", nat_a: "المنتخب الأول", nat_u21: "تحت 21",
+        },
+        zh: {
+          menu_matches: "比赛", menu_tactics: "战术", menu_squad: "阵容", menu_youth: "青训",
+          menu_training: "训练", menu_transfer: "转会", menu_economy: "财政", menu_stadium: "球场",
+          menu_forum: "论坛", menu_premium: "精英会员", menu_help: "帮助", menu_logout: "退出",
+          menu_national: "国家队", menu_settings: "设置", settings_title: "设置",
+          help_title: "帮助 — 学习游戏", help_hint: "详细指南 · 全部系统",
+          lang_saved: "语言已保存", on: "开", off: "关",
+          tab_groups: "小组", tab_rank: "排名", tab_fixtures: "赛程", tab_kings: "射手榜",
+          tab_history: "历史", tab_stats: "数据", nat_a: "国家队", nat_u21: "U21",
+        },
+      };
       const EM_I18N = {};
       EM_LANG_ORDER.forEach(function (lang, idx) {
         EM_I18N[lang] = {};
@@ -12168,6 +12391,11 @@ function canManageStaff() {
           const useIdx = idx < arr.length ? idx : 1;
           EM_I18N[lang][key] = arr[useIdx] != null ? arr[useIdx] : arr[0];
         });
+        if (EM_I18N_EXTRA[lang]) {
+          Object.keys(EM_I18N_EXTRA[lang]).forEach(function (k) {
+            EM_I18N[lang][k] = EM_I18N_EXTRA[lang][k];
+          });
+        }
       });
       function getGameLang() {
         return localStorage.getItem("em_lang") || "tr";
@@ -12195,6 +12423,8 @@ function canManageStaff() {
         if (!box) return;
         const sections = [
           ["help_start_t", "help_start", "#38bdf8"],
+          ["help_squad_t", "help_squad", "#67e8f9"],
+          ["help_tactics_t", "help_tactics", "#c4b5fd"],
           ["help_match_t", "help_match", "#a78bfa"],
           ["help_train_t", "help_train", "#facc15"],
           ["help_youth_t", "help_youth", "#4ade80"],
@@ -12369,7 +12599,7 @@ function canManageStaff() {
               "</div></div>";
           } else {
             box.innerHTML =
-              '<div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;color:#94a3b8;font-size:13px;">Deneme süren bitti. Elite ile forma &amp; logo (kulüp), ikinci takım, takım/stadyum adı değiştirme, günlük ödül x2 devam eder.</div>';
+              '<div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;color:#94a3b8;font-size:13px;">Deneme süren bitti. Elite ile forma &amp; logo (kulüp), ikinci takım, takım/stadyum adı değiştirme devam eder. Günlük ödül herkesle aynıdır.</div>';
           }
         }
         if (!plans) return;
@@ -12418,12 +12648,12 @@ function canManageStaff() {
               pl.id +
               "')\">Seç</button></div></div>" +
               '<ul style="margin:12px 0 0;padding-left:18px;font-size:12px;color:#cbd5e1;line-height:1.6;">' +
-              "<li>Günlük giriş ödülü x2</li>" +
               "<li>Transfer listesinde öne çıkma</li>" +
               "<li><b>İkinci takım yönetim hakkı</b></li>" +
               "<li><b>Kulüp forma &amp; logo tasarımı</b></li>" +
-              "<li>Günlük ödül x2</li>" +
+              "<li>Takım / stadyum adı değiştirme</li>" +
               "<li>Özel Elite rozeti</li>" +
+              "<li style='color:#94a3b8;'>Günlük ödül herkesle aynı</li>" +
               "<li style='color:#94a3b8;'>Yeni hesap: 14 gün deneme</li></ul></div>"
             );
           })
@@ -13096,13 +13326,20 @@ function canManageStaff() {
       };
       function qualityLabel(q) {
         const n = Math.max(1, Math.min(10, Math.round(Number(q) || 1)));
-        return QUALITY_LABELS[n] || String(n);
+        // 1–10 kaliteyi 1–8 yıldıza map et
+        const stars = Math.max(1, Math.min(8, Math.round(((n - 1) / 9) * 7 + 1)));
+        return "★".repeat(stars) + "☆".repeat(8 - stars);
+      }
+      function qualityStarsCount(q) {
+        const n = Math.max(1, Math.min(10, Math.round(Number(q) || 1)));
+        return Math.max(1, Math.min(8, Math.round(((n - 1) / 9) * 7 + 1)));
       }
       function potentialLabel(q) {
         const n = Math.max(1, Math.min(10, Math.round(Number(q) || 1)));
         return POTENTIAL_LABELS[n] || String(n);
       }
       window.qualityLabel = qualityLabel;
+      window.qualityStarsCount = qualityStarsCount;
       window.potentialLabel = potentialLabel;
 
       function applyPostMatchDevelopment(
@@ -14074,6 +14311,7 @@ function canManageStaff() {
           const natural = generateNaturalPos(pos);
           players.push({
             id: 1000 + i + Math.floor(Math.random() * 10000),
+            playerNo: nextPlayerNo(),
             name: generateRandomPlayerName(country),
             number: number,
             pos: pos,
@@ -14133,6 +14371,7 @@ function canManageStaff() {
             clinicalFinishing: "pasif",
             sweeperKeeper: "pasif",
             deepPlaymaker: "aktif",
+            dualDominance: "pasif",
           },
           advancedTactics: {
             pres: "tam",
@@ -14162,6 +14401,7 @@ function canManageStaff() {
             clinicalFinishing: "aktif",
             sweeperKeeper: "pasif",
             deepPlaymaker: "pasif",
+            dualDominance: "pasif",
           },
           advancedTactics: {
             pres: "normal",
@@ -15012,6 +15252,7 @@ function canManageStaff() {
         const natural = generateNaturalPos(pos);
         const player = {
           id: 9000 + Math.floor(Math.random() * 100000),
+          playerNo: nextPlayerNo(),
           name: generateRandomPlayerName(country),
           number: 30 + Math.floor(Math.random() * 60),
           age: age,
@@ -15131,6 +15372,7 @@ function canManageStaff() {
 
       function generateMarketPlayer() {
         const p = generateYouthPlayer(USER_COUNTRY);
+        ensurePlayerNo(p);
         p.age = 18 + Math.floor(Math.random() * 12);
         p.fromAcademy = false;
         p.fromMarket = true;
@@ -18057,6 +18299,7 @@ function canManageStaff() {
         clinicalFinishing: "Plaseli Bitiricilik",
         sweeperKeeper: "Kaleci Çıkışı",
         deepPlaymaker: "Derin Oyun Kurucu",
+        dualDominance: "İkili Üstünlük",
       };
 
       const TACTIC_INFO = {
@@ -18074,6 +18317,8 @@ function canManageStaff() {
           "Nasıl kazanılır: Kalecinin refleks + pozisyon + top tutma skoru, rakip forvet pace + bitiricilik ortalamasını geçerse. Kazanç: Kaleci ve savunma bonusu.",
         deepPlaymaker:
           "Nasıl kazanılır: En iyi oyun kurucunun pas + görüş skoru, rakip orta sahanın markajını geçerse. Kazanç: Orta saha ve hücum.",
+        dualDominance:
+          "Nasıl kazanılır: Takımının en güçlü iki skill ortalamasının toplamı, rakibin en güçlü iki skill ortalamasının toplamını geçerse. Kazanç: Genel denge (hücum + orta saha + savunma) bonusu.",
       };
 
       function toggleTactic(side, key, isActive) {
@@ -18499,8 +18744,9 @@ function canManageStaff() {
           (currentReferee && currentReferee.strictness) || 1;
         ["home", "away"].forEach((side) => {
           const team = side === "home" ? teamConfig.home : teamConfig.away;
-          let cardChance = 0.045 * refStrictness;
-          if (team.customTactics?.chokePress === "aktif") cardChance += 0.02;
+          // Kart oranı düşürüldü (daha az sarı/kırmızı)
+          let cardChance = 0.022 * refStrictness;
+          if (team.customTactics?.chokePress === "aktif") cardChance += 0.01;
           if (Math.random() < cardChance) {
             const candidate = pickWeightedByTackle(team);
             if (!candidate || candidate.sentOff) return;
@@ -18525,7 +18771,7 @@ function canManageStaff() {
                   ")",
                 "penalty",
               );
-            } else if (Math.random() < 0.12) {
+            } else if (Math.random() < 0.06) {
               candidate.cards = 2;
               candidate.sentOff = true;
               ogtSimulation.matchBonuses[side].defense -= 1.5;
@@ -18745,14 +18991,25 @@ function canManageStaff() {
         rating += (player.form ?? 0) * 0.5;
         rating += ((player.experience ?? 5) - 5) * 0.08;
         rating += ((player.happiness ?? 80) - 80) * 0.015;
+        // Mevki uyumu: MC → DM / OMC yakın mevki (hafif ceza); tamamen yabancı mevki daha ağır
         if (player.naturalPos && !playerCanPlay(player, player.pos)) {
-          rating -= 1.2;
+          rating -= 1.0;
         } else if (
           player.naturalPos &&
           String(player.naturalPos).toUpperCase() !==
             String(player.pos).toUpperCase()
         ) {
-          rating -= 0.3; // yakın mevki, hafif ceza
+          const natU = String(player.naturalPos).toUpperCase();
+          const posU = String(player.pos).toUpperCase();
+          const nearMid =
+            (natU === "MC" || natU.includes("MC")) &&
+            (posU === "DM" ||
+              posU === "DMC" ||
+              posU === "OMC" ||
+              posU === "AM" ||
+              posU.includes("OM") ||
+              posU.includes("DM"));
+          rating -= nearMid ? 0.2 : 0.35; // MC↔DM/OMC çok hafif
         }
         rating +=
           currentWeather.techMod * ((Number(player.technique) || 10) / 15);
@@ -19052,8 +19309,10 @@ function canManageStaff() {
           " Pot: " +
           potential +
           "/10</span>";
+        ensurePlayerNo(player);
         document.getElementById("modalPlayerSub").innerText =
-          "#" +
+          formatPlayerNo(player.playerNo) +
+          " · #" +
           (player.number || "?") +
           " · " +
           (player.pos || "?") +
@@ -19277,18 +19536,20 @@ function canManageStaff() {
               agileFlanks: false,
               dynamicWall: false,
               chokePress: false,
-                            clinicalFinishing: false,
+              clinicalFinishing: false,
               sweeperKeeper: false,
               deepPlaymaker: false,
+              dualDominance: false,
             },
             away: {
               ritmicPassing: false,
               agileFlanks: false,
               dynamicWall: false,
               chokePress: false,
-                            clinicalFinishing: false,
+              clinicalFinishing: false,
               sweeperKeeper: false,
               deepPlaymaker: false,
+              dualDominance: false,
             },
           };
           this.matchBonuses = {
@@ -19547,6 +19808,50 @@ function canManageStaff() {
                   }
                   bonusApplied = true;
                 }
+              }
+              break;
+            case "dualDominance":
+              if (team.customTactics?.dualDominance === "aktif") {
+                // Yalnızca özel taktiklerde kullanılan skill'ler
+                const skillKeys = [
+                  "pace",
+                  "passing",
+                  "finishing",
+                  "tackle",
+                  "vision",
+                  "stamina",
+                  "technique",
+                  "agility",
+                  "positioning",
+                  "reflex",
+                  "handling",
+                ];
+                function topTwoSum(totals) {
+                  const vals = skillKeys
+                    .map(function (k) {
+                      return Number(totals[k]) || 0;
+                    })
+                    .sort(function (a, b) {
+                      return b - a;
+                    });
+                  return (vals[0] || 0) + (vals[1] || 0);
+                }
+                const mySum = topTwoSum(teamTotals);
+                const oppSum = topTwoSum(oppTotals);
+                if (mySum > oppSum) {
+                  attributeDelta.attack += 1.5;
+                  attributeDelta.midfield += 1.5;
+                  attributeDelta.defense += 1.2;
+                  logMessage =
+                    team.name +
+                    " Özel: İkili Üstünlük — en güçlü iki skill rakibi geçti!";
+                } else {
+                  attributeDelta.midfield -= 0.8;
+                  logMessage =
+                    team.name +
+                    " Özel: İkili Üstünlük tutmadı, rakip dengeyi korudu.";
+                }
+                bonusApplied = true;
               }
               break;
           }
