@@ -35,6 +35,34 @@ async function getTeamByCountry(country, category) {
   return rowToTeam(rows[0]);
 }
 
+/** Ülke için A / U21 satırı yoksa oluşturur */
+async function ensureTeamRow(country, category) {
+  const cat = normCategory(category);
+  const c = String(country || "Türkiye").trim() || "Türkiye";
+  let team = await getTeamByCountry(c, cat);
+  if (team) return team;
+  try {
+    const { rows } = await query(
+      `INSERT INTO national_teams (country, category)
+       VALUES ($1, $2)
+       ON CONFLICT DO NOTHING
+       RETURNING *`,
+      [c, cat],
+    );
+    if (rows[0]) return rowToTeam(rows[0]);
+  } catch (e) {
+    // unique yoksa veya eski şema
+    try {
+      const { rows } = await query(
+        `INSERT INTO national_teams (country, category) VALUES ($1, $2) RETURNING *`,
+        [c, cat],
+      );
+      if (rows[0]) return rowToTeam(rows[0]);
+    } catch (e2) {}
+  }
+  return getTeamByCountry(c, cat);
+}
+
 /** category kolonu yoksa (migrate öncesi) country ile tek satır dene */
 async function getTeamByCountryFallback(country, category) {
   try {
@@ -439,6 +467,7 @@ async function finishFixture(fixtureId, homeGoals, awayGoals) {
 module.exports = {
   MAX_SQUAD,
   getTeamByCountry,
+  ensureTeamRow,
   normCategory,
   getTeamById,
   claimManager,
