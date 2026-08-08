@@ -111,10 +111,24 @@ async function enrichClubId(req) {
   return req.user.clubId;
 }
 
+/** UUID'den stabil görünen üye no (U10000–U99999) */
+function userNoFromId(id) {
+  const s = String(id || "");
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return 10000 + (h >>> 0) % 90000;
+}
+
 function publicUser(row) {
   return {
     id: row.id,
     username: row.username,
+    userNo: row.user_no != null ? Number(row.user_no) : userNoFromId(row.id),
+    email: row.email || null,
+    createdAt: row.created_at || null,
   };
 }
 
@@ -132,13 +146,17 @@ function publicClub(row) {
 function createAuthRouter() {
   const router = express.Router();
 
-  // POST /api/auth/register  { username, password, teamName? }
+  // POST /api/auth/register  { username, password, email?, teamName?, securityQuestion, securityAnswer }
   router.post("/register", async (req, res) => {
     try {
       const username = String((req.body && req.body.username) || "")
         .trim()
         .slice(0, 32);
       const password = String((req.body && req.body.password) || "");
+      let email = (req.body && req.body.email
+        ? String(req.body.email).trim().toLowerCase().slice(0, 255)
+        : "") || "";
+      if (!email) email = null;
       const teamName = (req.body && req.body.teamName
         ? String(req.body.teamName).trim().slice(0, 64)
         : null) || null;
@@ -160,6 +178,19 @@ function createAuthRouter() {
       if (!password || password.length < 6) {
         return res.status(400).json({ error: "Şifre en az 6 karakter olmalı" });
       }
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: "Geçerli bir e-posta gir" });
+      }
+      if (!securityQuestion || securityQuestion.length < 5) {
+        return res.status(400).json({
+          error: "Şifre kurtarma için güvenlik sorusu gerekli (en az 5 karakter)",
+        });
+      }
+      if (!securityAnswerRaw || securityAnswerRaw.length < 2) {
+        return res.status(400).json({
+          error: "Güvenlik sorusu cevabı gerekli",
+        });
+      }
       // GÜVENLİK: teamName burada reddedilmezse HTML/script içerebilir ve
       // sıralama, fikstür, transfer pazarı gibi onlarca ekranda başka
       // kullanıcıların tarayıcısında kaçışsız (unescaped) gösteriliyor —
@@ -177,18 +208,28 @@ function createAuthRouter() {
       if (existing.rows.length) {
         return res.status(409).json({ error: "Bu kullanıcı adı alınmış" });
       }
+      if (email) {
+        const em = await query(
+          `SELECT id FROM users WHERE email IS NOT NULL AND LOWER(email) = LOWER($1)`,
+          [email],
+        );
+        if (em.rows.length) {
+          return res.status(409).json({ error: "Bu e-posta zaten kayıtlı" });
+        }
+      }
 
       const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-      const securityAnswerHash = securityAnswerRaw
-        ? await bcrypt.hash(securityAnswerRaw.toLowerCase(), BCRYPT_ROUNDS)
-        : null;
+      const securityAnswerHash = await bcrypt.hash(
+        securityAnswerRaw.toLowerCase(),
+        BCRYPT_ROUNDS,
+      );
 
       const result = await withTransaction(async (client) => {
         const userIns = await client.query(
-          `INSERT INTO users (username, password_hash, security_question, security_answer_hash)
-           VALUES ($1, $2, $3, $4)
-           RETURNING id, username, created_at`,
-          [username, passwordHash, securityQuestion, securityAnswerHash],
+          `INSERT INTO users (username, email, password_hash, security_question, security_answer_hash)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING id, username, email, created_at`,
+          [username, email, passwordHash, securityQuestion, securityAnswerHash],
         );
         const user = userIns.rows[0];
 
@@ -265,7 +306,7 @@ function createAuthRouter() {
       }
 
       const { rows } = await query(
-        `SELECT id, username, password_hash, is_banned, banned_until, ban_reason
+        `SELECT id, username, email, created_at, password_hash, is_banned, banned_until, ban_reason
          FROM users WHERE LOWER(username) = LOWER($1)`,
         [username],
       );
@@ -433,7 +474,7 @@ async function meHandler(req, res) {
   try {
     await enrichClubId(req);
     const { rows } = await query(
-      `SELECT id, username FROM users WHERE id = $1`,
+      `SELECT id, username, email, created_at FROM users WHERE id = $1`,
       [req.user.id],
     );
     if (!rows[0]) return res.status(404).json({ error: "Kullanıcı yok" });
@@ -446,10 +487,17 @@ async function meHandler(req, res) {
     } catch (e) {
       console.warn("[me] elite", e.message);
     }
+    const user = publicUser(rows[0]);
     res.json({
-      user: publicUser(rows[0]),
+      user,
       club: publicClub(club),
       elite,
+      account: {
+        userNo: user.userNo,
+        hasEmail: !!rows[0].email,
+        hasSecurityQuestion: true,
+        createdAt: rows[0].created_at,
+      },
     });
   } catch (e) {
     console.error("[me]", e);
