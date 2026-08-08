@@ -1605,17 +1605,37 @@
       }
     };
 
-    // refreshTransferMarket
+    // refreshTransferMarket — herkes piyasayı yenileyebilir (AI doldurma admin)
     window.refreshTransferMarket = async function () {
       const note = document.getElementById("transferNote");
       try {
-        await apiFetch("/api/transfer/refresh", {
-          method: "POST",
-          body: JSON.stringify({}),
-        });
-        await fetchTransferMarketFromServer();
+        if (note) note.innerText = "Piyasa yükleniyor...";
+        // Önce listeyi çek; gerekirse sunucu refresh (admin değilse AI yok)
+        let ok = await fetchTransferMarketFromServer();
+        if (
+          !ok ||
+          (typeof transferMarket !== "undefined" && transferMarket.length < 3)
+        ) {
+          try {
+            await apiFetch("/api/transfer/refresh", {
+              method: "POST",
+              body: JSON.stringify({}),
+            });
+            ok = await fetchTransferMarketFromServer();
+          } catch (e2) {
+            /* admin zorunlu değil */
+          }
+        }
+        if (!ok && typeof ensureTransferMarket === "function") {
+          ensureTransferMarket();
+        }
         if (typeof renderTransferPage === "function") renderTransferPage();
-        if (note) note.innerText = "Piyasa yenilendi.";
+        if (note)
+          note.innerText =
+            "Piyasa güncellendi · " +
+            ((typeof transferMarket !== "undefined" && transferMarket.length) ||
+              0) +
+            " ilan";
       } catch (e) {
         if (note) note.innerText = e.message || "Yenileme başarısız";
       }
