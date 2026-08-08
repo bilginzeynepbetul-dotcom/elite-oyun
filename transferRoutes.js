@@ -102,17 +102,37 @@ function createTransferRouter(opts) {
     }
   });
 
-  // POST /api/transfer/refresh — AI piyasasını silip yeniden doldurur.
-  // Herhangi bir oyuncunun spam/grief etmesini engellemek için yalnızca admin.
+  // POST /api/transfer/refresh
+  // Normal kullanıcı: mevcut piyasayı döndürür (AI regenerasyon yok).
+  // Admin veya body.regenerateAi=true (admin): AI piyasasını yeniler.
   router.post("/refresh", async (req, res) => {
     try {
       const { isAdmin } = require("./nationalSystem");
-      if (!isAdmin(req.user && req.user.username)) {
-        return res.status(403).json({ error: "Sadece admin" });
+      const admin = isAdmin(req.user && req.user.username);
+      const wantRegen = !!(req.body && req.body.regenerateAi);
+      let added = 0;
+      if (admin && wantRegen) {
+        added = await Promise.resolve(transferSystem.refreshAiMarket());
+      } else if (admin && !wantRegen) {
+        // Admin varsayılan: hafif yenile (boşsa AI doldur)
+        const clubId = getClubId(req);
+        const rows = await transferSystem.listMarket(clubId, null);
+        if (!rows || rows.length < 5) {
+          added = await Promise.resolve(transferSystem.refreshAiMarket());
+        }
       }
-      const n = await Promise.resolve(transferSystem.refreshAiMarket());
-      res.json({ ok: true, added: n });
+      // Herkes mevcut piyasayı alabilir
+      const clubId = getClubId(req);
+      const listings = await transferSystem.listMarket(clubId, null);
+      res.json({
+        ok: true,
+        added: added,
+        listings: listings,
+        count: (listings && listings.length) || 0,
+        regenerated: admin && (wantRegen || added > 0),
+      });
     } catch (e) {
+      console.error("[transfer/refresh]", e);
       res.status(500).json({ error: "Yenileme başarısız" });
     }
   });
