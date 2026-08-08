@@ -1,7 +1,19 @@
 const jwt = require('jsonwebtoken');
 const db = require('./db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// GÜVENLİK: sabit/varsayılan bir JWT secret ile prod'a çıkmak, bu dosyayı
+// gören (repo erişimi olan) herkesin istediği kullanıcı/admin adına geçerli
+// token üretebilmesi demektir. Bu yüzden burada asla hardcoded bir fallback
+// kullanılmaz; env değişkeni yoksa uygulama güvenli şekilde başlamayı reddeder.
+// (routes/authRoutes.js ile aynı politika.)
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error(
+    'JWT_SECRET ortam değişkeni tanımlı değil. Güvenlik nedeniyle sabit bir ' +
+      'varsayılan secret KULLANILMIYOR — lütfen .env dosyasına güçlü, rastgele ' +
+      'bir JWT_SECRET ekleyin (ör. `openssl rand -hex 32`).',
+  );
+}
 
 // Ban kontrolü
 const checkBanStatus = async (userId) => {

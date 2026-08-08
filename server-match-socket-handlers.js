@@ -48,12 +48,18 @@ function registerMatchControlHandlers(io, getMatchByFixture, getSocketIdentity) 
         // İsteğe bağlı yetki: sadece kendi tarafını değiştirebilsin
         if (typeof getSocketIdentity === "function") {
           const ident = getSocketIdentity(socket);
-          if (ident && ident.userId) {
+          // GÜVENLİK: getSocketIdentity, routes/authRoutes.js socketAuthMiddleware
+          // tarafından ayarlanan socket.data.user'ı döner ve bu nesnenin alanı
+          // "id"dir ("userId" değil). Önceden "ident.userId" kontrol edildiği için
+          // bu ifade her zaman undefined dönüyor ve sahiplik kontrolü hiç
+          // çalışmıyordu — böylece herhangi bir oturum açmış kullanıcı, canlı bir
+          // maçın HERHANGİ bir tarafının taktiğini değiştirebiliyordu.
+          if (ident && ident.id) {
             const sidePlayer = match.players[side];
             if (
               sidePlayer &&
               sidePlayer.userId &&
-              String(sidePlayer.userId) !== String(ident.userId) &&
+              String(sidePlayer.userId) !== String(ident.id) &&
               !sidePlayer.isBot
             ) {
               socket.emit("match:tactics:result", {
@@ -95,12 +101,14 @@ function registerMatchControlHandlers(io, getMatchByFixture, getSocketIdentity) 
         }
         if (typeof getSocketIdentity === "function") {
           const ident = getSocketIdentity(socket);
-          if (ident && ident.userId) {
+          // GÜVENLİK: bkz. yukarıdaki match:tactics açıklaması — alan adı "id"
+          // olmalı, "userId" değil; aksi halde sahiplik kontrolü atlanır.
+          if (ident && ident.id) {
             const sidePlayer = match.players[side];
             if (
               sidePlayer &&
               sidePlayer.userId &&
-              String(sidePlayer.userId) !== String(ident.userId) &&
+              String(sidePlayer.userId) !== String(ident.id) &&
               !sidePlayer.isBot
             ) {
               socket.emit("match:sub:result", {

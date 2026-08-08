@@ -12,6 +12,25 @@ app.use(cors());
 app.use(express.json());
 
 // ============================================================
+// GÜVENLİK: domain sistemlerini (transfer, altyapı, antrenman,
+// stadyum, sosyal) DB repo'larına ve bütçe/roster doğrulamasına bağla.
+// Bu çağrı olmadan transferSystem/youthSystem/trainingSystem/stadiumSystem
+// "deps" nesnesi boş kalır ve:
+//   - transfer teklifleri kulüp bütçesi kontrol edilmeden kabul edilir,
+//   - satışa çıkarılan oyuncu istemciden gelen (sahte olabilecek) veriyle
+//     doğrudan listelenir, gerçek kadrodan silinmez/doğrulanmaz,
+//   - ilanlar/işlemler veritabanına hiç yazılmaz (yeniden başlatmada kaybolur).
+// wireAll() bu güvenlik kontrollerini ve kalıcılığı etkinleştirir; sunucu
+// istek almadan önce, en başta senkron olarak çağrılmalıdır.
+try {
+  const { wireAll } = require('./wireSystems');
+  wireAll();
+  console.log('✅ Domain sistemleri (transfer/youth/training/stadium/social) bağlandı');
+} catch (e) {
+  console.error('❌ wireSystems başlatılamadı — ekonomi/anti-cheat kontrolleri devre dışı olabilir:', e.message);
+}
+
+// ============================================================
 // AUTH
 // ============================================================
 const {
