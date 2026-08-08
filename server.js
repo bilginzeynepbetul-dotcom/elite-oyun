@@ -9,6 +9,16 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 10000;
 
 app.use(cors());
+
+// Stripe webhook MUST receive the raw body (before express.json()).
+// Mounted here so signature verification works.
+const { stripeWebhookHandler } = require('./premiumRoutes');
+app.post(
+  '/api/premium/webhook',
+  express.raw({ type: 'application/json' }),
+  stripeWebhookHandler
+);
+
 app.use(express.json());
 
 // ============================================================

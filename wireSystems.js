@@ -102,6 +102,17 @@ function wireAll() {
     console.warn("[wire] socialSystem", e.message);
   }
 
+  // Bordro zamanlayıcısı: antrenör/oyuncu maaşları sunucu tarafında düzenli kesilsin.
+  // startPayrollTimer tanımlıydı ama hiç çağrılmıyordu; istemci /api/contracts/pay
+  // çağırmadan yüksek maaşlı kadro tutmak mümkündü.
+  try {
+    const contractSystem = require("./contractSystem");
+    contractSystem.startPayrollTimer();
+    console.log("[wire] contract payroll timer started");
+  } catch (e) {
+    console.warn("[wire] contractSystem payroll", e.message);
+  }
+
   return {
     clubsRepo,
     youthRepo,

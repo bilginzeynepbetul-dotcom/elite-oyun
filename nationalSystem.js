@@ -16,7 +16,8 @@ const OPPONENT_NAMES = [
 
 const NAT_MATCH_DAY = 4; // Perşembe (Pazar=0)
 const NAT_MATCH_HOUR = 21;
-const FIXTURE_GAP_DAYS = 14; // iki milli maç arası (test ortamında NAT_INTERVAL_MS ile ezilebilir)
+// A Milli + U21: sezonda haftada 1 dostluk maçı (lig ~9 hafta / 18 maç)
+const FIXTURE_GAP_DAYS = 7;
 
 const NAT_INTERVAL_MS = process.env.NAT_INTERVAL_MS
   ? Number(process.env.NAT_INTERVAL_MS)
@@ -301,7 +302,10 @@ async function autoFillSquadForMatch(team) {
   }
 }
 
-/** Sıradaki maç yoksa yeni bir tane açar (rastgele "dünya" rakibi). */
+/**
+ * Sıradaki maç yoksa yeni bir dostluk maçı açar (rastgele dünya rakibi).
+ * A Milli ve U21 için ayrı kadro / fikstür zinciri.
+ */
 async function scheduleNextFixtureIfNeeded(country, category) {
   const team = await ensureTeam(country, category);
   if (!team) return null;
@@ -310,11 +314,31 @@ async function scheduleNextFixtureIfNeeded(country, category) {
 
   const [name, strength] =
     OPPONENT_NAMES[Math.floor(Math.random() * OPPONENT_NAMES.length)];
+  // U21 rakipleri biraz daha zayıf tutulur
+  const cat = team.category || (String(category || "A").toUpperCase() === "U21" ? "U21" : "A");
+  const adjStrength =
+    cat === "U21" ? Math.max(50, Math.round(strength * 0.88)) : strength;
+  const label = cat === "U21" ? name + " U21" : name;
+
   const kickoffAt = NAT_INTERVAL_MS
     ? new Date(Date.now() + NAT_INTERVAL_MS)
     : nextThursday21(Date.now());
 
-  return nationalRepo.createFixture(team.id, name, strength, kickoffAt);
+  return nationalRepo.createFixture(team.id, label, adjStrength, kickoffAt);
+}
+
+/** A + U21 için sıradaki dostlukları doldurur (scheduler tick). */
+async function ensureAllNationalFixtures(country) {
+  const out = [];
+  for (const cat of ["A", "U21"]) {
+    try {
+      const fx = await scheduleNextFixtureIfNeeded(country, cat);
+      if (fx) out.push({ category: cat, fixtureId: fx.id || fx.fixtureId || null });
+    } catch (e) {
+      console.warn("[national] ensure fixture", cat, e.message);
+    }
+  }
+  return out;
 }
 
 module.exports = {
@@ -332,5 +356,6 @@ module.exports = {
   saveLineup,
   autoFillSquadForMatch,
   scheduleNextFixtureIfNeeded,
+  ensureAllNationalFixtures,
   OPPONENT_NAMES,
 };

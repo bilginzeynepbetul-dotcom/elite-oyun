@@ -10,6 +10,7 @@ const cupRepo = require("./repos/cupRepo");
 const clubsRepo = require("./repos/clubsRepo");
 const matchArchive = require("./matchArchive");
 const { enrichClubId } = require("./routes/authRoutes");
+const { isAdmin } = require("./nationalSystem");
 
 function createCupRouter() {
   const router = express.Router();
@@ -66,20 +67,41 @@ function createCupRouter() {
   });
 
   // POST /api/cup/generate  { country?, force? }
-  // Aktif edition yoksa (ya da force=true ve şampiyon belliyse) yeni kupa açar.
+  // Aktif edition yoksa yeni kupa açar. force=true yalnızca admin.
+  // Non-admin yalnızca kendi ülkesinin kupasını bootstrap edebilir.
   router.post("/cup/generate", async (req, res) => {
     try {
       const clubId = await enrichClubId(req);
       const club = clubId ? await clubsRepo.getClub(clubId) : null;
-      const country = (req.body && req.body.country) || (club && club.country) || "Türkiye";
-      const force = !!(req.body && req.body.force);
+      const admin = isAdmin(req.user && req.user.username);
 
+      let country;
+      if (admin) {
+        country =
+          (req.body && req.body.country) ||
+          (club && club.country) ||
+          "Türkiye";
+      } else {
+        if (!club) {
+          return res.status(404).json({ error: "Kulüp yok" });
+        }
+        country = club.country || "Türkiye";
+      }
+
+      const wantForce = !!(req.body && req.body.force);
+      if (wantForce && !admin) {
+        return res.status(403).json({
+          error: "Kupa zorla yenilemek yalnızca admin yetkisi gerektirir",
+        });
+      }
+
+      const force = wantForce && admin;
       const existing = await cupRepo.getCurrentEdition(country);
       if (existing && !force) {
         return res.json({ ok: true, skipped: true, edition: existing });
       }
       if (existing && force) {
-        // Mevcut aktif edition'ı kapat, yenisini aç
+        // Mevcut aktif edition'ı kapat, yenisini aç (admin only)
         const clubIds = await cupRepo.listClubIdsForCountry(country);
         const yearLabel = "force_" + Date.now();
         const result = await cupRepo.createEdition(country, yearLabel, clubIds);

@@ -23,14 +23,24 @@ function pickShooter(team) {
   );
   if (!pool.length) return team.players && team.players[0];
 
+  const attackDir = team.attackDir || "orta";
   const weight = (p) => {
     const fam = posFamily(p.pos);
+    const pos = String(p.pos || "").toUpperCase();
     let w = 1;
     if (fam === "FW") w = 6;
     else if (fam === "AM") w = 4;
     else if (fam === "MF") w = 2;
     else if (fam === "DM") w = 1.2;
     else w = 0.8; // DF — ara sıra şut
+    // Hücum yönü: kanatlardan / sol / sağ → kanat oyuncularına ağırlık
+    const isLeftWing = pos === "FL" || pos === "ML" || pos === "DL" || pos === "AML";
+    const isRightWing = pos === "FR" || pos === "MR" || pos === "DR" || pos === "AMR";
+    const isWing = isLeftWing || isRightWing || pos === "WL" || pos === "WR";
+    if (attackDir === "kanatlardan" && isWing) w *= 1.85;
+    else if (attackDir === "sol" && isLeftWing) w *= 2.1;
+    else if (attackDir === "sag" && isRightWing) w *= 2.1;
+    else if (attackDir === "orta" && (fam === "FW" || fam === "AM") && !isWing) w *= 1.25;
     const fin = Number(p.finishing) || 10;
     const tech = Number(p.technique) || 10;
     const form = 1 + (Number(p.form) || 0) * 0.03;

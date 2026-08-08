@@ -22,8 +22,8 @@
  * @param {import("socket.io").Server} io
  * @param {(fixtureId: string) => any} getMatchByFixture
  *   fixtureId → Match instance (veya null)
- * @param {(socket) => {userId?: string, clubId?: string}|null} [getSocketIdentity]
- *   opsiyonel: socket'ten user/club kimliği; side doğrulaması için
+ * @param {(socket) => {id?: string, clubId?: string}|null} [getSocketIdentity]
+ *   socket'ten user kimliği; side doğrulaması için zorunlu
  */
 function registerMatchControlHandlers(io, getMatchByFixture, getSocketIdentity) {
   io.on("connection", (socket) => {
@@ -45,30 +45,40 @@ function registerMatchControlHandlers(io, getMatchByFixture, getSocketIdentity) 
           });
           return;
         }
-        // İsteğe bağlı yetki: sadece kendi tarafını değiştirebilsin
-        if (typeof getSocketIdentity === "function") {
-          const ident = getSocketIdentity(socket);
-          // GÜVENLİK: getSocketIdentity, routes/authRoutes.js socketAuthMiddleware
-          // tarafından ayarlanan socket.data.user'ı döner ve bu nesnenin alanı
-          // "id"dir ("userId" değil). Önceden "ident.userId" kontrol edildiği için
-          // bu ifade her zaman undefined dönüyor ve sahiplik kontrolü hiç
-          // çalışmıyordu — böylece herhangi bir oturum açmış kullanıcı, canlı bir
-          // maçın HERHANGİ bir tarafının taktiğini değiştirebiliyordu.
-          if (ident && ident.id) {
-            const sidePlayer = match.players[side];
-            if (
-              sidePlayer &&
-              sidePlayer.userId &&
-              String(sidePlayer.userId) !== String(ident.id) &&
-              !sidePlayer.isBot
-            ) {
-              socket.emit("match:tactics:result", {
-                ok: false,
-                error: "Bu taraf size ait değil",
-              });
-              return;
-            }
-          }
+        // Sadece kendi tarafını değiştirebilsin. Bot/rakip tarafına müdahale engellenir.
+        if (typeof getSocketIdentity !== "function") {
+          socket.emit("match:tactics:result", {
+            ok: false,
+            error: "Yetki doğrulanamadı",
+          });
+          return;
+        }
+        const ident = getSocketIdentity(socket);
+        if (!ident || !ident.id) {
+          socket.emit("match:tactics:result", {
+            ok: false,
+            error: "Yetki doğrulanamadı",
+          });
+          return;
+        }
+        if (side !== "home" && side !== "away") {
+          socket.emit("match:tactics:result", {
+            ok: false,
+            error: "Geçersiz taraf",
+          });
+          return;
+        }
+        const sidePlayer = match.players[side];
+        if (
+          !sidePlayer ||
+          !sidePlayer.userId ||
+          String(sidePlayer.userId) !== String(ident.id)
+        ) {
+          socket.emit("match:tactics:result", {
+            ok: false,
+            error: "Bu taraf size ait değil",
+          });
+          return;
         }
         const result = match.applyTacticChange(side, tactics || {});
         socket.emit("match:tactics:result", result || { ok: true });
@@ -99,25 +109,39 @@ function registerMatchControlHandlers(io, getMatchByFixture, getSocketIdentity) 
           });
           return;
         }
-        if (typeof getSocketIdentity === "function") {
-          const ident = getSocketIdentity(socket);
-          // GÜVENLİK: bkz. yukarıdaki match:tactics açıklaması — alan adı "id"
-          // olmalı, "userId" değil; aksi halde sahiplik kontrolü atlanır.
-          if (ident && ident.id) {
-            const sidePlayer = match.players[side];
-            if (
-              sidePlayer &&
-              sidePlayer.userId &&
-              String(sidePlayer.userId) !== String(ident.id) &&
-              !sidePlayer.isBot
-            ) {
-              socket.emit("match:sub:result", {
-                ok: false,
-                error: "Bu taraf size ait değil",
-              });
-              return;
-            }
-          }
+        if (typeof getSocketIdentity !== "function") {
+          socket.emit("match:sub:result", {
+            ok: false,
+            error: "Yetki doğrulanamadı",
+          });
+          return;
+        }
+        const ident = getSocketIdentity(socket);
+        if (!ident || !ident.id) {
+          socket.emit("match:sub:result", {
+            ok: false,
+            error: "Yetki doğrulanamadı",
+          });
+          return;
+        }
+        if (side !== "home" && side !== "away") {
+          socket.emit("match:sub:result", {
+            ok: false,
+            error: "Geçersiz taraf",
+          });
+          return;
+        }
+        const sidePlayer = match.players[side];
+        if (
+          !sidePlayer ||
+          !sidePlayer.userId ||
+          String(sidePlayer.userId) !== String(ident.id)
+        ) {
+          socket.emit("match:sub:result", {
+            ok: false,
+            error: "Bu taraf size ait değil",
+          });
+          return;
         }
         const result = match.applySubstitution(side, outIdx, inIdx);
         socket.emit("match:sub:result", result || { ok: false, error: "?" });

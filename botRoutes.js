@@ -8,35 +8,55 @@ const express = require("express");
 const botClubs = require("./botClubs");
 const clubsRepo = require("./repos/clubsRepo");
 const { enrichClubId } = require("./routes/authRoutes");
+const { isAdmin } = require("./nationalSystem");
 
 function createBotRouter() {
   const router = express.Router();
 
   // POST /api/league/fill-bots
   // { targetSize?: 8, forceFixtures?: false, intervalHours?: 24 }
+  // forceFixtures yalnızca admin. Non-admin yalnızca kendi country/division'ına
+  // bot ekleyebilir (başka ligleri doldurarak grief edemez).
   router.post("/league/fill-bots", async (req, res) => {
     try {
       const clubId = await enrichClubId(req);
       const club = clubId ? await clubsRepo.getClub(clubId) : null;
-      const country =
-        (req.body && req.body.country) ||
-        (club && club.country) ||
-        "Türkiye";
-      const division = parseInt(
-        (req.body && req.body.division) || (club && club.division) || 1,
-        10,
-      );
+      const admin = isAdmin(req.user && req.user.username);
+
+      let country;
+      let division;
+      if (admin) {
+        country =
+          (req.body && req.body.country) ||
+          (club && club.country) ||
+          "Türkiye";
+        division = parseInt(
+          (req.body && req.body.division) || (club && club.division) || 1,
+          10,
+        );
+      } else {
+        if (!club) {
+          return res.status(404).json({ error: "Kulüp yok" });
+        }
+        country = club.country || "Türkiye";
+        division = parseInt(club.division || 1, 10);
+      }
+
       const targetSize = Math.min(
         20,
         Math.max(2, parseInt((req.body && req.body.targetSize) || 10, 10)),
       );
+
+      const wantForce = !!(req.body && req.body.forceFixtures);
+      // Non-admin force isteğini yok say: boş ligde üretim yine olur, mevcut fikstür silinmez.
+      // (İstemci ensureLeagueReady forceFixtures:true gönderiyor; bu güvenli fallback.)
 
       const result = await botClubs.ensureLeagueFilled({
         country,
         division,
         targetSize,
         generateFixtures: true,
-        forceFixtures: !!(req.body && req.body.forceFixtures),
+        forceFixtures: wantForce && admin,
         intervalHours: (req.body && req.body.intervalHours) || 24,
         doubleRound: req.body && req.body.doubleRound === false ? false : true,
       });

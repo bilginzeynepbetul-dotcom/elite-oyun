@@ -102,9 +102,14 @@ function createTransferRouter(opts) {
     }
   });
 
-  // POST /api/transfer/refresh
+  // POST /api/transfer/refresh — AI piyasasını silip yeniden doldurur.
+  // Herhangi bir oyuncunun spam/grief etmesini engellemek için yalnızca admin.
   router.post("/refresh", async (req, res) => {
     try {
+      const { isAdmin } = require("./nationalSystem");
+      if (!isAdmin(req.user && req.user.username)) {
+        return res.status(403).json({ error: "Sadece admin" });
+      }
       const n = await Promise.resolve(transferSystem.refreshAiMarket());
       res.json({ ok: true, added: n });
     } catch (e) {

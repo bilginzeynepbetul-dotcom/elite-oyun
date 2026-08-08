@@ -17,6 +17,10 @@ const friendlySystem = require("./friendlySystem");
 const { startFixtureMatch } = require("./matchLifecycle");
 const { startCupFixtureMatch } = require("./cupLifecycle");
 const { startFriendlyFixtureMatch } = require("./friendlyLifecycle");
+const { startNationalFixtureMatch } = require("./nationalLifecycle");
+const nationalRepo = require("./repos/nationalRepo");
+const nationalSystem = require("./nationalSystem");
+const { COUNTRY } = require("./nationalRoutes");
 
 let timer = null;
 let running = false;
@@ -64,6 +68,29 @@ async function tickFriendly({ io, liveMatches }) {
   }
 }
 
+async function tickNational({ io, liveMatches }) {
+  // A Milli + U21 dostluk fikstürlerini doldur ve zamanı gelenleri başlat
+  try {
+    await nationalSystem.ensureAllNationalFixtures(COUNTRY);
+  } catch (e) {
+    console.warn("[scheduler] national ensure fixtures", e.message);
+  }
+  const due = await nationalRepo.listDueFixtures(10);
+  for (const f of due) {
+    try {
+      await startNationalFixtureMatch({
+        fixtureId: f.id,
+        io,
+        liveMatches,
+        MatchClass: Match,
+      });
+      console.log("[scheduler] milli maç başladı", f.id);
+    } catch (e) {
+      console.warn("[scheduler] milli maç başlatılamadı", f.id, e.message);
+    }
+  }
+}
+
 async function tick(ctx) {
   if (running) return; // önceki tur bitmeden yenisini başlatma
   running = true;
@@ -71,6 +98,7 @@ async function tick(ctx) {
     await tickLeague(ctx);
     await tickCup(ctx);
     await tickFriendly(ctx);
+    await tickNational(ctx);
   } catch (e) {
     console.error("[scheduler] tick error", e);
   } finally {

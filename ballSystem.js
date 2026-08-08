@@ -112,6 +112,7 @@ function longPassChance(style) {
 /** index-30.html'deki pickNextTeammate() portu — pas alacak bir sonraki oyuncu */
 function pickNextTeammate(team, currentIndex) {
   const famRank = { GK: -1, DF: 0, DM: 1, MF: 2, AM: 3, FW: 4 };
+  const attackDir = team.attackDir || "orta";
   const order = team.players
     .map((p, i) => ({ p, i }))
     .filter((o) => !isGkPos(o.p.pos) && !o.p.sentOff)
@@ -123,14 +124,44 @@ function pickNextTeammate(team, currentIndex) {
 
   const chance = longPassChance(team.passStyle);
 
+  const isWingPos = (pos) => {
+    const p = String(pos || "").toUpperCase();
+    return (
+      p === "FL" || p === "FR" || p === "ML" || p === "MR" ||
+      p === "WL" || p === "WR" || p === "AML" || p === "AMR"
+    );
+  };
+  const isLeft = (pos) => {
+    const p = String(pos || "").toUpperCase();
+    return p === "FL" || p === "ML" || p === "DL" || p === "WL" || p === "AML";
+  };
+  const isRight = (pos) => {
+    const p = String(pos || "").toUpperCase();
+    return p === "FR" || p === "MR" || p === "DR" || p === "WR" || p === "AMR";
+  };
+
+  // Kanat odaklı hücum: pasları kanatlara yönlendir
+  let wingBias = 0;
+  if (attackDir === "kanatlardan") wingBias = 0.45;
+  else if (attackDir === "sol" || attackDir === "sag") wingBias = 0.4;
+
+  if (wingBias > 0 && Math.random() < wingBias) {
+    const wings = order.filter((o) => {
+      if (attackDir === "sol") return isLeft(o.p.pos);
+      if (attackDir === "sag") return isRight(o.p.pos);
+      return isWingPos(o.p.pos);
+    });
+    if (wings.length) {
+      return wings[Math.floor(Math.random() * wings.length)].i;
+    }
+  }
+
   let nextEntry;
   if (Math.random() >= chance) {
-    // komşu oyuncuya (bir öncekine/sonrakine) kısa pas
     const step = Math.random() < 0.5 ? 1 : -1;
     const nextIdx = (((safeRankPos + step) % order.length) + order.length) % order.length;
     nextEntry = order[nextIdx];
   } else {
-    // uzun/sürpriz pas — sahadaki rastgele bir takım arkadaşına
     nextEntry = order[Math.floor(Math.random() * order.length)];
   }
   return nextEntry.i;

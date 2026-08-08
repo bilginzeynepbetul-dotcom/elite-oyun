@@ -4,6 +4,7 @@
 
 const express = require("express");
 const socialSystem = require("./socialSystem");
+const antiCheat = require("./antiCheat");
 
 function createSocialRouter(opts) {
   const router = express.Router();
@@ -19,23 +20,27 @@ function createSocialRouter(opts) {
     }
   });
 
-  router.post("/forum", async (req, res) => {
-    try {
-      const userId = getUserId(req);
-      if (!userId) return res.status(401).json({ error: "Giriş gerekli" });
-      const text = req.body && req.body.text;
-      const result = await socialSystem.addForumPost(
-        userId,
-        getUsername(req),
-        text,
-      );
-      if (!result.ok) return res.status(400).json(result);
-      res.json(result);
-    } catch (e) {
-      console.error("[forum POST]", e);
-      res.status(500).json({ error: "Paylaşım başarısız" });
-    }
-  });
+  router.post(
+    "/forum",
+    antiCheat.rateLimitMiddleware({ max: 10, windowMs: 60000, prefix: "forum" }),
+    async (req, res) => {
+      try {
+        const userId = getUserId(req);
+        if (!userId) return res.status(401).json({ error: "Giriş gerekli" });
+        const text = req.body && req.body.text;
+        const result = await socialSystem.addForumPost(
+          userId,
+          getUsername(req),
+          text,
+        );
+        if (!result.ok) return res.status(400).json(result);
+        res.json(result);
+      } catch (e) {
+        console.error("[forum POST]", e);
+        res.status(500).json({ error: "Paylaşım başarısız" });
+      }
+    },
+  );
 
   router.get("/messages", async (req, res) => {
     try {
@@ -52,25 +57,29 @@ function createSocialRouter(opts) {
     }
   });
 
-  router.post("/messages", async (req, res) => {
-    try {
-      const userId = getUserId(req);
-      if (!userId) return res.status(401).json({ error: "Giriş gerekli" });
-      const { toUserId, toUsername, text } = req.body || {};
-      const result = await socialSystem.sendMessage(
-        userId,
-        getUsername(req),
-        toUserId,
-        toUsername,
-        text,
-      );
-      if (!result.ok) return res.status(400).json(result);
-      res.json(result);
-    } catch (e) {
-      console.error("[messages POST]", e);
-      res.status(500).json({ error: "Mesaj gönderilemedi" });
-    }
-  });
+  router.post(
+    "/messages",
+    antiCheat.rateLimitMiddleware({ max: 20, windowMs: 60000, prefix: "msg" }),
+    async (req, res) => {
+      try {
+        const userId = getUserId(req);
+        if (!userId) return res.status(401).json({ error: "Giriş gerekli" });
+        const { toUserId, toUsername, text } = req.body || {};
+        const result = await socialSystem.sendMessage(
+          userId,
+          getUsername(req),
+          toUserId,
+          toUsername,
+          text,
+        );
+        if (!result.ok) return res.status(400).json(result);
+        res.json(result);
+      } catch (e) {
+        console.error("[messages POST]", e);
+        res.status(500).json({ error: "Mesaj gönderilemedi" });
+      }
+    },
+  );
 
   router.get("/notifications", async (req, res) => {
     try {

@@ -9,6 +9,7 @@ const express = require("express");
 const leagueRepo = require("./repos/leagueRepo");
 const clubsRepo = require("./repos/clubsRepo");
 const { enrichClubId } = require("./routes/authRoutes");
+const { isAdmin } = require("./nationalSystem");
 
 function createLeagueRouter() {
   const router = express.Router();
@@ -103,19 +104,32 @@ function createLeagueRouter() {
   });
 
   // POST /api/league/generate-fixtures  { force?, intervalHours?, doubleRound? }
-  // Admin-ish: herhangi bir giriş yapmış kullanıcı kendi ligi için üretebilir
+  // force=true yalnızca admin. Non-admin yalnızca kendi ligi için (boşsa) üretebilir.
   router.post("/league/generate-fixtures", async (req, res) => {
     try {
       const clubId = await enrichClubId(req);
       const club = clubId ? await clubsRepo.getClub(clubId) : null;
-      const country =
-        (req.body && req.body.country) ||
-        (club && club.country) ||
-        "Türkiye";
-      const division = parseInt(
-        (req.body && req.body.division) || (club && club.division) || 1,
-        10,
-      );
+      const admin = isAdmin(req.user && req.user.username);
+
+      let country;
+      let division;
+      if (admin) {
+        country =
+          (req.body && req.body.country) ||
+          (club && club.country) ||
+          "Türkiye";
+        division = parseInt(
+          (req.body && req.body.division) || (club && club.division) || 1,
+          10,
+        );
+      } else {
+        if (!club) {
+          return res.status(404).json({ error: "Kulüp yok" });
+        }
+        country = club.country || "Türkiye";
+        division = parseInt(club.division || 1, 10);
+      }
+
       const season = await leagueRepo.getCurrentSeason(country, division);
       if (!season) {
         return res.status(404).json({ error: "Aktif sezon yok" });
@@ -124,8 +138,15 @@ function createLeagueRouter() {
         await leagueRepo.ensureClubInStandings(season.id, clubId);
       }
 
+      const wantForce = !!(req.body && req.body.force);
+      if (wantForce && !admin) {
+        return res.status(403).json({
+          error: "Fikstürü zorla yenilemek yalnızca admin yetkisi gerektirir",
+        });
+      }
+
       const result = await leagueRepo.generateFixturesForSeason(season.id, {
-        force: !!(req.body && req.body.force),
+        force: wantForce && admin,
         intervalHours:
           req.body && req.body.intervalHours != null
             ? req.body.intervalHours
