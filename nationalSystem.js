@@ -12,6 +12,10 @@ const OPPONENT_NAMES = [
   ["Danimarka", 67], ["İsviçre", 65], ["Avusturya", 63], ["Ukrayna", 62],
   ["Fas", 61], ["Mısır", 58], ["Senegal", 60], ["Japonya", 59],
   ["Güney Kore", 60], ["Brezilya", 82], ["Arjantin", 81], ["Kolombiya", 63],
+  // Balkan + İsrail
+  ["İsrail", 64], ["Yunanistan", 62], ["Romanya", 60], ["Bulgaristan", 58],
+  ["Bosna-Hersek", 59], ["Arnavutluk", 57], ["Kuzey Makedonya", 55],
+  ["Karadağ", 54], ["Kosova", 53], ["Slovenya", 58],
 ];
 
 const NAT_MATCH_DAY = 4; // Perşembe (Pazar=0)
@@ -38,7 +42,11 @@ async function ensureTeam(country, category) {
   const cat = nationalRepo.normCategory
     ? nationalRepo.normCategory(category)
     : (String(category || "A").toUpperCase() === "U21" ? "U21" : "A");
-  let team = await nationalRepo.getTeamByCountry(country, cat);
+  const c = String(country || "Türkiye").trim() || "Türkiye";
+  if (typeof nationalRepo.ensureTeamRow === "function") {
+    return nationalRepo.ensureTeamRow(c, cat);
+  }
+  let team = await nationalRepo.getTeamByCountry(c, cat);
   return team;
 }
 

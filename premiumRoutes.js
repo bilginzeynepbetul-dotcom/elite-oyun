@@ -206,87 +206,32 @@ function createPremiumRouter() {
     }
   });
 
-  // POST /api/premium/daily-reward — Elite olmasa da alınır; Elite ise x2
-  // Atomik claim: aynı gün çift istek yarışıyla iki kez ödül alınmasını engeller.
+  // GET /api/premium/daily-status
+  router.get("/daily-status", async (req, res) => {
+    try {
+      const userId = req.user && req.user.id;
+      if (!userId) return res.status(401).json({ error: "Giriş gerekli" });
+      const st = await premiumSystem.getDailyStatus(userId);
+      res.json(st);
+    } catch (e) {
+      console.error("[premium/daily-status]", e);
+      res.status(500).json({ error: "Durum alınamadı" });
+    }
+  });
+
+  // POST /api/premium/daily-reward — herkes aynı tutar (Elite çarpanı yok)
   router.post("/daily-reward", async (req, res) => {
     try {
       const userId = req.user.id;
-      const clubsRepo = require("./repos/clubsRepo");
-      const { query } = require("./db");
       const { enrichClubId } = require("./routes/authRoutes");
       const clubId = await enrichClubId(req);
       if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
-
-      const now = new Date();
-      const startOfToday = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-      );
-
-      // Önce mevcut streak bilgisini oku (yalnızca hesap için)
-      const { rows } = await query(
-        `SELECT daily_reward_at, daily_reward_streak FROM users WHERE id = $1`,
-        [userId],
-      );
-      const row = rows[0] || {};
-      const last = row.daily_reward_at ? new Date(row.daily_reward_at) : null;
-      if (last && last >= startOfToday) {
-        return res.status(400).json({
-          ok: false,
-          error: "Bugünkü ödül zaten alındı",
-          code: "ALREADY_CLAIMED",
-          nextAt: new Date(startOfToday.getTime() + 86400000).toISOString(),
-        });
+      const result = await premiumSystem.claimDailyReward(userId, clubId);
+      if (!result.ok) {
+        const code = result.code === "ALREADY_CLAIMED" ? 400 : 400;
+        return res.status(code).json(result);
       }
-
-      let streak = Number(row.daily_reward_streak) || 0;
-      const yesterday = new Date(startOfToday.getTime() - 86400000);
-      if (last && last >= yesterday && last < startOfToday) streak += 1;
-      else streak = 1;
-      streak = Math.min(30, streak);
-
-      // Atomik rezervasyon: yalnızca henüz bugün claim edilmemişse güncelle
-      const claim = await query(
-        `UPDATE users
-         SET daily_reward_at = NOW(), daily_reward_streak = $2
-         WHERE id = $1
-           AND (daily_reward_at IS NULL OR daily_reward_at < $3)
-         RETURNING id`,
-        [userId, streak, startOfToday.toISOString()],
-      );
-      if (!claim.rows.length) {
-        return res.status(400).json({
-          ok: false,
-          error: "Bugünkü ödül zaten alındı",
-          code: "ALREADY_CLAIMED",
-          nextAt: new Date(startOfToday.getTime() + 86400000).toISOString(),
-        });
-      }
-
-      const elite = await premiumSystem.getStatus(userId);
-      const base = 15000 + streak * 2500;
-      const amount = elite.active ? base * 2 : base;
-
-      const ok = await clubsRepo.adjustBalance(
-        clubId,
-        amount,
-        "Günlük giriş ödülü" + (elite.active ? " (Elite x2)" : ""),
-      );
-      if (!ok) {
-        // Nadir: bütçe yazılamadıysa claim'i geri almak karmaşık; logla
-        console.error("[premium/daily-reward] balance adjust failed", userId);
-        return res.status(400).json({ error: "Bütçe güncellenemedi" });
-      }
-
-      const eco = await clubsRepo.getEconomy(clubId);
-      res.json({
-        ok: true,
-        amount,
-        streak,
-        elite: elite.active,
-        balance: eco && eco.balance,
-      });
+      res.json(result);
     } catch (e) {
       console.error("[premium/daily-reward]", e);
       res.status(500).json({ error: "Ödül verilemedi" });

@@ -1,15 +1,37 @@
 // ============================================================
 // nationalRoutes.js — /api/national/*
+// Ülke: kullanıcının kulüp ülkesi (yoksa Türkiye)
 // ============================================================
 
 const express = require("express");
 const nationalSystem = require("./nationalSystem");
+const clubsRepo = require("./repos/clubsRepo");
 
-const COUNTRY = "Türkiye"; // MVP: tek ülke (lig zaten Türkiye)
+const DEFAULT_COUNTRY = "Türkiye";
 
 function readCategory(req) {
-  const q = (req.query && req.query.category) || (req.body && req.body.category) || "A";
+  const q =
+    (req.query && req.query.category) ||
+    (req.body && req.body.category) ||
+    "A";
   return String(q).toUpperCase() === "U21" ? "U21" : "A";
+}
+
+async function resolveCountry(req, getClubId) {
+  // query/body override (admin / liste)
+  const q =
+    (req.query && req.query.country) ||
+    (req.body && req.body.country) ||
+    null;
+  if (q && String(q).trim()) return String(q).trim();
+  try {
+    const clubId = getClubId ? getClubId(req) : null;
+    if (clubId) {
+      const club = await clubsRepo.getClub(clubId);
+      if (club && club.country) return club.country;
+    }
+  } catch (e) {}
+  return DEFAULT_COUNTRY;
 }
 
 function createNationalRouter(opts) {
@@ -20,14 +42,16 @@ function createNationalRouter(opts) {
 
   router.get("/state", async (req, res) => {
     try {
+      const country = await resolveCountry(req, getClubId);
       const state = await nationalSystem.getState(
-        COUNTRY,
+        country,
         getUserId(req),
         getClubId(req),
         getUsername(req),
         readCategory(req),
       );
-      if (!state) return res.status(404).json({ error: "Milli takım bulunamadı" });
+      if (!state)
+        return res.status(404).json({ error: "Milli takım bulunamadı" });
       res.json(state);
     } catch (e) {
       console.error("[national/state]", e);
@@ -35,12 +59,25 @@ function createNationalRouter(opts) {
     }
   });
 
-  // TD koltuğu artık "ilk tıklayan kapar" değil — başvuru + admin ataması.
+  // Fikstür yoksa A + U21 için dostluk üret
+  router.post("/ensure-fixtures", async (req, res) => {
+    try {
+      const country = await resolveCountry(req, getClubId);
+      const out = await nationalSystem.ensureAllNationalFixtures(country);
+      res.json({ ok: true, country, fixtures: out });
+    } catch (e) {
+      console.error("[national/ensure-fixtures]", e);
+      res.status(500).json({ error: "Fikstür üretilemedi" });
+    }
+  });
+
+  // TD koltuğu — başvuru + admin ataması
   router.post("/apply", async (req, res) => {
     try {
+      const country = await resolveCountry(req, getClubId);
       const message = req.body && req.body.message;
       const result = await nationalSystem.apply(
-        COUNTRY,
+        country,
         getUserId(req),
         getClubId(req),
         message,
@@ -57,7 +94,12 @@ function createNationalRouter(opts) {
 
   router.post("/apply/withdraw", async (req, res) => {
     try {
-      const result = await nationalSystem.withdrawApplication(COUNTRY, getUserId(req), readCategory(req));
+      const country = await resolveCountry(req, getClubId);
+      const result = await nationalSystem.withdrawApplication(
+        country,
+        getUserId(req),
+        readCategory(req),
+      );
       res.json(result);
     } catch (e) {
       console.error("[national/apply/withdraw]", e);
@@ -65,10 +107,14 @@ function createNationalRouter(opts) {
     }
   });
 
-  // Sadece admin (.env ADMIN_USERNAME) görebilir/atayabilir.
   router.get("/applications", async (req, res) => {
     try {
-      const result = await nationalSystem.listApplications(COUNTRY, getUsername(req), readCategory(req));
+      const country = await resolveCountry(req, getClubId);
+      const result = await nationalSystem.listApplications(
+        country,
+        getUsername(req),
+        readCategory(req),
+      );
       if (!result.ok) return res.status(403).json(result);
       res.json(result);
     } catch (e) {
@@ -79,9 +125,16 @@ function createNationalRouter(opts) {
 
   router.post("/appoint", async (req, res) => {
     try {
+      const country = await resolveCountry(req, getClubId);
       const applicationId = req.body && req.body.applicationId;
-      if (!applicationId) return res.status(400).json({ error: "applicationId gerekli" });
-      const result = await nationalSystem.appoint(COUNTRY, getUsername(req), applicationId, readCategory(req));
+      if (!applicationId)
+        return res.status(400).json({ error: "applicationId gerekli" });
+      const result = await nationalSystem.appoint(
+        country,
+        getUsername(req),
+        applicationId,
+        readCategory(req),
+      );
       if (!result.ok) return res.status(403).json(result);
       res.json(result);
     } catch (e) {
@@ -92,7 +145,12 @@ function createNationalRouter(opts) {
 
   router.post("/resign", async (req, res) => {
     try {
-      const result = await nationalSystem.resign(COUNTRY, getUserId(req), readCategory(req));
+      const country = await resolveCountry(req, getClubId);
+      const result = await nationalSystem.resign(
+        country,
+        getUserId(req),
+        readCategory(req),
+      );
       if (!result.ok) return res.status(400).json(result);
       res.json(result);
     } catch (e) {
@@ -103,9 +161,16 @@ function createNationalRouter(opts) {
 
   router.post("/squad/call", async (req, res) => {
     try {
+      const country = await resolveCountry(req, getClubId);
       const playerId = req.body && req.body.playerId;
-      if (!playerId) return res.status(400).json({ error: "playerId gerekli" });
-      const result = await nationalSystem.callUp(COUNTRY, getUserId(req), playerId, readCategory(req));
+      if (!playerId)
+        return res.status(400).json({ error: "playerId gerekli" });
+      const result = await nationalSystem.callUp(
+        country,
+        getUserId(req),
+        playerId,
+        readCategory(req),
+      );
       if (!result.ok) return res.status(400).json(result);
       res.json(result);
     } catch (e) {
@@ -116,43 +181,52 @@ function createNationalRouter(opts) {
 
   router.post("/squad/drop", async (req, res) => {
     try {
+      const country = await resolveCountry(req, getClubId);
       const playerId = req.body && req.body.playerId;
-      if (!playerId) return res.status(400).json({ error: "playerId gerekli" });
-      const result = await nationalSystem.drop(COUNTRY, getUserId(req), playerId, readCategory(req));
+      if (!playerId)
+        return res.status(400).json({ error: "playerId gerekli" });
+      const result = await nationalSystem.drop(
+        country,
+        getUserId(req),
+        playerId,
+        readCategory(req),
+      );
       if (!result.ok) return res.status(400).json(result);
       res.json(result);
     } catch (e) {
       console.error("[national/squad/drop]", e);
-      res.status(500).json({ error: "İşlem başarısız" });
+      res.status(500).json({ error: "Çıkarma başarısız" });
     }
   });
 
   router.post("/squad/lineup", async (req, res) => {
     try {
-      const starterPlayerIds = (req.body && req.body.starterPlayerIds) || [];
-      const formation = req.body && req.body.formation;
-      const assignments = (req.body && req.body.assignments) || [];
-      const passStyle = req.body && req.body.passStyle;
-      const gameStyle = req.body && req.body.gameStyle;
+      const country = await resolveCountry(req, getClubId);
+      const body = req.body || {};
       const result = await nationalSystem.saveLineup(
-        COUNTRY,
+        country,
         getUserId(req),
-        starterPlayerIds,
-        formation,
-        assignments,
-        passStyle,
-        gameStyle,
+        body.starterPlayerIds || body.starters || [],
+        body.formation,
+        body.assignments,
+        body.passStyle,
+        body.gameStyle,
         readCategory(req),
       );
       if (!result.ok) return res.status(400).json(result);
       res.json(result);
     } catch (e) {
       console.error("[national/squad/lineup]", e);
-      res.status(500).json({ error: "Kaydedilemedi" });
+      res.status(500).json({ error: "Kadro kaydedilemedi" });
     }
   });
 
   return router;
 }
 
-module.exports = { createNationalRouter, COUNTRY };
+module.exports = {
+  createNationalRouter,
+  COUNTRY: DEFAULT_COUNTRY,
+  DEFAULT_COUNTRY,
+  resolveCountry,
+};

@@ -303,6 +303,107 @@ function eliteMiddleware(req, res, next) {
     });
 }
 
+/** Günlük ödül: herkes aynı (25.000 + seri×5.000), Elite çarpanı yok */
+const DAILY_BASE = 25000;
+const DAILY_STREAK_BONUS = 5000;
+const DAILY_STREAK_MAX = 30;
+
+function startOfLocalDay(d) {
+  const x = d ? new Date(d) : new Date();
+  return new Date(x.getFullYear(), x.getMonth(), x.getDate());
+}
+
+async function getDailyStatus(userId) {
+  const { rows } = await query(
+    `SELECT daily_reward_at, daily_reward_streak FROM users WHERE id = $1`,
+    [userId],
+  );
+  const row = rows[0] || {};
+  const last = row.daily_reward_at ? new Date(row.daily_reward_at) : null;
+  const today = startOfLocalDay();
+  const claimedToday = !!(last && last >= today);
+  const streak = Number(row.daily_reward_streak) || 0;
+  let nextStreak = 1;
+  if (!claimedToday) {
+    const yesterday = new Date(today.getTime() - 86400000);
+    if (last && last >= yesterday && last < today) nextStreak = Math.min(DAILY_STREAK_MAX, streak + 1);
+    else nextStreak = 1;
+  } else {
+    nextStreak = streak;
+  }
+  const amount = DAILY_BASE + nextStreak * DAILY_STREAK_BONUS;
+  return {
+    claimedToday,
+    streak: claimedToday ? streak : nextStreak,
+    amountIfClaim: amount,
+    nextAt: new Date(today.getTime() + 86400000).toISOString(),
+    lastAt: last ? last.toISOString() : null,
+  };
+}
+
+/**
+ * Atomik günlük ödül claim. Elite ile aynı tutar.
+ * @returns {{ ok, amount?, streak?, balance?, code? }}
+ */
+async function claimDailyReward(userId, clubId) {
+  if (!userId || !clubId) return { ok: false, error: "Kulüp yok", code: "NO_CLUB" };
+  const clubsRepo = require("./repos/clubsRepo");
+  const today = startOfLocalDay();
+
+  const { rows } = await query(
+    `SELECT daily_reward_at, daily_reward_streak FROM users WHERE id = $1`,
+    [userId],
+  );
+  const row = rows[0] || {};
+  const last = row.daily_reward_at ? new Date(row.daily_reward_at) : null;
+  if (last && last >= today) {
+    return {
+      ok: false,
+      error: "Bugünkü ödül zaten alındı",
+      code: "ALREADY_CLAIMED",
+      nextAt: new Date(today.getTime() + 86400000).toISOString(),
+    };
+  }
+
+  let streak = Number(row.daily_reward_streak) || 0;
+  const yesterday = new Date(today.getTime() - 86400000);
+  if (last && last >= yesterday && last < today) streak += 1;
+  else streak = 1;
+  streak = Math.min(DAILY_STREAK_MAX, streak);
+
+  const claim = await query(
+    `UPDATE users
+     SET daily_reward_at = NOW(), daily_reward_streak = $2
+     WHERE id = $1
+       AND (daily_reward_at IS NULL OR daily_reward_at < $3)
+     RETURNING id`,
+    [userId, streak, today.toISOString()],
+  );
+  if (!claim.rows.length) {
+    return {
+      ok: false,
+      error: "Bugünkü ödül zaten alındı",
+      code: "ALREADY_CLAIMED",
+      nextAt: new Date(today.getTime() + 86400000).toISOString(),
+    };
+  }
+
+  const amount = DAILY_BASE + streak * DAILY_STREAK_BONUS;
+  const ok = await clubsRepo.adjustBalance(clubId, amount, "Günlük giriş ödülü");
+  if (!ok) {
+    return { ok: false, error: "Bütçe güncellenemedi", code: "BALANCE" };
+  }
+  const eco = await clubsRepo.getEconomy(clubId);
+  const elite = await getStatus(userId);
+  return {
+    ok: true,
+    amount,
+    streak,
+    elite: !!(elite && elite.active),
+    balance: eco && eco.balance,
+  };
+}
+
 module.exports = {
   PLANS,
   stripeEnabled,
@@ -315,4 +416,8 @@ module.exports = {
   listPlansPublic,
   requireElite,
   eliteMiddleware,
+  getDailyStatus,
+  claimDailyReward,
+  DAILY_BASE,
+  DAILY_STREAK_BONUS,
 };

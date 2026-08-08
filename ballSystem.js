@@ -194,7 +194,12 @@ function circulateBall(match) {
     if (defender) defender.keyActions = (defender.keyActions || 0) + 1;
 
     if (Math.random() < 0.35) {
-      event = { type: "turnover", text: `${winningTeam.name} topu kazandı.` };
+      const { mt } = require("./matchI18n");
+      const lang = (match && match.lang) || "en";
+      event = {
+        type: "turnover",
+        text: mt("turnover", lang, { team: winningTeam.name }),
+      };
     }
   }
 

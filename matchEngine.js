@@ -28,6 +28,8 @@ class Match {
     this.onEnd = options.onEnd || null;
     this.tickMs = options.tickMs || DEFAULT_TICK_MS;
     this.circulationMs = options.circulationMs || DEFAULT_CIRCULATION_MS;
+    // Maç log dili: en / es / de / it / pt / fr / tr
+    this.lang = options.lang || process.env.MATCH_LOG_LANG || "en";
     this.players = {
       home: {
         userId: playerA.userId,
@@ -83,7 +85,8 @@ class Match {
 
   start() {
     this.status = "live";
-    this.addLog("⚽ Maç başladı!");
+    const { mt } = require("./matchI18n");
+    this.addLog(mt("match_start", this.lang));
     this.tickInterval = setInterval(() => this.tick(), this.tickMs);
     this.circulationInterval = setInterval(
       () => this.runCirculation(),
@@ -181,7 +184,15 @@ class Match {
     allowed.forEach((k) => {
       if (tactics && tactics[k]) p.team[k] = tactics[k];
     });
-    this.addLog(`${this.minute}' ${p.username} taktik değiştirdi.`);
+    {
+      const { mt } = require("./matchI18n");
+      this.addLog(
+        mt("tactic_change", this.lang, {
+          min: this.minute,
+          user: p.username,
+        }),
+      );
+    }
     this.broadcast("match:state", this.getPublicState());
     return { ok: true };
   }
@@ -202,9 +213,17 @@ class Match {
     team.bench[inIdx] = outPlayer;
     this.subsUsed[side]++;
     syncBallToValidHolder(this);
-    this.addLog(
-      `${this.minute}' Değişiklik (${p.username}): ${outPlayer.name} çıktı, ${inPlayer.name} girdi.`,
-    );
+    {
+      const { mt } = require("./matchI18n");
+      this.addLog(
+        mt("sub", this.lang, {
+          min: this.minute,
+          user: p.username,
+          out: outPlayer.name,
+          inn: inPlayer.name,
+        }),
+      );
+    }
     this.broadcast("match:state", this.getPublicState());
     return {
       ok: true,
@@ -219,9 +238,17 @@ class Match {
     this.status = "ended";
     clearInterval(this.tickInterval);
     clearInterval(this.circulationInterval);
-    this.addLog(
-      `🏁 Maç bitti: ${this.players.home.username} ${this.score.home} - ${this.score.away} ${this.players.away.username}`,
-    );
+    {
+      const { mt } = require("./matchI18n");
+      this.addLog(
+        mt("match_end", this.lang, {
+          home: this.players.home.username,
+          away: this.players.away.username,
+          hs: this.score.home,
+          as: this.score.away,
+        }),
+      );
+    }
     const state = this.getPublicState();
     this.broadcast("match:ended", state);
     if (typeof this.onEnd === "function") {

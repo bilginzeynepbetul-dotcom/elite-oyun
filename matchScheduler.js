@@ -69,11 +69,23 @@ async function tickFriendly({ io, liveMatches }) {
 }
 
 async function tickNational({ io, liveMatches }) {
-  // A Milli + U21 dostluk fikstürlerini doldur ve zamanı gelenleri başlat
+  // A Milli + U21 dostluk fikstürlerini doldur (tüm ülkeler) ve başlat
+  const countries = new Set([COUNTRY || "Türkiye"]);
   try {
-    await nationalSystem.ensureAllNationalFixtures(COUNTRY);
-  } catch (e) {
-    console.warn("[scheduler] national ensure fixtures", e.message);
+    const { query } = require("./db");
+    const { rows } = await query(
+      `SELECT DISTINCT country FROM national_teams WHERE country IS NOT NULL`,
+    );
+    (rows || []).forEach(function (r) {
+      if (r.country) countries.add(r.country);
+    });
+  } catch (e) {}
+  for (const c of countries) {
+    try {
+      await nationalSystem.ensureAllNationalFixtures(c);
+    } catch (e) {
+      console.warn("[scheduler] national ensure fixtures", c, e && e.message);
+    }
   }
   const due = await nationalRepo.listDueFixtures(10);
   for (const f of due) {

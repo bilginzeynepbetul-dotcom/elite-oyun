@@ -158,31 +158,34 @@ function attemptShot(match, side) {
   const quality = shotQuality(shooter, attack, defend);
   const save = saveStrength(gk, defend);
 
-  // İsabet: şut kalitesi baskın, biraz rastgelelik
-  const onTargetChance = Math.max(0.18, Math.min(0.78, 0.22 + quality * 0.55));
+  // İsabet: gerçekçi ~%35–45 isabet; üst sınır sıkı
+  const onTargetChance = Math.max(0.2, Math.min(0.58, 0.28 + quality * 0.42));
   const onTarget = Math.random() < onTargetChance;
 
   if (!onTarget) {
-    const missLog =
-      Math.random() < 0.45
-        ? "Şut auta gitti (" + shooter.name + ")"
-        : Math.random() < 0.5
-          ? "Şut bloklandı (" + shooter.name + ")"
-          : "Şut direğin yanından (" + shooter.name + ")";
-    match.addLog && match.addLog(missLog);
+    const { mt } = require("./matchI18n");
+    const lang = (match && match.lang) || "en";
+    const r = Math.random();
+    const key =
+      r < 0.45 ? "shot_wide" : r < 0.75 ? "shot_blocked" : "shot_post";
+    match.addLog && match.addLog(mt(key, lang, { name: shooter.name }));
     return { scored: false, onTarget: false, scorer: shooter.name };
   }
 
   match.stats[side].onTarget = (match.stats[side].onTarget || 0) + 1;
 
-  // Gol şansı: quality vs save; tipik maçta ~0.25–0.40 on-target conversion
-  let goalChance = 0.12 + (quality - save) * 0.55;
-  goalChance = Math.max(0.06, Math.min(0.52, goalChance));
+  // İsabetli şuttan gol: ortalama ~%28–32 (çok yüksek skorları kes)
+  let goalChance = 0.18 + (quality - save) * 0.38;
+  goalChance = Math.max(0.08, Math.min(0.4, goalChance));
+
+  // Ev sahibi hafif avantaj (şut tarafı home ise)
+  if (side === "home") goalChance += 0.02;
 
   // Skor farkı: önde olan biraz daha az, geride olan biraz daha istekli
   const diff = (match.score[side] || 0) - (match.score[other] || 0);
-  if (diff <= -2) goalChance += 0.03;
-  else if (diff >= 2) goalChance -= 0.025;
+  if (diff <= -2) goalChance += 0.025;
+  else if (diff >= 2) goalChance -= 0.03;
+  if (diff >= 3) goalChance -= 0.02; // fark açılınca daha da zor
 
   const scored = Math.random() < goalChance;
 
@@ -202,18 +205,20 @@ function attemptShot(match, side) {
     };
     match.scorers.push(entry);
 
-    const assistText = assister ? " (Asist: " + assister.name + ")" : "";
+    const { mt } = require("./matchI18n");
+    const lang = (match && match.lang) || "en";
+    const assistText = assister
+      ? mt("assist", lang, { name: assister.name })
+      : "";
     match.addLog &&
       match.addLog(
-        "⚽ GOL! " +
-          shooter.name +
-          assistText +
-          " (" +
-          match.minute +
-          "') — " +
-          match.score.home +
-          "-" +
-          match.score.away,
+        mt("goal", lang, {
+          scorer: shooter.name,
+          assist: assistText,
+          min: match.minute,
+          hs: match.score.home,
+          as: match.score.away,
+        }),
       );
 
     match.broadcast &&
@@ -234,12 +239,19 @@ function attemptShot(match, side) {
   }
 
   // İsabetli ama gol değil
-  const saveLog =
-    Math.random() < 0.55
-      ? "Kurtarış! " + (gk.name || "Kaleci") + " (" + shooter.name + " şutu)"
-      : "Şut kalecide (" + shooter.name + ")";
-  if (gk.saves != null) gk.saves = (gk.saves || 0) + 1;
-  match.addLog && match.addLog(saveLog);
+  {
+    const { mt } = require("./matchI18n");
+    const lang = (match && match.lang) || "en";
+    const saveLog =
+      Math.random() < 0.55
+        ? mt("save", lang, {
+            gk: gk.name || "GK",
+            name: shooter.name,
+          })
+        : mt("shot_gk", lang, { name: shooter.name });
+    if (gk.saves != null) gk.saves = (gk.saves || 0) + 1;
+    match.addLog && match.addLog(saveLog);
+  }
   return { scored: false, onTarget: true, scorer: shooter.name };
 }
 
