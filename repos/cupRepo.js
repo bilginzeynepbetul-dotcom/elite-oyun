@@ -8,9 +8,16 @@
 
 const { query, withTransaction } = require("../db");
 
-const FIRST_ROUND_OFFSET_MS = 3 * 60 * 1000; // ilk tur ~3 dk sonra başlar (test/demo dostu)
-const ROUND_GAP_MS = 15 * 60 * 1000; // bir sonraki tur, öncekinin bitiminden ~15 dk sonra
-const MATCH_SPACING_MS = 2 * 60 * 1000; // aynı tur içindeki maçlar art arda değil, biraz aralıklı
+// Demo/test varsayılanları (env ile prod aralıkları verilebilir)
+const FIRST_ROUND_OFFSET_MS = Number(process.env.CUP_FIRST_ROUND_OFFSET_MS) || 3 * 60 * 1000;
+// Grup maçları arası (lig haftasıyla uyumlu ~ birkaç gün / testte kısa)
+const GROUP_MATCH_SPACING_MS = Number(process.env.CUP_GROUP_MATCH_SPACING_MS) || 6 * 60 * 60 * 1000;
+// Eleme turları arası — final aşaması daha sık
+const KNOCKOUT_ROUND_GAP_MS = Number(process.env.CUP_KNOCKOUT_ROUND_GAP_MS) || 2 * 24 * 60 * 60 * 1000;
+const MATCH_SPACING_MS = Number(process.env.CUP_MATCH_SPACING_MS) || 2 * 60 * 1000;
+// Geriye uyumluluk
+const ROUND_GAP_MS = KNOCKOUT_ROUND_GAP_MS;
+const GROUP_SIZE = 4;
 
 function shuffle(arr) {
   const a = arr.slice();
@@ -61,48 +68,110 @@ async function createEdition(country, yearLabel, clubIds, opts = {}) {
     return { ok: false, error: "Kupa için en az 2 kulüp gerekli" };
   }
   return withTransaction(async (client) => {
-    const totalRounds = roundsForSize(clubIds.length);
+    const shuffled = shuffle(clubIds);
+    const useGroups = shuffled.length >= 8 && opts.forceKnockoutOnly !== true;
+
+    if (!useGroups) {
+      // Az kulüp: klasik tek eleme
+      const totalRounds = roundsForSize(shuffled.length);
+      const { rows: edRows } = await client.query(
+        `INSERT INTO cup_editions (country, year_label, is_current, current_round, total_rounds)
+         VALUES ($1, $2, TRUE, 1, $3)
+         ON CONFLICT (country, year_label) DO UPDATE SET is_current = TRUE, current_round = 1, total_rounds = $3
+         RETURNING id`,
+        [country, yearLabel, totalRounds],
+      );
+      const editionId = edRows[0].id;
+      const startAt = opts.startAt || new Date(Date.now() + FIRST_ROUND_OFFSET_MS);
+      const pairs = [];
+      for (let i = 0; i < shuffled.length; i += 2) {
+        pairs.push([shuffled[i], shuffled[i + 1] || null]);
+      }
+      let slot = 0;
+      for (const [home, away] of pairs) {
+        if (!away) {
+          await client.query(
+            `INSERT INTO cup_fixtures
+               (edition_id, round, round_label, slot, home_club_id, away_club_id,
+                status, winner_club_id)
+             VALUES ($1, 1, $2, $3, $4, NULL, 'bye', $4)`,
+            [editionId, roundLabel(1, totalRounds), slot, home],
+          );
+        } else {
+          const kickoff = new Date(startAt.getTime() + slot * MATCH_SPACING_MS);
+          await client.query(
+            `INSERT INTO cup_fixtures
+               (edition_id, round, round_label, slot, home_club_id, away_club_id,
+                kickoff_at, status)
+             VALUES ($1, 1, $2, $3, $4, $5, $6, 'scheduled')`,
+            [editionId, roundLabel(1, totalRounds), slot, home, away, kickoff.toISOString()],
+          );
+        }
+        slot++;
+      }
+      return { ok: true, editionId, totalRounds, phase: "knockout", pairsCreated: pairs.length };
+    }
+
+    // ---- Grup aşaması + eleme (Son 16 / ÇF / YF / Final) ----
+    // Gruplar: 4'lü; fazla takım en yakın 4'ün katına kadar (fazlalar bye grubuna değil, en küçük gruplara eklenmez — kesilir)
+    const nGroups = Math.max(2, Math.floor(shuffled.length / GROUP_SIZE));
+    const used = shuffled.slice(0, nGroups * GROUP_SIZE);
+    const groups = [];
+    for (let g = 0; g < nGroups; g++) {
+      groups.push(used.slice(g * GROUP_SIZE, (g + 1) * GROUP_SIZE));
+    }
+    // Eleme turu sayısı: nGroups*2 (her gruptan 2) → 2^k
+    const knockoutTeams = nGroups * 2;
+    const koRounds = roundsForSize(knockoutTeams);
+    // total_rounds = 1 (grup) + koRounds
+    const totalRounds = 1 + koRounds;
+
     const { rows: edRows } = await client.query(
       `INSERT INTO cup_editions (country, year_label, is_current, current_round, total_rounds)
        VALUES ($1, $2, TRUE, 1, $3)
-       ON CONFLICT (country, year_label) DO UPDATE SET is_current = TRUE
+       ON CONFLICT (country, year_label) DO UPDATE
+         SET is_current = TRUE, current_round = 1, total_rounds = $3, champion_club_id = NULL
        RETURNING id`,
       [country, yearLabel, totalRounds],
     );
     const editionId = edRows[0].id;
-
-    const shuffled = shuffle(clubIds);
     const startAt = opts.startAt || new Date(Date.now() + FIRST_ROUND_OFFSET_MS);
-    const pairs = [];
-    for (let i = 0; i < shuffled.length; i += 2) {
-      pairs.push([shuffled[i], shuffled[i + 1] || null]);
-    }
 
-    let slot = 0;
-    for (const [home, away] of pairs) {
-      if (!away) {
-        // Bye — rakip yok, direkt tur atlar
-        await client.query(
-          `INSERT INTO cup_fixtures
-             (edition_id, round, round_label, slot, home_club_id, away_club_id,
-              status, winner_club_id)
-           VALUES ($1, 1, $2, $3, $4, NULL, 'bye', $4)`,
-          [editionId, roundLabel(1, totalRounds), slot, home],
-        );
-      } else {
-        const kickoff = new Date(startAt.getTime() + slot * MATCH_SPACING_MS);
-        await client.query(
-          `INSERT INTO cup_fixtures
-             (edition_id, round, round_label, slot, home_club_id, away_club_id,
-              kickoff_at, status)
-           VALUES ($1, 1, $2, $3, $4, $5, $6, 'scheduled')`,
-          [editionId, roundLabel(1, totalRounds), slot, home, away, kickoff.toISOString()],
-        );
+    // Her grupta tek devreli (herkes herkese 1 maç): 4 takım → 6 maç
+    let globalSlot = 0;
+    let matchIndex = 0;
+    for (let gi = 0; gi < groups.length; gi++) {
+      const label = "Grup " + String.fromCharCode(65 + gi); // A, B, C...
+      const g = groups[gi];
+      for (let i = 0; i < g.length; i++) {
+        for (let j = i + 1; j < g.length; j++) {
+          const home = g[i];
+          const away = g[j];
+          const kickoff = new Date(
+            startAt.getTime() + matchIndex * GROUP_MATCH_SPACING_MS,
+          );
+          await client.query(
+            `INSERT INTO cup_fixtures
+               (edition_id, round, round_label, slot, home_club_id, away_club_id,
+                kickoff_at, status)
+             VALUES ($1, 1, $2, $3, $4, $5, $6, 'scheduled')`,
+            [editionId, label, globalSlot, home, away, kickoff.toISOString()],
+          );
+          globalSlot++;
+          matchIndex++;
+        }
       }
-      slot++;
     }
 
-    return { ok: true, editionId, totalRounds, pairsCreated: pairs.length };
+    return {
+      ok: true,
+      editionId,
+      totalRounds,
+      phase: "group",
+      groups: nGroups,
+      knockoutTeams,
+      groupMatches: matchIndex,
+    };
   });
 }
 
@@ -242,6 +311,65 @@ async function applyMatchResult(fixtureId, homeGoals, awayGoals, matchId) {
  * Bittiyse ya şampiyonu ilan eder ya da sıradaki turu oluşturur.
  * server.js'deki scheduler tick'inden periyodik çağrılır.
  */
+async function leagueSeasonEndAt(country) {
+  const { rows } = await query(
+    `SELECT MAX(f.kickoff_at) AS last_kickoff
+     FROM fixtures f
+     JOIN seasons s ON s.id = f.season_id
+     WHERE s.country = $1 AND s.is_current = TRUE`,
+    [country],
+  );
+  if (rows[0] && rows[0].last_kickoff) return new Date(rows[0].last_kickoff);
+  return null;
+}
+
+/** Grup maçlarından puan tablosu → her gruptan ilk 2 */
+function groupQualifiers(groupFixtures) {
+  // groupFixtures: [{roundLabel, homeClubId, awayClubId, homeGoals, awayGoals, winnerClubId, status}]
+  const byGroup = new Map();
+  for (const f of groupFixtures) {
+    const label = f.roundLabel || f.round_label || "Grup";
+    if (!byGroup.has(label)) byGroup.set(label, []);
+    byGroup.get(label).push(f);
+  }
+  const qualified = [];
+  for (const [label, matches] of byGroup.entries()) {
+    const table = new Map(); // clubId -> {pts, gd, gf}
+    const touch = (id) => {
+      if (!table.has(id)) table.set(id, { clubId: id, pts: 0, gd: 0, gf: 0 });
+      return table.get(id);
+    };
+    for (const m of matches) {
+      if (m.status !== "finished" && m.status !== "bye") continue;
+      const h = m.homeClubId || m.home_club_id;
+      const a = m.awayClubId || m.away_club_id;
+      if (!h || !a) continue;
+      const hg = Number(m.homeGoals != null ? m.homeGoals : m.home_goals) || 0;
+      const ag = Number(m.awayGoals != null ? m.awayGoals : m.away_goals) || 0;
+      const H = touch(h);
+      const A = touch(a);
+      H.gf += hg; A.gf += ag;
+      H.gd += hg - ag; A.gd += ag - hg;
+      if (hg > ag) H.pts += 3;
+      else if (ag > hg) A.pts += 3;
+      else { H.pts += 1; A.pts += 1; }
+    }
+    const ranked = Array.from(table.values()).sort((x, y) => {
+      if (y.pts !== x.pts) return y.pts - x.pts;
+      if (y.gd !== x.gd) return y.gd - x.gd;
+      return y.gf - x.gf;
+    });
+    // İlk 2
+    for (const row of ranked.slice(0, 2)) qualified.push(row.clubId);
+  }
+  return qualified;
+}
+
+/**
+ * Her is_current edition için: mevcut tur bitmiş mi?
+ * Grup aşaması bittiyse eleme bracket'ini sezon bitişinden sonraya kurar.
+ * Eleme turu bittiyse bir sonraki turu (daha sık aralıkla) açar veya şampiyon ilan eder.
+ */
 async function advanceReadyEditions() {
   const { rows: editions } = await query(
     `SELECT id, country, current_round AS "currentRound", total_rounds AS "totalRounds"
@@ -255,8 +383,96 @@ async function advanceReadyEditions() {
          WHERE edition_id = $1 AND round = $2 AND status IN ('scheduled', 'live')`,
         [ed.id, ed.currentRound],
       );
-      if (pending[0].c > 0) continue; // tur henüz bitmedi
+      if (pending[0].c > 0) continue;
 
+      // Grup aşaması mı? (round_label Grup *)
+      const { rows: sample } = await query(
+        `SELECT round_label AS "roundLabel" FROM cup_fixtures
+         WHERE edition_id = $1 AND round = $2 LIMIT 1`,
+        [ed.id, ed.currentRound],
+      );
+      const isGroupPhase =
+        sample[0] &&
+        String(sample[0].roundLabel || "").toLowerCase().startsWith("grup");
+
+      if (isGroupPhase) {
+        const { rows: groupFx } = await query(
+          `SELECT round_label AS "roundLabel",
+                  home_club_id AS "homeClubId", away_club_id AS "awayClubId",
+                  home_goals AS "homeGoals", away_goals AS "awayGoals",
+                  winner_club_id AS "winnerClubId", status
+           FROM cup_fixtures WHERE edition_id = $1 AND round = $2`,
+          [ed.id, ed.currentRound],
+        );
+        let winnerIds = groupQualifiers(groupFx);
+        // Güç-of-2'ye yuvarla (fazla ise en sondan kes)
+        while (winnerIds.length > 1 && (winnerIds.length & (winnerIds.length - 1)) !== 0) {
+          winnerIds = winnerIds.slice(0, winnerIds.length - 1);
+        }
+        if (winnerIds.length < 2) {
+          // Yetersiz — şampiyon yok, edition kapat
+          await query(
+            `UPDATE cup_editions SET is_current = FALSE WHERE id = $1`,
+            [ed.id],
+          );
+          advanced.push({ editionId: ed.id, phase: "group_failed" });
+          continue;
+        }
+
+        // Eleme kickoff: lig sezonunun son maçından sonra (yoksa şimdi + gap)
+        const seasonEnd = await leagueSeasonEndAt(ed.country);
+        let startAt;
+        if (seasonEnd && seasonEnd.getTime() > Date.now()) {
+          startAt = new Date(seasonEnd.getTime() + KNOCKOUT_ROUND_GAP_MS);
+        } else {
+          startAt = new Date(Date.now() + KNOCKOUT_ROUND_GAP_MS);
+        }
+
+        const nextRound = ed.currentRound + 1;
+        const koTotal = roundsForSize(winnerIds.length);
+        // total_rounds = current group (1) + ko rounds
+        const newTotal = ed.currentRound + koTotal;
+        const label = roundLabel(1, koTotal); // Son 16 / ÇF ... relative to ko bracket
+        // Fix labels for absolute round numbers
+        const absLabel = roundLabel(nextRound - ed.currentRound, koTotal);
+
+        let slot = 0;
+        for (let i = 0; i < winnerIds.length; i += 2) {
+          const home = winnerIds[i];
+          const away = winnerIds[i + 1] || null;
+          if (!away) {
+            await query(
+              `INSERT INTO cup_fixtures
+                 (edition_id, round, round_label, slot, home_club_id, away_club_id, status, winner_club_id)
+               VALUES ($1, $2, $3, $4, $5, NULL, 'bye', $5)`,
+              [ed.id, nextRound, absLabel, slot, home],
+            );
+          } else {
+            const kickoff = new Date(startAt.getTime() + slot * MATCH_SPACING_MS);
+            await query(
+              `INSERT INTO cup_fixtures
+                 (edition_id, round, round_label, slot, home_club_id, away_club_id, kickoff_at, status)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, 'scheduled')`,
+              [ed.id, nextRound, absLabel, slot, home, away, kickoff.toISOString()],
+            );
+          }
+          slot++;
+        }
+        await query(
+          `UPDATE cup_editions SET current_round = $2, total_rounds = $3 WHERE id = $1`,
+          [ed.id, nextRound, newTotal],
+        );
+        advanced.push({
+          editionId: ed.id,
+          phase: "knockout_seeded",
+          nextRound,
+          qualifiers: winnerIds.length,
+          startAt: startAt.toISOString(),
+        });
+        continue;
+      }
+
+      // Klasik eleme turu ilerlemesi
       const { rows: winners } = await query(
         `SELECT slot, winner_club_id AS "winnerClubId"
          FROM cup_fixtures WHERE edition_id = $1 AND round = $2 ORDER BY slot ASC`,
@@ -266,7 +482,6 @@ async function advanceReadyEditions() {
       const winnerIds = winners.map((w) => w.winnerClubId).filter(Boolean);
 
       if (winnerIds.length <= 1) {
-        // Şampiyon belli
         await query(
           `UPDATE cup_editions SET is_current = FALSE, champion_club_id = $2 WHERE id = $1`,
           [ed.id, winnerIds[0] || null],
@@ -276,8 +491,9 @@ async function advanceReadyEditions() {
       }
 
       const nextRound = ed.currentRound + 1;
-      const label = roundLabel(nextRound, ed.totalRounds);
-      const startAt = new Date(Date.now() + ROUND_GAP_MS);
+      const remainingRounds = Math.max(1, ed.totalRounds - ed.currentRound);
+      const label = roundLabel(1, remainingRounds);
+      const startAt = new Date(Date.now() + KNOCKOUT_ROUND_GAP_MS);
       let slot = 0;
       for (let i = 0; i < winnerIds.length; i += 2) {
         const home = winnerIds[i];
