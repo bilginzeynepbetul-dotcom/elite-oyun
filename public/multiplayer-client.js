@@ -3997,10 +3997,23 @@
     }
   };
   window.setNationalFormation = function (formation) {
+    const templateProbe = NAT_FORMATION_PRESETS[formation] || NAT_FORMATION_PRESETS["4-4-2"];
+    const centerKeys = ["MC", "DM", "OMC", "OM"];
+    const centerCount = templateProbe.filter((s) =>
+      centerKeys.includes(String(s.pos || "").toUpperCase()),
+    ).length;
+    if (centerCount > 3) {
+      alert(
+        "Bu formasyonda orta bölgede " +
+          centerCount +
+          " oyuncu var. Millilerde en fazla 3 orta saha (MC/DM/OMC) kullanılabilir.",
+      );
+      return;
+    }
     _natFormation = formation;
     // Mevcut yerleşimi koru: aynı oyuncuları yeni formasyonun slotlarına
     // en iyi eşleşmeyle tekrar dağıt (kulüp sayfasındaki applyFormationPreset ruhu).
-    const template = NAT_FORMATION_PRESETS[formation] || NAT_FORMATION_PRESETS["4-4-2"];
+    const template = templateProbe;
     const currentPlayers = _natLineup.filter((s) => s.playerId).map((s) => s.playerId);
     const usedIds = new Set();
     const slots = template.map((slot) => ({ pos: slot.pos, x: slot.x, y: slot.y, playerId: null }));
@@ -4057,19 +4070,24 @@
       c.x = bandX;
     });
   }
-  /** Mevcut dizilişte (kaleci hariç) hat bazında oyuncu sayısını döner. */
+  /** Mevcut dizilişte (kaleci hariç) hat bazında oyuncu sayısını döner.
+   *  centerMid: MC/DM/OMC (kanat ML/MR hariç) — milli üst sınır 3. */
   function natLineCounts() {
     let def = 0,
       mid = 0,
-      fw = 0;
+      fw = 0,
+      centerMid = 0;
+    const centerKeys = ["MC", "DM", "OMC", "OM"];
     _natLineup.forEach((s) => {
       if (!s) return;
+      const pos = String(s.pos || "").toUpperCase();
       const band = typeof getZoneBand === "function" ? getZoneBand(s.pos) : null;
       if (band === "DF") def++;
       else if (band === "FW") fw++;
       else if (band && band !== "GK") mid++;
+      if (centerKeys.includes(pos)) centerMid++;
     });
-    return { def, mid, fw };
+    return { def, mid, fw, centerMid };
   }
 
   /** Bir mevkinin hangi hatta (def/mid/fw) sayıldığını döner, kaleci/tanımsız için null. */
@@ -4081,8 +4099,10 @@
     return null;
   }
 
-  // Diziliş kuralı: en az 3 defans, 2 orta saha, 1 forvet olmalı — daha aza izin verilmez.
+  // Diziliş kuralı: en az 3 defans, 2 orta saha, 1 forvet;
+  // orta bölgede (DM+MF+OMC) en fazla 3 oyuncu.
   const NAT_MIN_LINE_COUNTS = { def: 3, mid: 2, fw: 1 };
+  const NAT_MAX_LINE_COUNTS = { mid: 3 };
 
   window.handleNationalPitchClick = function (kind, index, zx, zy, zpos) {
     if (_natSelectedSlot === null) {
@@ -4131,6 +4151,28 @@
             " orta saha, " +
             NAT_MIN_LINE_COUNTS.fw +
             " forvet olmalı.",
+        );
+        _natSelectedSlot = null;
+        renderNationalManage();
+        return;
+      }
+      // Orta bölge (MC/DM/OMC) üst sınırı — kanat ML/MR bu sayıya dahil değil
+      let projectedCenterMid = 0;
+      const centerKeys = ["MC", "DM", "OMC", "OM"];
+      _natLineup.forEach((s, idx) => {
+        if (!s) return;
+        let pos = String(s.pos || "").toUpperCase();
+        if (idx === _natSelectedSlot) pos = String(zpos || "").toUpperCase();
+        if (centerKeys.includes(pos)) projectedCenterMid++;
+      });
+      if (
+        NAT_MAX_LINE_COUNTS.mid != null &&
+        projectedCenterMid > NAT_MAX_LINE_COUNTS.mid
+      ) {
+        alert(
+          "Milli diziliş: orta bölgede (MC/DM/OMC) en fazla " +
+            NAT_MAX_LINE_COUNTS.mid +
+            " oyuncu olabilir.",
         );
         _natSelectedSlot = null;
         renderNationalManage();

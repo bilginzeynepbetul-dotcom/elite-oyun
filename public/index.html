@@ -1607,29 +1607,37 @@
         font-size: 22px;
         font-weight: 700;
         letter-spacing: -0.03em;
-        background: linear-gradient(105deg, #7dd3fc 0%, #38bdf8 35%, #818cf8 70%, #a78bfa 100%);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-        text-shadow: 0 0 40px rgba(56, 189, 248, 0.15);
+        color: #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
       .main-menu-header h1 .em-brand-mark {
-        display: inline-block;
-        margin-right: 6px;
-        font-size: 20px;
-        filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.45));
-        vertical-align: -1px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 2px;
+        font-size: 22px;
+        line-height: 1;
+        /* gradient text clip emoji'yi görünmez yapmasın */
+        background: none;
+        -webkit-background-clip: border-box;
+        background-clip: border-box;
+        color: inherit;
+        filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+        vertical-align: middle;
       }
-      .main-menu-header h1 .em-brand-text {
-        font-weight: 800;
-        letter-spacing: -0.04em;
-      }
+      .main-menu-header h1 .em-brand-text,
       .main-menu-header h1 .em-brand-sub {
-        font-weight: 500;
-        font-size: 0.72em;
-        letter-spacing: 0.04em;
-        opacity: 0.85;
-        margin-left: 2px;
+        font-weight: 700;
+        font-size: 22px;
+        letter-spacing: -0.03em;
+        color: #e2e8f0;
+        opacity: 1;
+        margin-left: 0;
+        background: none;
+        -webkit-background-clip: border-box;
+        background-clip: border-box;
       }
       .main-menu-header .user-badge {
         font-size: 12px;
@@ -2409,7 +2417,7 @@
         <div class="tactics-title">⭐ Elite Üyelik</div>
         <div class="formation-hint">
           Tüm kullanıcılar 14 gün ücretsiz Elite dener (forma, 2. takım, takım/stadyum adı). Sonra haftalık / aylık / yıllık plan.
-          Ödeme sunucu üzerinden doğrulanır (Stripe veya demo onay). Forma &amp; logo, ikinci takım, transfer önceliği ve günlük ödül x2.
+          Ödeme sunucu üzerinden doğrulanır (Stripe veya demo onay). Forma &amp; logo, ikinci takım, günlük ödül x2.
         </div>
         <div id="premiumStatusBox" style="margin-bottom:14px;"></div>
         <div id="premiumPayNote" style="font-size:12px;color:#94a3b8;margin-bottom:10px;text-align:center;"></div>
@@ -2458,6 +2466,9 @@
               <option value="nl">Nederlands</option>
               <option value="pl">Polski</option>
               <option value="ru">Русский</option>
+              <option value="ja">日本語</option>
+              <option value="ar">العربية</option>
+              <option value="zh">中文</option>
             </select>
           </div>
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
@@ -2585,7 +2596,7 @@
           <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
             <div style="font-weight:800;color:#fb923c;margin-bottom:6px;">⭐ Elite Üyelik</div>
             <div style="font-size:13px;color:#cbd5e1;line-height:1.55;">
-              Forma &amp; logo (kulüp), ikinci takım, transfer önceliği ve günlük ödülde x2 gibi ek avantajlar sağlar. Ayarlar sayfasından dilediğin zaman durumunu kontrol edebilirsin.
+              Forma &amp; logo (kulüp), ikinci takım, günlük ödülde x2 gibi ek avantajlar sağlar. Ayarlar sayfasından dilediğin zaman durumunu kontrol edebilirsin.
             </div>
           </div>
         </div>
@@ -2643,7 +2654,7 @@
       <div class="report-container">
         <div class="tactics-title">👔 Kulüp Çalışanları</div>
         <div class="formation-hint">
-          Antrenör ve doktor alımı · İsme tıklayarak sözleşme feshi · Maaşlar haftalık kasadan düşer
+          Antrenör ve doktor alımı · Sözleşmeyi feshet butonu ile serbest bırakılır · Maaşlar haftalık kasadan düşer
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
           <div style="background:#0f172a;border:1px solid #2c3a52;border-radius:12px;padding:12px;">
@@ -2680,7 +2691,12 @@
         <div id="staffCoachesList"></div>
 
         <div class="youth-section-title" style="margin-top:18px;">🩺 Doktorlar</div>
-        <div class="formation-hint" style="margin-bottom:8px;">Sakatlık iyileşme süresini kısaltır. Max 3 · seviye yükseldikçe etki artar.</div>
+        <div class="formation-hint" style="margin-bottom:8px;">Sakatlık iyileşme süresini kısaltır. Max 3 · seviye yükseldikçe etki artar.<br/>
+          <b>Genel pratisyen:</b> Genel sakatlık yönetimi, temel iyileşme.<br/>
+          <b>Ortopedi:</b> Kas-iskelet / bağ sakatlıklarında ekstra etki.<br/>
+          <b>Fizik tedavi:</b> Rehabilitasyon ve kondisyon dönüşünü hızlandırır.<br/>
+          <b>Spor hekimi:</b> Maç yükü ve tekrar sakatlık riskini düşürür.
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
           <div>
             <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Uzmanlık</div>
@@ -2711,10 +2727,29 @@
     <div id="page-training" class="page">
       <div class="report-container">
         <div class="tactics-title">💪 Antrenman Merkezi</div>
+        <button type="button" class="sub-btn" style="width:100%;margin-bottom:10px;background:linear-gradient(90deg,#059669,#10b981);font-weight:800;" onclick="saveTrainingPlan()">💾 Antrenmanı Kaydet</button>
         <div class="formation-hint">
-          Manuel antrenman yok — skill artışı maç oynanınca otomatik verilir.
-          Antrenör seviyesi ve uzmanlığı maç sonu gelişimi etkiler (Sv.5 = %100, Sv.1 ≈ %35).
+          Skill artışı maç oynanınca da artar. Antrenör seviyesi ve uzmanlığı gelişimi etkiler (Sv.5 = %100, Sv.1 ≈ %35).
           Kondisyon 70 altı = daha az gelişim.
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+          <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;" onclick="trainingSelectAll(true)">Hepsini seç</button>
+          <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#334155;" onclick="trainingSelectAll(false)">Seçimi kaldır</button>
+          <select id="trainingBulkSkill" style="padding:8px 10px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;">
+            <option value="pace">Hız</option>
+            <option value="passing">Pas</option>
+            <option value="finishing">Bitiricilik</option>
+            <option value="tackle">Müdahale</option>
+            <option value="vision">Görüş</option>
+            <option value="dribbling">Top sürme</option>
+            <option value="stamina">Dayanıklılık</option>
+            <option value="strength">Güç</option>
+            <option value="technique">Teknik</option>
+            <option value="agility">Çeviklik</option>
+            <option value="positioning">Pozisyon</option>
+            <option value="reflex">Refleks</option>
+          </select>
+          <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#1d4ed8;" onclick="trainingApplyBulkSkill()">Aynı antrenmanı seç</button>
         </div>
         <div
           style="
@@ -3668,6 +3703,7 @@
               "
             >
               <option value="orta">Orta</option>
+              <option value="kanatlardan">Kanatlardan</option>
               <option value="sol">Sol Kanat</option>
               <option value="sag">Sağ Kanat</option>
             </select>
@@ -4437,6 +4473,7 @@
               <option value="hizli">Hızlı Pas</option>
               <option value="karisik">Karışık Pas</option>
               <option value="orta">Hücum: Orta</option>
+              <option value="kanatlardan">Hücum: Kanatlardan</option>
               <option value="sol">Hücum: Sol</option>
               <option value="sag">Hücum: Sağ</option>
             </select>
@@ -5158,6 +5195,25 @@
       window.countryFlag = countryFlag;
 
       // Antrenör: seviye 1–5, maaş seviyeye göre
+      const COACH_NAME_BY_COUNTRY = {
+        Türkiye: ["Mehmet Yılmaz", "Emre Kaya", "Burak Demir", "Serkan Çelik", "Ali Öztürk", "Hakan Arslan", "Murat Şahin", "Can Aydın"],
+        Almanya: ["Hans Mueller", "Klaus Weber", "Thomas Schneider", "Michael Fischer", "Andreas Wagner"],
+        İngiltere: ["James Smith", "William Brown", "George Taylor", "Harry Wilson", "Jack Davies"],
+        İspanya: ["Carlos Garcia", "Miguel Lopez", "Javier Martinez", "Pablo Sanchez", "Diego Ruiz"],
+        İtalya: ["Marco Rossi", "Luca Bianchi", "Andrea Romano", "Giuseppe Conti", "Francesco Ricci"],
+        Fransa: ["Jean Dupont", "Pierre Martin", "Antoine Bernard", "Nicolas Petit", "Lucas Moreau"],
+        Portekiz: ["João Silva", "Pedro Santos", "Ricardo Ferreira", "Tiago Costa", "André Oliveira"],
+        Hollanda: ["Jan de Vries", "Pieter Bakker", "Lars Jansen", "Koen Visser", "Sven de Boer"],
+        Brezilya: ["Carlos Silva", "Rafael Santos", "Bruno Oliveira", "Felipe Costa", "Lucas Pereira"],
+        Arjantin: ["Diego Fernandez", "Martin Gomez", "Pablo Rodriguez", "Lucas Alvarez", "Mateo Diaz"],
+      };
+      function randomCoachName(country) {
+        const pool =
+          COACH_NAME_BY_COUNTRY[country] ||
+          COACH_NAME_BY_COUNTRY["Türkiye"] ||
+          ["Antrenör"];
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
       const COACH_CATALOG = [
         {
           id: "c_agi5",
@@ -5419,7 +5475,7 @@
         const existing = clubCoaches.findIndex((c) => c.skill === skill);
         const coach = {
           id: "user_coach_" + skill + "_" + level,
-          name: (SKILL_LABELS_FOR_COACH[skill] || skill) + " Antrenörü",
+          name: (typeof randomCoachName === "function" ? randomCoachName(typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "Türkiye") : ((SKILL_LABELS_FOR_COACH[skill] || skill) + " Antrenörü")),
           level: level,
           salary: salary,
           skill: skill,
@@ -9167,30 +9223,24 @@
             if (ka !== kb) return ka - kb;
             return (a.number || 0) - (b.number || 0);
           });
-        const sections = [
-          { label: "İlk 11", players: sortPlayers(team.players) },
-          { label: "Yedekler", players: sortPlayers(team.bench || []) },
-        ];
-        sections.forEach((section) => {
-          const title = document.createElement("div");
-          title.className = "youth-section-title";
-          title.innerText = section.label + " (" + section.players.length + ")";
-          container.appendChild(title);
-          if (section.players.length === 0) {
-            const empty = document.createElement("div");
-            empty.style.cssText =
-              "color:#64748b;font-size:12px;padding:4px 0 10px;text-align:center;";
-            empty.innerText = "Oyuncu yok.";
-            container.appendChild(empty);
-            return;
-          }
-          const head = document.createElement("div");
-          head.style.cssText =
-            "display:grid;grid-template-columns:42px minmax(90px,1.4fr) 34px 24px 24px 24px minmax(72px,0.9fr);gap:3px;align-items:center;color:#64748b;font-size:10px;font-weight:700;padding:4px 4px;border-bottom:1px solid #2c3a52;margin-bottom:4px;";
-          head.innerHTML =
-            '<span title="Forma numarası">No</span><span>İsim</span><span>Mevki</span><span style="text-align:center;">Yaş</span><span style="text-align:center;">K</span><span style="text-align:center;">P</span><span title="Kontrat süresi · maaş">Kontrat</span>';
-          container.appendChild(head);
-          section.players.forEach((p) => {
+        const allPlayers = sortPlayers(
+          [].concat(team.players || [], team.bench || []),
+        );
+        if (allPlayers.length === 0) {
+          const empty = document.createElement("div");
+          empty.style.cssText =
+            "color:#64748b;font-size:12px;padding:4px 0 10px;text-align:center;";
+          empty.innerText = "Oyuncu yok.";
+          container.appendChild(empty);
+          return;
+        }
+        const head = document.createElement("div");
+        head.style.cssText =
+          "display:grid;grid-template-columns:42px minmax(90px,1.4fr) 34px 24px minmax(56px,0.8fr) minmax(56px,0.8fr) minmax(72px,0.9fr);gap:3px;align-items:center;color:#64748b;font-size:10px;font-weight:700;padding:4px 4px;border-bottom:1px solid #2c3a52;margin-bottom:4px;";
+        head.innerHTML =
+          '<span title="Forma numarası">No</span><span>İsim</span><span>Mevki</span><span style="text-align:center;">Yaş</span><span style="text-align:center;">Kalite</span><span style="text-align:center;">Potansiyel</span><span title="Kontrat süresi · maaş">Kontrat</span>';
+        container.appendChild(head);
+        allPlayers.forEach((p) => {
             ensurePlayerContract(p);
             const quality = calculatePlayerQuality(p);
             const potential = calculatePlayerPotential(p);
@@ -9247,13 +9297,14 @@
 
             const qCell = document.createElement("span");
             qCell.style.cssText =
-              "text-align:center;font-weight:700;color:" +
+              "text-align:center;font-weight:700;font-size:10px;color:" +
               (qColor === "high"
                 ? "#4ade80"
                 : qColor === "mid"
                   ? "#facc15"
                   : "#f87171");
-            qCell.innerText = quality;
+            qCell.innerText = typeof qualityLabel === "function" ? qualityLabel(quality) : quality;
+            qCell.title = "Kalite " + quality + "/10";
 
             const potCell = document.createElement("span");
             potCell.style.cssText =
@@ -9263,7 +9314,8 @@
                 : pColor === "mid"
                   ? "#facc15"
                   : "#94a3b8");
-            potCell.innerText = potential;
+            potCell.innerText = typeof potentialLabel === "function" ? potentialLabel(potential) : potential;
+            potCell.title = "Potansiyel " + potential + "/10";
 
             row.appendChild(numCell);
             row.appendChild(nameCell);
@@ -9324,7 +9376,6 @@
             });
             container.appendChild(skillsRow);
           });
-        });
       }
 
       function goToTransfer() {
@@ -9683,12 +9734,16 @@
           });
         }
         const n = document.getElementById(prefix + "Note");
-        if (n)
+        if (n) {
           n.innerText =
-            "Kaydedildi · " +
-            (target === "national" ? "Milli forma" : "Kulüp forma");
+            "✓ Kaydedildi · " +
+            (target === "national" ? "Milli forma & logo" : "Kulüp forma & logo");
+          n.style.color = "#4ade80";
+          n.style.fontWeight = "700";
+        }
+        try { alert("Kaydedildi"); } catch (e) {}
         if (typeof pushNotification === "function")
-          pushNotification("👕", "Forma tasarımı kaydedildi", "Görünüm");
+          pushNotification("👕", "Forma & logo kaydedildi", "Görünüm");
         renderKitPreviewFor(prefix);
       }
       window.saveKitDesignFor = saveKitDesignFor;
@@ -10195,20 +10250,28 @@
           return;
         }
         let html =
-          '<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px 10px;font-size:11px;color:#94a3b8;padding:0 4px 6px;border-bottom:1px solid #2c3a52;margin-bottom:6px;"><span>Oyuncu</span><span>Süre</span><span>Maaş/hf</span><span>Bitiş</span></div>';
+          '<div style="display:grid;grid-template-columns:1fr auto auto auto auto auto;gap:6px 8px;font-size:11px;color:#94a3b8;padding:0 4px 6px;border-bottom:1px solid #2c3a52;margin-bottom:6px;"><span>Oyuncu</span><span>Değer</span><span>Süre</span><span>Maaş/hf</span><span>Bitiş</span><span></span></div>';
         all.forEach(function (p) {
           const safeId = String(p.id != null ? p.id : "").replace(/'/g, "");
+          const val =
+            typeof estimatePlayerValue === "function"
+              ? estimatePlayerValue(p)
+              : p.marketValue || 0;
           html +=
-            '<div class="clickable-player" style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px 10px;align-items:center;padding:10px 8px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:12px;color:#e2e8f0;cursor:pointer;" onclick="(function(){var t=teamConfig.home;var all=[].concat(t.players||[],t.bench||[]);var pl=all.find(function(x){return String(x.id)===\'' +
+            '<div style="display:grid;grid-template-columns:1fr auto auto auto auto auto;gap:6px 8px;align-items:center;padding:10px 8px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:12px;color:#e2e8f0;">' +
+            '<span class="clickable-player" style="cursor:pointer;" onclick="(function(){var t=teamConfig.home;var all=[].concat(t.players||[],t.bench||[]);var pl=all.find(function(x){return String(x.id)===\'' +
             safeId +
-            "\';});if(pl&&typeof showPlayerProfile===\'function\')showPlayerProfile(pl,t.name);})()\">" +
-            "<span><b>#" +
+            "';});if(pl&&typeof showPlayerProfile==='function')showPlayerProfile(pl,t.name);})()\">" +
+            "<b>#" +
             (p.number || "?") +
             " " +
             (p.name || "?") +
             '</b> <span style="color:#64748b;">' +
             (p.pos || "") +
             "</span></span>" +
+            '<span style="color:#38bdf8;font-weight:700;">' +
+            (typeof formatMoney === "function" ? formatMoney(val) : val + " €") +
+            "</span>" +
             '<span style="color:#e2e8f0;font-weight:600;">' +
             (p.contractYears || 1) +
             " yıl</span>" +
@@ -10219,10 +10282,51 @@
             "</span>" +
             '<span style="color:#94a3b8;">' +
             (p.contractEnd || "—") +
-            "</span></div>";
+            "</span>" +
+            '<button type="button" class="sub-btn" style="width:auto;padding:4px 8px;font-size:10px;background:#065f46;" onclick="event.stopPropagation();renewPlayerContract(\'' +
+            safeId +
+            "')\">Yenile</button></div>";
         });
         container.innerHTML = html;
       }
+      function renewPlayerContract(playerId) {
+        const team = teamConfig.home;
+        const all = [].concat(team.players || [], team.bench || []);
+        const pl = all.find(function (x) {
+          return String(x.id) === String(playerId);
+        });
+        if (!pl) return;
+        if (typeof ensurePlayerContract === "function") ensurePlayerContract(pl);
+        const years = 1 + Math.floor(Math.random() * 3);
+        const q =
+          typeof calculatePlayerQuality === "function"
+            ? calculatePlayerQuality(pl)
+            : 5;
+        const bump = Math.round((pl.wage || 1000) * (0.05 + q * 0.02));
+        pl.wage = Math.round((pl.wage || 1000) + bump);
+        pl.contractYears = (pl.contractYears || 1) + years;
+        const endY = new Date().getFullYear() + (pl.contractYears || 1);
+        pl.contractEnd = "Haz " + endY;
+        if (typeof pushNotification === "function")
+          pushNotification(
+            "📝",
+            (pl.name || "Oyuncu") + " kontratı yenilendi (+" + years + " yıl)",
+            "Kontrat",
+          );
+        try {
+          alert(
+            (pl.name || "Oyuncu") +
+              " kontratı yenilendi (+" +
+              years +
+              " yıl, maaş güncellendi).",
+          );
+        } catch (e) {}
+        renderSquadContractsPage("home");
+        try {
+          if (typeof saveCareerLocal === "function") saveCareerLocal();
+        } catch (e) {}
+      }
+      window.renewPlayerContract = renewPlayerContract;
       window.renderSquadContractsPage = renderSquadContractsPage;
       window.showSquadTab = showSquadTab;
       function goToYouth() {
@@ -10326,9 +10430,7 @@
               .map(function (d, idx) {
                 return (
                   '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;">' +
-                  "<div><b style=\"cursor:pointer;color:#38bdf8;\" onclick=\"fireStaffDoctor(" +
-                  idx +
-                  ")\" title=\"Sözleşme feshi\">" +
+                  "<div><b style=\"color:#e2e8f0;\">" +
                   (d.name || "Doktor") +
                   "</b><div style=\"font-size:11px;color:#94a3b8;\">" +
                   (d.specLabel || d.spec || "") +
@@ -10738,6 +10840,39 @@
       }
       window.toggleTrainSelectAll = toggleTrainSelectAll;
       window.trainSelectedPlayers = trainSelectedPlayers;
+      function trainingSelectAll(on) {
+        document.querySelectorAll("#trainingSquadList input[type=checkbox]").forEach(function (cb) {
+          cb.checked = !!on;
+        });
+        const allCb = document.getElementById("trainSelectAll");
+        if (allCb) allCb.checked = !!on;
+      }
+      window.trainingSelectAll = trainingSelectAll;
+      function trainingApplyBulkSkill() {
+        const sel = document.getElementById("trainingBulkSkill");
+        const skill = sel ? sel.value : "pace";
+        document.querySelectorAll("#trainingSquadList select").forEach(function (s) {
+          if ([].some.call(s.options, function (o) { return o.value === skill; })) s.value = skill;
+        });
+      }
+      window.trainingApplyBulkSkill = trainingApplyBulkSkill;
+      function saveTrainingPlan() {
+        try {
+          const plan = [];
+          document.querySelectorAll("#trainingSquadList > div").forEach(function (row) {
+            const cb = row.querySelector("input[type=checkbox]");
+            const s = row.querySelector("select");
+            if (cb && cb.checked && s) plan.push({ id: cb.dataset.pid || cb.value, skill: s.value });
+          });
+          localStorage.setItem("em_training_plan", JSON.stringify(plan));
+          if (typeof pushNotification === "function")
+            pushNotification("💪", "Antrenman planı kaydedildi", "Antrenman");
+          alert("Antrenman kaydedildi");
+        } catch (e) {
+          alert("Kayıt başarısız");
+        }
+      }
+      window.saveTrainingPlan = saveTrainingPlan;
       function trainSelectedPlayers() {
         const note = document.getElementById("trainingResultNote");
         if (note)
@@ -11793,7 +11928,7 @@ function canManageStaff() {
           "Maillot/logo, 2e équipe, priorité transferts, récompense x2.",
           "Kit/logo, seconda squadra, priorità trasferimenti, ricompensa x2.",
           "Kit/logo, segunda equipa, prioridade de transferências, recompensa x2.",
-          "Shirt/logo, tweede team, transferprioriteit, beloning x2.",
+          "Shirt/logo, tweede team, beloning x2.",
           "Strój/logo, druga drużyna, priorytet transferów, nagroda x2.",
           "Форма/лого, вторая команда, приоритет трансферов, награда x2.",
         ],
@@ -11811,13 +11946,15 @@ function canManageStaff() {
           "Высокая кондиция; родные позиции. Домашнее преимущество. Язык в Настройках.",
         ],
       };
-      const EM_LANG_ORDER = ["tr", "en", "de", "es", "fr", "it", "pt", "nl", "pl", "ru"];
+      const EM_LANG_ORDER = ["tr", "en", "de", "es", "fr", "it", "pt", "nl", "pl", "ru", "ja", "ar", "zh"];
       const EM_I18N = {};
       EM_LANG_ORDER.forEach(function (lang, idx) {
         EM_I18N[lang] = {};
         Object.keys(EM_I18N_BASE).forEach(function (key) {
           const arr = EM_I18N_BASE[key];
-          EM_I18N[lang][key] = arr[idx] != null ? arr[idx] : arr[0];
+          // Yeni diller henüz tam çevrilmediyse İngilizceye düş
+          const useIdx = idx < arr.length ? idx : 1;
+          EM_I18N[lang][key] = arr[useIdx] != null ? arr[useIdx] : arr[0];
         });
       });
       function getGameLang() {
@@ -12020,7 +12157,7 @@ function canManageStaff() {
               "</div></div>";
           } else {
             box.innerHTML =
-              '<div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;color:#94a3b8;font-size:13px;">Deneme süren bitti. Elite ile forma &amp; logo (kulüp), ikinci takım, takım/stadyum adı değiştirme, transfer önceliği ve günlük ödül x2 devam eder.</div>';
+              '<div style="padding:12px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;color:#94a3b8;font-size:13px;">Deneme süren bitti. Elite ile forma &amp; logo (kulüp), ikinci takım, takım/stadyum adı değiştirme, günlük ödül x2 devam eder.</div>';
           }
         }
         if (!plans) return;
@@ -12654,16 +12791,17 @@ function canManageStaff() {
       }
 
       function calculatePlayerPotential(player) {
-        // Potansiyel = maç başına skill gelişim gücü (1–10), mevcut skill seviyesinden bağımsız
+        // Potansiyel = gelişim tavanı (1–10). Genç yüksek, yaşlı düşük.
         if (!player) return 0;
         const basePotential = player.basePotential || player.potential || 5;
         const age = player.age || 18;
         let reduction = 0;
-        if (age >= 28) {
-          reduction = Math.min(5, Math.floor((age - 27) * 0.5));
-        } else if (age >= 25) {
-          reduction = Math.floor((age - 24) * 0.3);
-        }
+        if (age <= 21) reduction = 0;
+        else if (age <= 24) reduction = 1;
+        else if (age <= 27) reduction = 2;
+        else if (age <= 30) reduction = 4;
+        else if (age <= 33) reduction = 6;
+        else reduction = 8;
         return Math.max(1, Math.min(10, basePotential - reduction));
       }
 
@@ -12718,6 +12856,42 @@ function canManageStaff() {
         if (potential >= 5) return "📊";
         return "📉";
       }
+
+      // 1–10 yazılı etiketler
+      const QUALITY_LABELS = {
+        1: "Çok Zayıf",
+        2: "Zayıf",
+        3: "Düşük",
+        4: "Vasat",
+        5: "Ortalama",
+        6: "İyi",
+        7: "Çok İyi",
+        8: "Üst Düzey",
+        9: "Elit",
+        10: "Dünya Klası",
+      };
+      const POTENTIAL_LABELS = {
+        1: "Tükenmiş",
+        2: "Sınırlı",
+        3: "Düşük",
+        4: "Vasat",
+        5: "Orta",
+        6: "İyi",
+        7: "Yüksek",
+        8: "Çok Yüksek",
+        9: "Muhteşem",
+        10: "Efsanevi",
+      };
+      function qualityLabel(q) {
+        const n = Math.max(1, Math.min(10, Math.round(Number(q) || 1)));
+        return QUALITY_LABELS[n] || String(n);
+      }
+      function potentialLabel(q) {
+        const n = Math.max(1, Math.min(10, Math.round(Number(q) || 1)));
+        return POTENTIAL_LABELS[n] || String(n);
+      }
+      window.qualityLabel = qualityLabel;
+      window.potentialLabel = potentialLabel;
 
       function applyPostMatchDevelopment(
         homeTeam,
@@ -13623,9 +13797,15 @@ function canManageStaff() {
           const pos = slot.pos;
           const x = slot.x != null ? slot.x : 300;
           const y = slot.y != null ? slot.y : 200;
-          const quality = Math.round(3 + Math.random() * 7);
-          const potential = Math.round(3 + Math.random() * 7);
           const age = 18 + Math.floor(Math.random() * 12);
+          const quality = Math.round(3 + Math.random() * 7);
+          // Genç = yüksek potansiyel, yaşlı = düşük
+          let potential;
+          if (age <= 21) potential = Math.round(6 + Math.random() * 4); // 6-10
+          else if (age <= 24) potential = Math.round(5 + Math.random() * 4); // 5-9
+          else if (age <= 27) potential = Math.round(3 + Math.random() * 4); // 3-7
+          else if (age <= 30) potential = Math.round(2 + Math.random() * 3); // 2-5
+          else potential = Math.round(1 + Math.random() * 3); // 1-4
           const stat = (b) =>
             Math.round(Math.max(1, b + (Math.random() * 4 - 2)));
           const cur = quality * 1.2;
@@ -13696,7 +13876,6 @@ function canManageStaff() {
             agileFlanks: "aktif",
             dynamicWall: "pasif",
             chokePress: "pasif",
-            directWall: "pasif",
             clinicalFinishing: "pasif",
             sweeperKeeper: "pasif",
             deepPlaymaker: "aktif",
@@ -13726,7 +13905,6 @@ function canManageStaff() {
             agileFlanks: "aktif",
             dynamicWall: "aktif",
             chokePress: "aktif",
-            directWall: "pasif",
             clinicalFinishing: "aktif",
             sweeperKeeper: "pasif",
             deepPlaymaker: "pasif",
@@ -14702,10 +14880,16 @@ function canManageStaff() {
         p.age = 18 + Math.floor(Math.random() * 12);
         p.fromAcademy = false;
         p.fromMarket = true;
-        p.basePotential = Math.max(
-          1,
-          Math.min(10, Math.round(2 + Math.random() * 8)),
-        );
+        {
+          const a = p.age || 25;
+          let bp;
+          if (a <= 21) bp = Math.round(6 + Math.random() * 4);
+          else if (a <= 24) bp = Math.round(5 + Math.random() * 4);
+          else if (a <= 27) bp = Math.round(3 + Math.random() * 4);
+          else if (a <= 30) bp = Math.round(2 + Math.random() * 3);
+          else bp = Math.round(1 + Math.random() * 3);
+          p.basePotential = Math.max(1, Math.min(10, bp));
+        }
         const keys = [
           "pace",
           "passing",
@@ -15166,8 +15350,8 @@ function canManageStaff() {
             : ["pace", "passing", "finishing"];
         const labels =
           typeof SKILL_LABELS_TR !== "undefined" ? SKILL_LABELS_TR : {};
-        // Maçta kritik ilk 3 skill'i öne çıkar
-        const top = keys.slice(0, 3);
+        // Tüm ilgili skill'ler
+        const top = keys.length ? keys : ["pace","passing","finishing","tackle","vision","dribbling","stamina","strength","technique","agility","positioning","reflex","handling"];
         return (
           '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">' +
           top
@@ -17599,7 +17783,6 @@ function canManageStaff() {
         agileFlanks: "Çevik Kanat Akını",
         dynamicWall: "Dinamik Alan Kademesi",
         chokePress: "Merkezi Boğucu Pres",
-        directWall: "Hızlı Geçiş Duvarı",
         clinicalFinishing: "Plaseli Bitiricilik",
         sweeperKeeper: "Kaleci Çıkışı",
         deepPlaymaker: "Derin Oyun Kurucu",
@@ -17614,8 +17797,6 @@ function canManageStaff() {
           "Nasıl kazanılır: Defansın pozisyon + tackle + stamina skoru, rakibin bitiricilik + teknik ortalamasını geçerse. Kazanç: Savunma ve kaleci bonusu.",
         chokePress:
           "Nasıl kazanılır: Pres gücü (stamina + tackle) rakibin oyun kurma (pas + görüş) skorunu geçerse. Kazanç: Orta saha ve savunma. Risk: kart.",
-        directWall:
-          "Nasıl kazanılır: Hızlı geçiş skoru (pace + finishing) rakip dinlenme savunmasını geçerse. Kazanç: Güçlü hücum.",
         clinicalFinishing:
           "Nasıl kazanılır: Forvetlerin bitiricilik + teknik skoru, rakip kalecinin refleks + pozisyon skorunu geçerse. Kazanç: Yüksek hücum.",
         sweeperKeeper:
@@ -17759,6 +17940,7 @@ function canManageStaff() {
           ],
           attack: [
             { v: "orta", t: "Orta" },
+            { v: "kanatlardan", t: "Kanatlardan" },
             { v: "sol", t: "Sol Kanat" },
             { v: "sag", t: "Sağ Kanat" },
           ],
@@ -17909,6 +18091,7 @@ function canManageStaff() {
           hizli: "Hızlı Pas",
           karisik: "Karışık Pas",
           orta: "Orta",
+          kanatlardan: "Kanatlardan",
           sol: "Sol",
           sag: "Sağ",
         };
@@ -18816,8 +18999,7 @@ function canManageStaff() {
               agileFlanks: false,
               dynamicWall: false,
               chokePress: false,
-              directWall: false,
-              clinicalFinishing: false,
+                            clinicalFinishing: false,
               sweeperKeeper: false,
               deepPlaymaker: false,
             },
@@ -18826,8 +19008,7 @@ function canManageStaff() {
               agileFlanks: false,
               dynamicWall: false,
               chokePress: false,
-              directWall: false,
-              clinicalFinishing: false,
+                            clinicalFinishing: false,
               sweeperKeeper: false,
               deepPlaymaker: false,
             },
@@ -18998,27 +19179,6 @@ function canManageStaff() {
                   attributeDelta.attack -= 0.8;
                   logMessage =
                     team.name + " Özel: Yoğun pres takımı erken yordu.";
-                }
-                bonusApplied = true;
-              }
-              break;
-            case "directWall":
-              if (team.customTactics?.directWall === "aktif") {
-                const transitionScore =
-                  teamTotals.pace * 0.6 + teamTotals.technique * 0.4;
-                const oppRestDefense =
-                  (oppTotals.positioning + oppTotals.tackle) /
-                  opponent.players.length;
-                if (transitionScore > oppRestDefense) {
-                  attributeDelta.attack += 2.8;
-                  attributeDelta.midfield += 0.8;
-                  logMessage =
-                    team.name +
-                    " Özel: Hızlı Geçiş Duvarı rakip savunmayı şoke etti!";
-                } else {
-                  logMessage =
-                    team.name +
-                    " Özel: Hızlı geçiş denemesi yerleşik savunmaya takıldı.";
                 }
                 bonusApplied = true;
               }
@@ -19317,14 +19477,26 @@ function canManageStaff() {
             : [];
           const centers = list.filter(isCenter);
 
-          // Tek oyuncu
+          // Tek oyuncu: orta bölgelerde (MF/DM/OMC) ve merkez mevkilerde tam ortaya al
           if (n === 1) {
             const p = list[0];
             const pos = String(p.pos || "").toUpperCase();
             p.x = meta.x;
-            if (wL && pos === wL) p.y = 50;
-            else if (wR && pos === wR) p.y = 350;
-            else p.y = 200; // FC / MC / DC / DM / OMC → tam orta
+            // Orta hat (MF/DM/OMC) veya merkez mevki → her zaman y=200
+            if (
+              key === "MF" ||
+              key === "DM" ||
+              key === "OMC" ||
+              ["FC", "MC", "DC", "DM", "OMC"].includes(pos)
+            ) {
+              p.y = 200;
+            } else if (wL && pos === wL) {
+              p.y = 50;
+            } else if (wR && pos === wR) {
+              p.y = 350;
+            } else {
+              p.y = 200;
+            }
             return;
           }
 
@@ -19522,6 +19694,13 @@ function canManageStaff() {
                   c.x = zoneData.x;
                 });
               }
+            }
+            // Orta hat bandında tek oyuncu kaldıysa (kanat dahil) tam ortaya al
+            if (typeof rebalanceBandPositions === "function") {
+              const fromBand = fromPos ? getZoneBand(fromPos) : null;
+              const toBand = getZoneBand(cp);
+              if (fromBand && fromBand !== "GK") rebalanceBandPositions(side, fromBand);
+              if (toBand && toBand !== "GK") rebalanceBandPositions(side, toBand);
             }
           }
           clearFormationSelection();
