@@ -51,7 +51,8 @@ const {
   enrichClubId,
   socketAuthMiddleware,
 } = require('./routes/authRoutes');
-const { isAdmin } = require('./authMiddleware');
+// isAdmin middleware bilinçli olarak global /api'ye bağlanmaz (transfer kırılıyordu)
+  // const { isAdmin } = require('./authMiddleware');
 
 app.use('/api/auth', createAuthRouter());
 app.get('/api/me', authMiddleware, meHandler);
@@ -81,8 +82,11 @@ const gameAuth = [authMiddleware, attachClubId];
 const adminAntiCheatRoutes = require('./adminAntiCheatRoutes');
 app.use('/api/admin/anti-cheat', authMiddleware, adminAntiCheatRoutes);
 
-const { createAdminSeasonRouter } = require('./adminSeasonRoutes');
-app.use('/api', authMiddleware, isAdmin, createAdminSeasonRouter());
+// ÖNEMLİ: isAdmin burada TÜM /api isteklerine uygulanmamalı.
+  // Aksi halde transfer, lig, takım vb. herkes için "Admin yetkisi gerekli" döner.
+  // Admin kontrolü adminSeasonRoutes içinde route bazında yapılıyor.
+  const { createAdminSeasonRouter } = require('./adminSeasonRoutes');
+  app.use('/api', authMiddleware, createAdminSeasonRouter());
 
 // ============================================================
 // TAKIM / EKONOMİ
