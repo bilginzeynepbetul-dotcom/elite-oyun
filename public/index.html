@@ -1604,20 +1604,20 @@
       }
       .main-menu-header h1 {
         font-family: "Segoe UI", "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
-        font-size: 22px;
+        font-size: 16px;
         font-weight: 700;
         letter-spacing: -0.03em;
         color: #e2e8f0;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 5px;
       }
       .main-menu-header h1 .em-brand-mark {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         margin-right: 2px;
-        font-size: 22px;
+        font-size: 16px;
         line-height: 1;
         /* gradient text clip emoji'yi görünmez yapmasın */
         background: none;
@@ -1630,7 +1630,7 @@
       .main-menu-header h1 .em-brand-text,
       .main-menu-header h1 .em-brand-sub {
         font-weight: 700;
-        font-size: 22px;
+        font-size: 16px;
         letter-spacing: -0.03em;
         color: #e2e8f0;
         opacity: 1;
@@ -2664,7 +2664,7 @@
           <div style="background:#0f172a;border:1px solid #2c3a52;border-radius:12px;padding:12px;">
             <div style="font-size:11px;color:#94a3b8;">Kadro özeti</div>
             <div style="font-size:13px;color:#e2e8f0;margin-top:4px;">
-              Antrenör <b id="staffCoachCount">0</b>/8 · Doktor <b id="staffDoctorCount">0</b>/3
+              Antrenör <b id="staffCoachCount">0</b>/8 · Doktor <b id="staffDoctorCount">0</b>/1
             </div>
           </div>
         </div>
@@ -2692,33 +2692,20 @@
 
         <div class="youth-section-title" style="margin-top:18px;">🩺 Doktorlar</div>
         <div class="formation-hint" style="margin-bottom:8px;">Sakatlık iyileşme süresini kısaltır. Max 3 · seviye yükseldikçe etki artar.<br/>
-          <b>Genel pratisyen:</b> Genel sakatlık yönetimi, temel iyileşme.<br/>
-          <b>Ortopedi:</b> Kas-iskelet / bağ sakatlıklarında ekstra etki.<br/>
-          <b>Fizik tedavi:</b> Rehabilitasyon ve kondisyon dönüşünü hızlandırır.<br/>
-          <b>Spor hekimi:</b> Maç yükü ve tekrar sakatlık riskini düşürür.
+          Sadece <b>1 kulüp doktoru</b> alınabilir. Seviye yükseldikçe sakatlık iyileşme süresi kısalır.
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-          <div>
-            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Uzmanlık</div>
-            <select id="staffDoctorSpecSelect" style="width:100%;padding:8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;">
-              <option value="genel">Genel pratisyen</option>
-              <option value="ortopedi">Ortopedi</option>
-              <option value="fizik">Fizik tedavi</option>
-              <option value="spor">Spor hekimi</option>
-            </select>
-          </div>
-          <div>
-            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Seviye</div>
-            <select id="staffDoctorLevelSelect" style="width:100%;padding:8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;">
-              <option value="1">Sv.1 · 3.000 €/hf · -1 maç</option>
-              <option value="2">Sv.2 · 6.000 €/hf · -2 maç</option>
-              <option value="3">Sv.3 · 12.000 €/hf · -3 maç</option>
-              <option value="4">Sv.4 · 20.000 €/hf · -4 maç</option>
-              <option value="5">Sv.5 · 35.000 €/hf · -5 maç</option>
-            </select>
-          </div>
+        <div style="margin-bottom:8px;">
+          <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Kulüp doktoru seviyesi</div>
+          <select id="staffDoctorLevelSelect" style="width:100%;padding:8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;">
+            <option value="1">Sv.1 · 3.000 €/hf · -1 maç</option>
+            <option value="2">Sv.2 · 6.000 €/hf · -2 maç</option>
+            <option value="3">Sv.3 · 12.000 €/hf · -3 maç</option>
+            <option value="4">Sv.4 · 20.000 €/hf · -4 maç</option>
+            <option value="5">Sv.5 · 35.000 €/hf · -5 maç</option>
+          </select>
+          <select id="staffDoctorSpecSelect" style="display:none;"><option value="genel" selected>Kulüp doktoru</option></select>
         </div>
-        <button type="button" class="sub-btn" style="width:100%;margin-bottom:10px;background:linear-gradient(90deg,#0284c7,#6366f1);font-weight:700;" onclick="hireStaffDoctor()">➕ Doktor Al</button>
+        <button type="button" class="sub-btn" style="width:100%;margin-bottom:10px;background:linear-gradient(90deg,#0284c7,#6366f1);font-weight:700;" onclick="hireStaffDoctor()">➕ Kulüp Doktoru Al</button>
         <div id="staffDoctorsList"></div>
         <div id="staffPageNote" style="text-align:center;font-size:12px;color:#94a3b8;margin-top:12px;"></div>
       </div>
@@ -2748,6 +2735,7 @@
             <option value="agility">Çeviklik</option>
             <option value="positioning">Pozisyon</option>
             <option value="reflex">Refleks</option>
+            <option value="handling">Top Tutma</option>
           </select>
           <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#1d4ed8;" onclick="trainingApplyBulkSkill()">Aynı antrenmanı seç</button>
         </div>
@@ -3824,6 +3812,15 @@
           <button
             type="button"
             class="sub-btn squad-main-tab"
+            data-stab="quality"
+            style="width:auto;padding:7px 14px;font-size:12px;background:#334155;"
+            onclick="showSquadTab('quality')"
+          >
+            ⭐ Kalite &amp; Pot
+          </button>
+          <button
+            type="button"
+            class="sub-btn squad-main-tab"
             data-stab="contracts"
             style="width:auto;padding:7px 14px;font-size:12px;background:#334155;"
             onclick="showSquadTab('contracts')"
@@ -3843,9 +3840,15 @@
         <div id="squadTabRoster">
           <div class="formation-hint">
             Forma numarasını değiştirmek için # kutusunu kullan. İsme tıklayınca profil açılır.
-            Kontrat bilgileri <b>Kontratlar</b> sekmesindedir.
+            Yatay kaydırarak tüm yetenekleri görebilirsin. Kalite / potansiyel ve kontrat ayrı sekmelerde.
           </div>
-          <div id="squadRosterList"></div>
+          <div id="squadRosterList" style="overflow-x:auto;-webkit-overflow-scrolling:touch;"></div>
+        </div>
+        <div id="squadTabQuality" style="display:none;">
+          <div class="formation-hint">
+            Oyuncu kalite ve potansiyel değerleri. İsme tıklayınca profil açılır.
+          </div>
+          <div id="squadQualityList"></div>
         </div>
         <div id="squadTabContracts" style="display:none;">
           <div class="formation-hint">
@@ -4286,7 +4289,7 @@
             border-top: 1px solid #2c3a52;
           "
         >
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px">
             <div>
               <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px">
                 Pas Stili
@@ -4328,6 +4331,28 @@
                 <option value="normal">Normal</option>
                 <option value="hücumsel">Hücum</option>
                 <option value="defansif">Defans</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px">
+                Hücum Yönü
+              </div>
+              <select
+                id="attackDirSelect"
+                style="
+                  width: 100%;
+                  padding: 6px 8px;
+                  border-radius: 8px;
+                  background: #0f172a;
+                  color: #e2e8f0;
+                  border: 1px solid #334155;
+                  font-size: 12px;
+                "
+              >
+                <option value="orta">Orta</option>
+                <option value="kanat">Kanat</option>
+                <option value="sol">Sol Kanat</option>
+                <option value="sag">Sağ Kanat</option>
               </select>
             </div>
           </div>
@@ -4779,6 +4804,9 @@
         <button class="modal-close" id="teamModalCloseBtn">&times;</button>
         <div class="modal-title" id="teamModalName">Takım Adı</div>
         <div class="modal-subtitle" id="teamModalSub">Ülke · Lig</div>
+        <div id="teamModalKitWrap" style="display:flex;justify-content:center;margin:10px 0 6px;">
+          <canvas id="teamModalKitCanvas" width="100" height="120" style="border-radius:10px;background:#1e293b;max-width:100px;"></canvas>
+        </div>
         <div class="team-modal-tabs" id="teamModalTabs">
           <button class="team-modal-tab active" data-teamtab="team-squad">
             👥 Kadro
@@ -5173,6 +5201,11 @@
         Hindistan: "🇮🇳",
         Sırbistan: "🇷🇸",
         Romanya: "🇷🇴",
+        İsrail: "🇮🇱",
+        BosnaHersek: "🇧🇦",
+        Arnavutluk: "🇦🇱",
+        Slovenya: "🇸🇮",
+        Bulgaristan: "🇧🇬",
         Çekya: "🇨🇿",
         Macaristan: "🇭🇺",
         İskoçya: "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
@@ -5314,18 +5347,12 @@
       ];
       let clubCoach = { ...COACH_CATALOG[9] }; // geriye uyumluluk: birincil
       let clubCoaches = [{ ...COACH_CATALOG[9] }]; // birden fazla antrenör (max 8)
-      let clubDoctors = []; // max 3 doktor
+      let clubDoctors = []; // max 1 kulüp doktoru
       const DOCTOR_SPEC_LABELS = {
-        genel: "Genel pratisyen",
-        ortopedi: "Ortopedi",
-        fizik: "Fizik tedavi",
-        spor: "Spor hekimi",
+        genel: "Kulüp doktoru",
       };
       const DOCTOR_NAMES = {
         genel: "Dr. Yılmaz",
-        ortopedi: "Dr. Kaya",
-        fizik: "Dr. Demir",
-        spor: "Dr. Çelik",
       };
       function doctorSalaryForLevel(level) {
         const map = { 1: 3000, 2: 6000, 3: 12000, 4: 20000, 5: 35000 };
@@ -5558,11 +5585,9 @@
             (c) =>
               '<div style="display:flex;align-items:center;gap:8px;padding:8px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:8px;font-size:12px;">' +
               '<div style="flex:1;color:#e2e8f0;">' +
-              '<a href="javascript:void(0)" onclick="removeClubCoach(\'' +
-              c.skill +
-              '\')" style="color:#38bdf8;font-weight:700;text-decoration:underline;cursor:pointer;" title="Sözleşmeyi feshet">' +
+              "<b style=\"color:#e2e8f0;\">" +
               (c.name || c.skillLabel || c.skill) +
-              "</a>" +
+              "</b>" +
               " · <b>" +
               (c.skillLabel || c.skill) +
               "</b> · Sv." +
@@ -6475,14 +6500,25 @@
             '<div class="youth-section-title">Elemeler — Gruplar' +
             suffix +
             "</div>";
-          html +=
-            '<div class="formation-hint" style="margin-bottom:8px;">Torba sistemi: sıralamaya göre 4 torba · her gruba her torbadan 1 takım.</div>';
           const sorted = rows.slice().sort(function (a, b) {
             return (b.pts || 0) - (a.pts || 0);
           });
+          const groupCount = 4;
+          const perGroup = Math.max(
+            4,
+            Math.ceil(sorted.length / groupCount),
+          );
+          html +=
+            '<div class="formation-hint" style="margin-bottom:8px;">Torba sistemi: sıralamaya göre 4 torba · her gruba yaklaşık ' +
+            perGroup +
+            " takım (toplam " +
+            sorted.length +
+            " ülke).</div>";
+          // Torbalar: her torbada groupCount kadar (veya kalan)
           const pots = [[], [], [], []];
           sorted.forEach(function (r, idx) {
-            pots[Math.min(3, Math.floor(idx / 4))].push(r);
+            const potIdx = Math.min(3, Math.floor(idx / perGroup));
+            pots[potIdx].push(r);
           });
           html +=
             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
@@ -6490,7 +6526,9 @@
             html +=
               '<div style="background:#0f172a;border:1px solid #2c3a52;border-radius:10px;padding:8px;"><div style="font-size:11px;font-weight:800;color:#facc15;margin-bottom:4px;">Torba ' +
               (pi + 1) +
-              "</div>";
+              " (" +
+              pot.length +
+              ")</div>";
             pot.forEach(function (r) {
               html +=
                 '<div style="font-size:12px;color:#e2e8f0;padding:2px 0;">' +
@@ -6508,16 +6546,17 @@
               drawn = getNationalGroupDraw(rows);
           } catch (e) {}
           const groups = ["A", "B", "C", "D"];
-          for (let g = 0; g < 4; g++) {
+          for (let g = 0; g < groupCount; g++) {
             html +=
               '<div style="font-size:12px;font-weight:700;color:#38bdf8;margin:10px 0 4px;">Grup ' +
               groups[g] +
               "</div>";
             const slice = drawn
               ? drawn[g] || []
-              : rows.slice(g * 4, g * 4 + 4);
+              : sorted.slice(g * perGroup, g * perGroup + perGroup);
             slice.forEach(function (r, ii) {
-              const p = [9, 7, 4, 1][ii] || 0;
+              const ptsTable = [12, 9, 7, 5, 3, 1];
+              const p = ptsTable[ii] != null ? ptsTable[ii] : 0;
               html +=
                 '<div class="clickable-player" onclick="openCountryProfile && openCountryProfile(\'' +
                 r.c +
@@ -7680,6 +7719,74 @@
         return html;
       }
 
+      function hashTeamColors(name) {
+        let h = 0;
+        const s = String(name || "Takım");
+        for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+        const palette = [
+          ["#1d4ed8", "#ffffff", "#0f172a"],
+          ["#b91c1c", "#fef2f2", "#1c1917"],
+          ["#15803d", "#ecfdf5", "#14532d"],
+          ["#a16207", "#fefce8", "#1c1917"],
+          ["#7c3aed", "#f5f3ff", "#1e1b4b"],
+          ["#0e7490", "#ecfeff", "#083344"],
+          ["#be123c", "#fff1f2", "#1c1917"],
+          ["#4338ca", "#eef2ff", "#1e1b4b"],
+        ];
+        return palette[h % palette.length];
+      }
+      function drawTeamModalKit(teamName, kitObj) {
+        const canvas = document.getElementById("teamModalKitCanvas");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width,
+          h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(0, 0, w, h);
+        let c1 = "#1d4ed8",
+          c2 = "#ffffff",
+          shorts = "#0f172a";
+        if (kitObj && kitObj.primary) {
+          c1 = kitObj.primary;
+          c2 = kitObj.secondary || "#ffffff";
+          shorts = kitObj.shorts || "#0f172a";
+        } else {
+          const cols = hashTeamColors(teamName);
+          c1 = cols[0];
+          c2 = cols[1];
+          shorts = cols[2];
+        }
+        // torso
+        const tx = 22,
+          ty = 14,
+          tw = 56,
+          th = 62;
+        ctx.fillStyle = c1;
+        ctx.beginPath();
+        ctx.moveTo(tx + 6, ty);
+        ctx.lineTo(tx + tw - 6, ty);
+        ctx.lineTo(tx + tw + 5, ty + 18);
+        ctx.lineTo(tx + tw - 4, ty + 24);
+        ctx.lineTo(tx + tw - 4, ty + th);
+        ctx.lineTo(tx + 4, ty + th);
+        ctx.lineTo(tx + 4, ty + 24);
+        ctx.lineTo(tx - 5, ty + 18);
+        ctx.closePath();
+        ctx.fill();
+        // simple stripe accent
+        ctx.fillStyle = c2;
+        ctx.globalAlpha = 0.35;
+        ctx.fillRect(tx + tw / 2 - 5, ty, 10, th);
+        ctx.globalAlpha = 1;
+        // shorts
+        ctx.fillStyle = shorts;
+        ctx.fillRect(tx + 8, ty + th - 2, tw - 16, 22);
+        // socks
+        ctx.fillStyle = c1;
+        ctx.fillRect(tx + 10, ty + th + 20, 12, 14);
+        ctx.fillRect(tx + tw - 22, ty + th + 20, 12, 14);
+      }
       function openClubProfileByName(name) {
         try {
           if (!name) return;
@@ -7711,6 +7818,9 @@
             (row && row.country ? countryFlag(row.country) + " " + row.country : "") +
             (row && row.strength ? " · Güç " + row.strength : "") +
             (row && row.pts != null ? " · " + row.pts + " puan" : "");
+          // Forma önizleme
+          const kitFromRow = row && (row.kit || row.homeKit || null);
+          drawTeamModalKit(name, kitFromRow);
           const squadEl = document.getElementById("teamSquadList");
           if (squadEl) {
             if (row && row.players && row.players.length) {
@@ -9211,6 +9321,22 @@
       }
       window.changePlayerShirtNumber = changePlayerShirtNumber;
 
+      const SQUAD_SKILL_COLS = [
+        { key: "pace", abbr: "HIZ" },
+        { key: "passing", abbr: "PAS" },
+        { key: "finishing", abbr: "BİT" },
+        { key: "tackle", abbr: "MÜD" },
+        { key: "vision", abbr: "GÖR" },
+        { key: "dribbling", abbr: "TOP" },
+        { key: "stamina", abbr: "DAY" },
+        { key: "strength", abbr: "GÜÇ" },
+        { key: "technique", abbr: "TEK" },
+        { key: "agility", abbr: "ÇEV" },
+        { key: "positioning", abbr: "POZ" },
+        { key: "reflex", abbr: "REF" },
+        { key: "handling", abbr: "TUT" },
+      ];
+
       function renderSquadRosterPage(side) {
         const team = teamConfig[side || "home"];
         const container = document.getElementById("squadRosterList");
@@ -9234,149 +9360,197 @@
           container.appendChild(empty);
           return;
         }
+        // Tek yatay kaydırmalı tablo: üstte başlıklar, altta değerler
+        const table = document.createElement("div");
+        table.style.cssText = "min-width:max-content;";
+        const colTemplate =
+          "40px 120px 36px 28px " +
+          SQUAD_SKILL_COLS.map(function () {
+            return "34px";
+          }).join(" ");
         const head = document.createElement("div");
         head.style.cssText =
-          "display:grid;grid-template-columns:42px minmax(90px,1.4fr) 34px 24px minmax(56px,0.8fr) minmax(56px,0.8fr) minmax(72px,0.9fr);gap:3px;align-items:center;color:#64748b;font-size:10px;font-weight:700;padding:4px 4px;border-bottom:1px solid #2c3a52;margin-bottom:4px;";
-        head.innerHTML =
-          '<span title="Forma numarası">No</span><span>İsim</span><span>Mevki</span><span style="text-align:center;">Yaş</span><span style="text-align:center;">Kalite</span><span style="text-align:center;">Potansiyel</span><span title="Kontrat süresi · maaş">Kontrat</span>';
-        container.appendChild(head);
-        allPlayers.forEach((p) => {
-            ensurePlayerContract(p);
-            const quality = calculatePlayerQuality(p);
-            const potential = calculatePlayerPotential(p);
-            const qColor = getQualityColor(quality);
-            const pColor = getPotentialColor(potential);
-            const row = document.createElement("div");
-            row.style.cssText =
-              "display:grid;grid-template-columns:42px minmax(90px,1.4fr) 34px 24px 24px 24px minmax(72px,0.9fr);gap:3px;align-items:center;padding:6px 4px;border-bottom:1px solid rgba(51,65,85,0.3);font-size:12px;border-radius:4px;";
-            row.onmouseover = function () {
-              this.style.background = "rgba(56,189,248,0.08)";
-            };
-            row.onmouseout = function () {
-              this.style.background = "transparent";
-            };
-            const numCell = document.createElement("div");
-            const numInp = document.createElement("input");
-            numInp.type = "number";
-            numInp.min = "1";
-            numInp.max = "99";
-            numInp.value = p.number || 1;
-            numInp.title = "Forma numarası";
-            numInp.style.cssText =
-              "width:36px;padding:3px 2px;border-radius:6px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:11px;text-align:center;";
-            numInp.onclick = function (e) {
-              e.stopPropagation();
-            };
-            numInp.onchange = function () {
-              changePlayerShirtNumber(p.id, numInp.value);
-            };
-            numCell.appendChild(numInp);
+          "display:grid;grid-template-columns:" +
+          colTemplate +
+          ";gap:4px;align-items:center;color:#64748b;font-size:10px;font-weight:700;padding:6px 4px;border-bottom:1px solid #2c3a52;margin-bottom:2px;position:sticky;top:0;background:#0b1220;z-index:1;";
+        let headHtml =
+          '<span title="Forma numarası">No</span><span>İsim</span><span>Mevki</span><span style="text-align:center;">Yaş</span>';
+        SQUAD_SKILL_COLS.forEach(function (sk) {
+          const full =
+            (typeof SKILL_LABELS_TR !== "undefined" && SKILL_LABELS_TR[sk.key]) ||
+            sk.key;
+          headHtml +=
+            '<span style="text-align:center;" title="' +
+            full +
+            '">' +
+            sk.abbr +
+            "</span>";
+        });
+        head.innerHTML = headHtml;
+        table.appendChild(head);
+        allPlayers.forEach(function (p) {
+          const row = document.createElement("div");
+          row.style.cssText =
+            "display:grid;grid-template-columns:" +
+            colTemplate +
+            ";gap:4px;align-items:center;padding:6px 4px;border-bottom:1px solid rgba(51,65,85,0.3);font-size:12px;border-radius:4px;";
+          row.onmouseover = function () {
+            this.style.background = "rgba(56,189,248,0.08)";
+          };
+          row.onmouseout = function () {
+            this.style.background = "transparent";
+          };
+          const numCell = document.createElement("div");
+          const numInp = document.createElement("input");
+          numInp.type = "number";
+          numInp.min = "1";
+          numInp.max = "99";
+          numInp.value = p.number || 1;
+          numInp.title = "Forma numarası";
+          numInp.style.cssText =
+            "width:34px;padding:3px 2px;border-radius:6px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:11px;text-align:center;";
+          numInp.onclick = function (e) {
+            e.stopPropagation();
+          };
+          numInp.onchange = function () {
+            changePlayerShirtNumber(p.id, numInp.value);
+          };
+          numCell.appendChild(numInp);
 
-            const nameCell = document.createElement("div");
-            nameCell.className = "clickable-player";
-            nameCell.style.cssText =
-              "color:#e2e8f0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;cursor:pointer;";
-            nameCell.innerHTML =
-              p.name +
-              (p.injured
-                ? ' <span style="color:#f87171;font-size:10px;font-weight:700;" title="Sakat">🤕' +
-                  (p.injuryDaysLeft ? " " + p.injuryDaysLeft + "maç" : "") +
-                  "</span>"
-                : "");
-            nameCell.onclick = function () {
-              showPlayerProfile(p, team.name);
-            };
+          const nameCell = document.createElement("div");
+          nameCell.className = "clickable-player";
+          nameCell.style.cssText =
+            "color:#e2e8f0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;cursor:pointer;";
+          nameCell.innerHTML =
+            p.name +
+            (p.injured
+              ? ' <span style="color:#f87171;font-size:10px;font-weight:700;" title="Sakat">🤕' +
+                (p.injuryDaysLeft ? " " + p.injuryDaysLeft + "maç" : "") +
+                "</span>"
+              : "");
+          nameCell.onclick = function () {
+            showPlayerProfile(p, team.name);
+          };
 
-            const posCell = document.createElement("span");
-            posCell.style.cssText = "color:#94a3b8;font-size:11px;";
-            posCell.innerText = p.pos || p.naturalPos || "?";
+          const posCell = document.createElement("span");
+          posCell.style.cssText = "color:#94a3b8;font-size:11px;";
+          posCell.innerText = p.pos || p.naturalPos || "?";
 
-            const ageCell = document.createElement("span");
-            ageCell.style.cssText = "text-align:center;color:#cbd5e1;";
-            ageCell.innerText = p.age || "?";
+          const ageCell = document.createElement("span");
+          ageCell.style.cssText = "text-align:center;color:#cbd5e1;";
+          ageCell.innerText = p.age || "?";
 
-            const qCell = document.createElement("span");
-            qCell.style.cssText =
-              "text-align:center;font-weight:700;font-size:10px;color:" +
-              (qColor === "high"
-                ? "#4ade80"
-                : qColor === "mid"
-                  ? "#facc15"
-                  : "#f87171");
-            qCell.innerText = typeof qualityLabel === "function" ? qualityLabel(quality) : quality;
-            qCell.title = "Kalite " + quality + "/10";
+          row.appendChild(numCell);
+          row.appendChild(nameCell);
+          row.appendChild(posCell);
+          row.appendChild(ageCell);
 
-            const potCell = document.createElement("span");
-            potCell.style.cssText =
-              "text-align:center;font-weight:700;color:" +
-              (pColor === "high"
-                ? "#818cf8"
-                : pColor === "mid"
-                  ? "#facc15"
-                  : "#94a3b8");
-            potCell.innerText = typeof potentialLabel === "function" ? potentialLabel(potential) : potential;
-            potCell.title = "Potansiyel " + potential + "/10";
-
-            row.appendChild(numCell);
-            row.appendChild(nameCell);
-            row.appendChild(posCell);
-            row.appendChild(ageCell);
-            row.appendChild(qCell);
-            row.appendChild(potCell);
-            container.appendChild(row);
-
-            // ---- Tüm yetenekler; maçta etkili olanlar (mevkiye göre) öne çıkar ----
-            const skillDefs = [
-              { key: "pace", abbr: "HIZ" },
-              { key: "passing", abbr: "PAS" },
-              { key: "finishing", abbr: "BİT" },
-              { key: "tackle", abbr: "MÜD" },
-              { key: "vision", abbr: "GÖR" },
-              { key: "dribbling", abbr: "TOP" },
-              { key: "stamina", abbr: "DAY" },
-              { key: "strength", abbr: "GÜÇ" },
-              { key: "technique", abbr: "TEK" },
-              { key: "agility", abbr: "ÇEV" },
-              { key: "positioning", abbr: "POZ" },
-              { key: "reflex", abbr: "REF" },
-              { key: "handling", abbr: "TUT" },
-            ];
-            const relevantKeys =
-              (typeof getSkillsForPos === "function" ? getSkillsForPos(p) : []) ||
-              [];
-            const orderedSkills = skillDefs.slice().sort((a, b) => {
-              const ai = relevantKeys.indexOf(a.key);
-              const bi = relevantKeys.indexOf(b.key);
-              const aRel = ai !== -1,
-                bRel = bi !== -1;
-              if (aRel && bRel) return ai - bi;
-              if (aRel) return -1;
-              if (bRel) return 1;
-              return 0;
-            });
-            const skillsRow = document.createElement("div");
-            skillsRow.style.cssText =
-              "display:flex;flex-wrap:wrap;gap:4px;padding:2px 4px 8px 4px;border-bottom:1px solid rgba(51,65,85,0.3);";
-            orderedSkills.forEach((sk) => {
-              const val = Math.round(Number(p[sk.key]) || 0);
-              const isRelevant = relevantKeys.indexOf(sk.key) !== -1;
-              const chip = document.createElement("span");
-              chip.title =
-                (typeof SKILL_LABELS_TR !== "undefined" && SKILL_LABELS_TR[sk.key]) ||
-                sk.key;
-              chip.style.cssText =
-                "font-size:9px;font-weight:" +
-                (isRelevant ? "800" : "500") +
-                ";padding:2px 5px;border-radius:5px;" +
-                (isRelevant
-                  ? "background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.35);"
-                  : "background:rgba(51,65,85,0.35);color:#94a3b8;border:1px solid transparent;");
-              chip.innerText = sk.abbr + " " + val;
-              skillsRow.appendChild(chip);
-            });
-            container.appendChild(skillsRow);
+          const relevantKeys =
+            (typeof getSkillsForPos === "function" ? getSkillsForPos(p) : []) ||
+            [];
+          SQUAD_SKILL_COLS.forEach(function (sk) {
+            const val = Math.round(Number(p[sk.key]) || 0);
+            const isRelevant = relevantKeys.indexOf(sk.key) !== -1;
+            const cell = document.createElement("span");
+            cell.style.cssText =
+              "text-align:center;font-size:11px;font-weight:" +
+              (isRelevant ? "800" : "500") +
+              ";color:" +
+              (isRelevant ? "#4ade80" : "#94a3b8") +
+              ";";
+            cell.innerText = String(val);
+            cell.title =
+              ((typeof SKILL_LABELS_TR !== "undefined" &&
+                SKILL_LABELS_TR[sk.key]) ||
+                sk.key) +
+              ": " +
+              val;
+            row.appendChild(cell);
           });
+          table.appendChild(row);
+        });
+        container.appendChild(table);
       }
+
+      function renderSquadQualityPage(side) {
+        const team = teamConfig[side || "home"];
+        const container = document.getElementById("squadQualityList");
+        if (!container) return;
+        const sortPlayers = (arr) =>
+          (arr || []).slice().sort((a, b) => {
+            const ka = squadPosSortKey(a),
+              kb = squadPosSortKey(b);
+            if (ka !== kb) return ka - kb;
+            return (a.number || 0) - (b.number || 0);
+          });
+        const allPlayers = sortPlayers(
+          [].concat(team.players || [], team.bench || []),
+        );
+        if (!allPlayers.length) {
+          container.innerHTML =
+            '<div style="color:#64748b;text-align:center;padding:16px;">Oyuncu yok.</div>';
+          return;
+        }
+        let html =
+          '<div style="display:grid;grid-template-columns:40px 1.4fr 40px 32px 70px 70px;gap:6px 8px;font-size:11px;color:#94a3b8;padding:0 4px 6px;border-bottom:1px solid #2c3a52;margin-bottom:6px;font-weight:700;"><span>No</span><span>İsim</span><span>Mevki</span><span style="text-align:center;">Yaş</span><span style="text-align:center;">Kalite</span><span style="text-align:center;">Potansiyel</span></div>';
+        allPlayers.forEach(function (p) {
+          const quality = calculatePlayerQuality(p);
+          const potential = calculatePlayerPotential(p);
+          const qColor = getQualityColor(quality);
+          const pColor = getPotentialColor(potential);
+          const qCol =
+            qColor === "high"
+              ? "#4ade80"
+              : qColor === "mid"
+                ? "#facc15"
+                : "#f87171";
+          const potCol =
+            pColor === "high"
+              ? "#818cf8"
+              : pColor === "mid"
+                ? "#facc15"
+                : "#94a3b8";
+          const qLab =
+            typeof qualityLabel === "function" ? qualityLabel(quality) : quality;
+          const potLab =
+            typeof potentialLabel === "function"
+              ? potentialLabel(potential)
+              : potential;
+          const safeId = String(p.id != null ? p.id : "").replace(/'/g, "");
+          html +=
+            '<div style="display:grid;grid-template-columns:40px 1.4fr 40px 32px 70px 70px;gap:6px 8px;align-items:center;padding:10px 8px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:12px;color:#e2e8f0;">' +
+            "<span>#" +
+            (p.number || "?") +
+            "</span>" +
+            '<span class="clickable-player" style="cursor:pointer;font-weight:600;" onclick="(function(){var t=teamConfig.home;var all=[].concat(t.players||[],t.bench||[]);var pl=all.find(function(x){return String(x.id)===\'' +
+            safeId +
+            '\';});if(pl&&typeof showPlayerProfile===\'function\')showPlayerProfile(pl,t.name);})()">' +
+            (p.name || "?") +
+            "</span>" +
+            '<span style="color:#94a3b8;">' +
+            (p.pos || p.naturalPos || "?") +
+            "</span>" +
+            '<span style="text-align:center;">' +
+            (p.age || "?") +
+            "</span>" +
+            '<span style="text-align:center;font-weight:800;color:' +
+            qCol +
+            ';" title="Kalite ' +
+            quality +
+            '/10">' +
+            qLab +
+            "</span>" +
+            '<span style="text-align:center;font-weight:800;color:' +
+            potCol +
+            ';" title="Potansiyel ' +
+            potential +
+            '/10">' +
+            potLab +
+            "</span></div>";
+        });
+        container.innerHTML = html;
+      }
+      window.renderSquadQualityPage = renderSquadQualityPage;
 
       function goToTransfer() {
         hideMainMenuAndShowBack();
@@ -10214,21 +10388,32 @@
       }
       function showSquadTab(tab) {
         const t =
-          tab === "kit" ? "kit" : tab === "contracts" ? "contracts" : "roster";
+          tab === "kit"
+            ? "kit"
+            : tab === "contracts"
+              ? "contracts"
+              : tab === "quality"
+                ? "quality"
+                : "roster";
         document.querySelectorAll("#squadMainTabs .squad-main-tab").forEach(function (btn) {
           const on = btn.getAttribute("data-stab") === t;
           btn.classList.toggle("active", on);
           btn.style.background = on ? "" : "#334155";
         });
         const rosterEl = document.getElementById("squadTabRoster");
+        const qualityEl = document.getElementById("squadTabQuality");
         const kitEl = document.getElementById("squadTabKit");
         const contractsEl = document.getElementById("squadTabContracts");
         if (rosterEl) rosterEl.style.display = t === "roster" ? "block" : "none";
+        if (qualityEl)
+          qualityEl.style.display = t === "quality" ? "block" : "none";
         if (kitEl) kitEl.style.display = t === "kit" ? "block" : "none";
         if (contractsEl)
           contractsEl.style.display = t === "contracts" ? "block" : "none";
         if (t === "kit") refreshKitAccessFor("kit", "club");
         if (t === "contracts") renderSquadContractsPage("home");
+        if (t === "quality" && typeof renderSquadQualityPage === "function")
+          renderSquadQualityPage("home");
       }
 
       function renderSquadContractsPage(side) {
@@ -10303,7 +10488,18 @@
             ? calculatePlayerQuality(pl)
             : 5;
         const bump = Math.round((pl.wage || 1000) * (0.05 + q * 0.02));
-        pl.wage = Math.round((pl.wage || 1000) + bump);
+        const newWage = Math.round((pl.wage || 1000) + bump);
+        const ok = confirm(
+          (pl.name || "Oyuncu") +
+            " kontratını +" +
+            years +
+            " yıl yenilemek istediğine emin misin?\nYeni maaş/hf: " +
+            (typeof formatMoney === "function"
+              ? formatMoney(newWage)
+              : newWage + " €"),
+        );
+        if (!ok) return;
+        pl.wage = newWage;
         pl.contractYears = (pl.contractYears || 1) + years;
         const endY = new Date().getFullYear() + (pl.contractYears || 1);
         pl.contractEnd = "Haz " + endY;
@@ -10398,9 +10594,7 @@
                 const sk = c.skill || "";
                 return (
                   '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;">' +
-                  "<div><b style=\"cursor:pointer;color:#38bdf8;\" onclick=\"removeClubCoach('" +
-                  sk +
-                  "');renderClubStaffPage();\" title=\"Sözleşme feshi\">" +
+                  "<div><b style=\"color:#e2e8f0;\">" +
                   name +
                   "</b><div style=\"font-size:11px;color:#94a3b8;\">" +
                   (c.skillLabel || sk) +
@@ -10476,16 +10670,13 @@
       function hireStaffDoctor() {
         const specSel = document.getElementById("staffDoctorSpecSelect");
         const lvSel = document.getElementById("staffDoctorLevelSelect");
-        const spec = (specSel && specSel.value) || "genel";
+        const spec = "genel";
         const level = Math.min(5, Math.max(1, parseInt((lvSel && lvSel.value) || "1", 10)));
-        if ((clubDoctors || []).length >= 3) {
-          alert("En fazla 3 doktor. Önce birinin sözleşmesini feshet.");
+        if ((clubDoctors || []).length >= 1) {
+          alert("Sadece 1 kulüp doktoru alınabilir. Önce mevcut doktorun sözleşmesini feshet.");
           return;
         }
-        if ((clubDoctors || []).some(function (d) { return d.spec === spec; })) {
-          alert("Bu uzmanlıkta zaten doktor var. Önce feshet veya başka uzmanlık seç.");
-          return;
-        }
+        if (specSel) specSel.value = "genel";
         const salary = doctorSalaryForLevel(level);
         const signing = salary * 2;
         if (typeof clubBudget === "number" && clubBudget < signing) {
@@ -10602,12 +10793,22 @@
         const all = [...team.players, ...(team.bench || [])];
         container.innerHTML = "";
         all.forEach((p, idx) => {
-          const skills = getSkillsForPos(p);
-          const extra = ["stamina", "pace", "agility", "strength", "technique"];
-          const set = [];
-          skills.concat(extra).forEach((s) => {
-            if (set.indexOf(s) < 0) set.push(s);
-          });
+          // Tüm yetenekler seçilebilir (kullanıcı istediği 1 skill'i verir)
+          const set = [
+            "pace",
+            "passing",
+            "finishing",
+            "tackle",
+            "vision",
+            "dribbling",
+            "stamina",
+            "strength",
+            "technique",
+            "agility",
+            "positioning",
+            "reflex",
+            "handling",
+          ];
           const row = document.createElement("div");
           row.style.cssText =
             "display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;";
@@ -10642,13 +10843,24 @@
           sel.className = "train-skill-select";
           sel.style.cssText =
             "padding:6px 8px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:12px;min-width:130px;";
+          // Önceki seçim veya doğal mevki skill'i varsayılan
+          const preferred =
+            (p.trainFocus && set.indexOf(p.trainFocus) >= 0
+              ? p.trainFocus
+              : null) ||
+            (typeof getSkillsForPos === "function" && getSkillsForPos(p)[0]) ||
+            set[0];
           set.forEach((s) => {
             const opt = document.createElement("option");
             opt.value = s;
             const val = Math.round(Number(p[s]) || 0);
             opt.textContent = (SKILL_LABELS_TR[s] || s) + " (" + val + ")";
+            if (s === preferred) opt.selected = true;
             sel.appendChild(opt);
           });
+          sel.onchange = function () {
+            p.trainFocus = sel.value;
+          };
           const btn = document.createElement("button");
           btn.className = "sub-btn";
           btn.style.cssText =
@@ -13484,6 +13696,48 @@ function canManageStaff() {
           firstNames: ["Ivan", "Marko", "Luka", "Ante", "Josip", "Filip"],
           lastNames: ["Horvat", "Kovačić", "Babić", "Marić", "Jurić", "Novak"],
         },
+        İsrail: {
+          cityWords: ["Tel Aviv", "Hayfa", "Kudüs", "Beerşeba", "Netanya"],
+          suffixes: ["FC", "Maccabi", "Hapoel", "Beitar", "Sport"],
+          firstNames: ["David", "Yossi", "Eyal", "Omer", "Lior", "Noam"],
+          lastNames: ["Cohen", "Levi", "Mizrahi", "Peretz", "Biton", "Avraham"],
+        },
+        Sırbistan: {
+          cityWords: ["Belgrad", "Novi Sad", "Niš", "Kragujevac", "Subotica"],
+          suffixes: ["FK", "Partizan", "Crvena Zvezda", "OFK", "Sport"],
+          firstNames: ["Nikola", "Stefan", "Luka", "Marko", "Aleksandar", "Nemanja"],
+          lastNames: ["Jovanović", "Nikolić", "Petrović", "Đorđević", "Ilić", "Stojanović"],
+        },
+        BosnaHersek: {
+          cityWords: ["Sarajevo", "Zenica", "Mostar", "Tuzla", "Banja Luka"],
+          suffixes: ["FK", "NK", "Željezničar", "Velež", "Sport"],
+          firstNames: ["Emir", "Haris", "Amar", "Edin", "Adnan", "Mirza"],
+          lastNames: ["Hadžić", "Dedić", "Kovačević", "Halilović", "Begić", "Mujić"],
+        },
+        Arnavutluk: {
+          cityWords: ["Tiran", "Dıraç", "İşkodra", "Vlorë", "Elbasan"],
+          suffixes: ["KF", "FK", "Partizani", "Skënderbeu", "Sport"],
+          firstNames: ["Arben", "Endri", "Klevis", "Gledi", "Andi", "Flamur"],
+          lastNames: ["Hoxha", "Shehu", "Lika", "Duka", "Basha", "Kola"],
+        },
+        Slovenya: {
+          cityWords: ["Ljubljana", "Maribor", "Celje", "Koper", "Nova Gorica"],
+          suffixes: ["NK", "FC", "Olimpija", "Maribor", "Sport"],
+          firstNames: ["Luka", "Jan", "Miha", "Žan", "Tilen", "Nejc"],
+          lastNames: ["Novak", "Horvat", "Kovač", "Zupan", "Mlakar", "Potočnik"],
+        },
+        Bulgaristan: {
+          cityWords: ["Sofya", "Plovdiv", "Varna", "Burgas", "Ruse"],
+          suffixes: ["PFC", "FC", "CSKA", "Levski", "Lokomotiv"],
+          firstNames: ["Georgi", "Ivan", "Dimitar", "Nikolay", "Petar", "Hristo"],
+          lastNames: ["Ivanov", "Petrov", "Georgiev", "Dimitrov", "Nikolov", "Stoyanov"],
+        },
+        Romanya: {
+          cityWords: ["Bükreş", "Cluj", "Timișoara", "Iași", "Craiova"],
+          suffixes: ["FC", "CFR", "Steaua", "Dinamo", "Universitatea"],
+          firstNames: ["Andrei", "Mihai", "Alexandru", "Ionut", "Cristian", "Florin"],
+          lastNames: ["Popescu", "Ionescu", "Popa", "Stan", "Dumitru", "Gheorghe"],
+        },
         Çin: {
           cityWords: [
             "Beijing",
@@ -15344,24 +15598,41 @@ function canManageStaff() {
 
       function formatKeySkillsHtml(p) {
         if (!p) return "";
-        const keys =
-          typeof getSkillsForPos === "function"
-            ? getSkillsForPos(p)
-            : ["pace", "passing", "finishing"];
         const labels =
           typeof SKILL_LABELS_TR !== "undefined" ? SKILL_LABELS_TR : {};
-        // Tüm ilgili skill'ler
-        const top = keys.length ? keys : ["pace","passing","finishing","tackle","vision","dribbling","stamina","strength","technique","agility","positioning","reflex","handling"];
+        // Tüm yetenekler yan yana
+        const all = [
+          "pace",
+          "passing",
+          "finishing",
+          "tackle",
+          "vision",
+          "dribbling",
+          "stamina",
+          "strength",
+          "technique",
+          "agility",
+          "positioning",
+          "reflex",
+          "handling",
+        ];
+        const relevant =
+          typeof getSkillsForPos === "function" ? getSkillsForPos(p) || [] : [];
         return (
-          '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">' +
-          top
+          '<div style="display:flex;flex-wrap:nowrap;gap:3px;margin-top:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;padding-bottom:2px;">' +
+          all
             .map(function (sk) {
               const val = Math.round(Number(p[sk]) || 0);
               const lab = labels[sk] || sk;
+              const isRel = relevant.indexOf(sk) !== -1;
               return (
-                '<span style="font-size:10px;padding:2px 6px;border-radius:6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.35);color:#7dd3fc;">' +
+                '<span style="flex-shrink:0;font-size:10px;padding:2px 5px;border-radius:6px;' +
+                (isRel
+                  ? "background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.35);color:#4ade80;"
+                  : "background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);color:#7dd3fc;") +
+                '">' +
                 lab +
-                " <b style=\"color:#e2e8f0;\">" +
+                ' <b style="color:#e2e8f0;">' +
                 val +
                 "</b></span>"
               );
@@ -17867,6 +18138,7 @@ function canManageStaff() {
         });
         const passEl = document.getElementById("passStyleSelect");
         const gameEl = document.getElementById("gameStyleSelect");
+        const atkEl = document.getElementById("attackDirSelect");
         if (passEl) {
           passEl.value = teamConfig.home.passStyle;
           passEl.addEventListener("change", function () {
@@ -17877,6 +18149,12 @@ function canManageStaff() {
           gameEl.value = teamConfig.home.gameStyle;
           gameEl.addEventListener("change", function () {
             if (!matchStarted) teamConfig.home.gameStyle = this.value;
+          });
+        }
+        if (atkEl) {
+          atkEl.value = teamConfig.home.attackDir || "orta";
+          atkEl.addEventListener("change", function () {
+            if (!matchStarted) teamConfig.home.attackDir = this.value;
           });
         }
       }
@@ -19579,6 +19857,38 @@ function canManageStaff() {
         selectedBenchIndex = null;
       }
 
+      // Kulüp diziliş kuralı: milli ile aynı — en az 3 defans, 2 orta saha, 1 forvet
+      const CLUB_MIN_LINE_COUNTS = { def: 3, mid: 2, fw: 1 };
+      function clubLineCategory(pos) {
+        const band = typeof getZoneBand === "function" ? getZoneBand(pos) : null;
+        if (band === "DF") return "def";
+        if (band === "FW") return "fw";
+        if (band && band !== "GK") return "mid";
+        return null;
+      }
+      function clubLineCounts(team) {
+        const counts = { def: 0, mid: 0, fw: 0 };
+        (team.players || []).forEach(function (p) {
+          if (!p) return;
+          const cat = clubLineCategory(p.pos);
+          if (cat) counts[cat]++;
+        });
+        return counts;
+      }
+      function wouldViolateClubMinLines(team, fromPos, toPos) {
+        const fromCat = clubLineCategory(fromPos);
+        const toCat = clubLineCategory(toPos);
+        if (fromCat === toCat) return false;
+        const projected = clubLineCounts(team);
+        if (fromCat) projected[fromCat]--;
+        if (toCat) projected[toCat]++;
+        return (
+          projected.def < CLUB_MIN_LINE_COUNTS.def ||
+          projected.mid < CLUB_MIN_LINE_COUNTS.mid ||
+          projected.fw < CLUB_MIN_LINE_COUNTS.fw
+        );
+      }
+
       function handleFormationClick(side, type, index, zoneData) {
         if (matchStarted) return;
         const team = teamConfig[side];
@@ -19591,6 +19901,13 @@ function canManageStaff() {
             if (hint)
               hint.innerText = "Önce bir oyuncu seç, sonra boş bölgeye tıkla.";
             return;
+          }
+          // Kaleciyi seçip kaleden çıkarmaya izin verme (sadece GK ile yer değişikliğine izin)
+          if (type === "slot") {
+            const p0 = team.players[index];
+            if (p0 && (p0.pos === "GK" || (typeof isGkPos === "function" && isGkPos(p0.pos)))) {
+              // GK seçilebilir ama sadece başka GK ile swap için; yine de seçime izin ver, taşımada engelle
+            }
           }
           selectedFormationToken = { type, index };
           const p = type === "slot" ? team.players[index] : team.bench[index];
@@ -19630,6 +19947,40 @@ function canManageStaff() {
           const i = selectedFormationToken.index;
           const player = team.players[i];
           let fromPos = player ? player.pos : null;
+          // Kaleciyi kaleden çıkarma
+          if (
+            player &&
+            (player.pos === "GK" ||
+              (typeof isGkPos === "function" && isGkPos(player.pos)))
+          ) {
+            if (hint)
+              hint.innerText =
+                "Kaleci kaleden çıkarılamaz. Sadece başka bir kaleciyle yer değiştirebilirsin.";
+            clearFormationSelection();
+            renderFormationPitch(side);
+            renderFormationBench(side);
+            return;
+          }
+          // Min hat kuralı (milli ile aynı)
+          if (
+            player &&
+            zoneData.pos !== "GK" &&
+            wouldViolateClubMinLines(team, player.pos, zoneData.pos)
+          ) {
+            alert(
+              "Diziliş kuralı: en az " +
+                CLUB_MIN_LINE_COUNTS.def +
+                " defans, " +
+                CLUB_MIN_LINE_COUNTS.mid +
+                " orta saha, " +
+                CLUB_MIN_LINE_COUNTS.fw +
+                " forvet olmalı.",
+            );
+            clearFormationSelection();
+            renderFormationPitch(side);
+            renderFormationBench(side);
+            return;
+          }
           if (player && zoneData.pos !== "GK") {
             fromPos = player.pos;
             const fromX = player.x,
@@ -19772,6 +20123,39 @@ function canManageStaff() {
           const playerA = team.players[i];
           const playerB = team.players[index];
           if (playerA && playerB) {
+            const aIsGk =
+              playerA.pos === "GK" ||
+              (typeof isGkPos === "function" && isGkPos(playerA.pos));
+            const bIsGk =
+              playerB.pos === "GK" ||
+              (typeof isGkPos === "function" && isGkPos(playerB.pos));
+            if (aIsGk !== bIsGk) {
+              if (hint)
+                hint.innerText =
+                  "Kaleci kaleden çıkarılamaz. Sadece kaleci–kaleci yer değişimi yapılabilir.";
+              clearFormationSelection();
+              renderFormationPitch(side);
+              renderFormationBench(side);
+              return;
+            }
+            if (
+              !aIsGk &&
+              wouldViolateClubMinLines(team, playerA.pos, playerB.pos)
+            ) {
+              alert(
+                "Diziliş kuralı: en az " +
+                  CLUB_MIN_LINE_COUNTS.def +
+                  " defans, " +
+                  CLUB_MIN_LINE_COUNTS.mid +
+                  " orta saha, " +
+                  CLUB_MIN_LINE_COUNTS.fw +
+                  " forvet olmalı.",
+              );
+              clearFormationSelection();
+              renderFormationPitch(side);
+              renderFormationBench(side);
+              return;
+            }
             const fromPos = playerA.pos;
             const toPos = playerB.pos;
             const ax = playerA.x,
@@ -19805,6 +20189,19 @@ function canManageStaff() {
             const benchIdx = selectedFormationToken.index;
             const inPlayer = team.bench[benchIdx];
             const outPlayer = team.players[index];
+            if (
+              outPlayer &&
+              (outPlayer.pos === "GK" ||
+                (typeof isGkPos === "function" && isGkPos(outPlayer.pos)))
+            ) {
+              if (hint)
+                hint.innerText =
+                  "Kaleci kaleden çıkarılamaz. Önce başka bir kaleciyle değiştir.";
+              clearFormationSelection();
+              renderFormationPitch(side);
+              renderFormationBench(side);
+              return;
+            }
             if (inPlayer && outPlayer) {
               team.bench.splice(benchIdx, 1);
               inPlayer.x = slots[index].x;
@@ -19838,6 +20235,19 @@ function canManageStaff() {
           } else {
             const outPlayer = team.players[selectedFormationToken.index];
             const inPlayer = team.bench[index];
+            if (
+              outPlayer &&
+              (outPlayer.pos === "GK" ||
+                (typeof isGkPos === "function" && isGkPos(outPlayer.pos)))
+            ) {
+              if (hint)
+                hint.innerText =
+                  "Kaleci kaleden çıkarılamaz. Önce başka bir kaleciyle değiştir.";
+              clearFormationSelection();
+              renderFormationPitch(side);
+              renderFormationBench(side);
+              return;
+            }
             if (outPlayer && inPlayer) {
               const slotIdx = selectedFormationToken.index;
               team.bench.splice(index, 1);
@@ -19952,7 +20362,17 @@ function canManageStaff() {
           label.className = "formation-token-label";
           label.style.left = drawX * 0.5 - 28 + "px";
           label.style.top = drawY * 0.5 + 13 + "px";
-          label.innerText = shortPlayerLabel(player.name) + " · " + player.pos;
+          const abil =
+            typeof computePlayerRating === "function"
+              ? Math.round(computePlayerRating(player))
+              : typeof calculatePlayerQuality === "function"
+                ? Math.round(calculatePlayerQuality(player))
+                : "";
+          label.innerText =
+            shortPlayerLabel(player.name) +
+            " · " +
+            player.pos +
+            (abil !== "" ? " · " + abil : "");
           label.style.color = "#ffffff";
           wrap.appendChild(label);
         });
@@ -19991,7 +20411,20 @@ function canManageStaff() {
                 .replace(/[^A-Z]/gi, "")
                 .slice(0, 2)
                 .toUpperCase() || "MC";
-            chip.innerText = p.number + " " + p.name + " (" + nat + ")";
+            const abilB =
+              typeof computePlayerRating === "function"
+                ? Math.round(computePlayerRating(p))
+                : typeof calculatePlayerQuality === "function"
+                  ? Math.round(calculatePlayerQuality(p))
+                  : "";
+            chip.innerText =
+              p.number +
+              " " +
+              p.name +
+              " (" +
+              nat +
+              ")" +
+              (abilB !== "" ? " · " + abilB : "");
             chip.style.borderLeft =
               "3px solid " +
               (POS_COLORS[primary] ||

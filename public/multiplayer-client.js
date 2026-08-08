@@ -2721,6 +2721,7 @@
   let _natFormation = "4-4-2";
   let _natPassStyle = "kisa";
   let _natGameStyle = "dengeli";
+  let _natAttackDir = "orta";
   let _natSelectedSlot = null; // sahada seçili boş/dolu slot index'i
   let _natApplications = [];
   // tactic | all | groups | rank | fixtures | kings | history | stats
@@ -2859,6 +2860,7 @@
       _natFormation = (state.team && state.team.formation) || "4-4-2";
       _natPassStyle = (state.team && state.team.passStyle) || "kisa";
       _natGameStyle = (state.team && state.team.gameStyle) || "dengeli";
+      _natAttackDir = (state.team && state.team.attackDir) || "orta";
       _natLineup = buildNationalLineupFromSquad(state, _natFormation);
       _natSelectedSlot = null;
       return state;
@@ -3708,7 +3710,7 @@
         .join("");
 
       html +=
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0 10px;padding-top:12px;border-top:1px solid #2c3a52;">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:12px 0 10px;padding-top:12px;border-top:1px solid #2c3a52;">' +
         '<div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Pas Stili</div>' +
         '<select style="width:100%;padding:6px 8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;" onchange="_natPassStyle=this.value">' +
         ["kisa", "uzun", "hizli", "karisik"]
@@ -3743,6 +3745,26 @@
               v +
               '"' +
               (v === _natGameStyle ? " selected" : "") +
+              ">" +
+              label +
+              "</option>",
+          )
+          .join("") +
+        "</select></div>" +
+        '<div><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Hücum Yönü</div>' +
+        '<select style="width:100%;padding:6px 8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;" onchange="_natAttackDir=this.value">' +
+        [
+          ["orta", "Orta"],
+          ["kanat", "Kanat"],
+          ["sol", "Sol Kanat"],
+          ["sag", "Sağ Kanat"],
+        ]
+          .map(
+            ([v, label]) =>
+              '<option value="' +
+              v +
+              '"' +
+              (v === _natAttackDir ? " selected" : "") +
               ">" +
               label +
               "</option>",
@@ -4121,6 +4143,14 @@
       // İki dolu/boş bölge arasında oyuncu takası
       const a = _natLineup[_natSelectedSlot];
       const b = _natLineup[index];
+      const aIsGk = String(a.pos).toUpperCase() === "GK";
+      const bIsGk = String(b.pos).toUpperCase() === "GK";
+      if (aIsGk !== bIsGk) {
+        alert("Kaleci kaleden çıkarılamaz. Sadece kaleci–kaleci yer değişimi yapılabilir.");
+        _natSelectedSlot = null;
+        renderNationalManage();
+        return;
+      }
       const tmp = a.playerId;
       a.playerId = b.playerId;
       b.playerId = tmp;
@@ -4131,6 +4161,13 @@
     // kind === "zone": seçili bölgeyi (ve varsa oyuncusunu) boş hedef bölgeye taşı
     const slot = _natLineup[_natSelectedSlot];
     const fromPos = slot.pos;
+    // Kaleciyi kaleden çıkarma
+    if (String(fromPos).toUpperCase() === "GK" && String(zpos).toUpperCase() !== "GK") {
+      alert("Kaleci kaleden çıkarılamaz.");
+      _natSelectedSlot = null;
+      renderNationalManage();
+      return;
+    }
     // Taşımadan önce: hedef hat kuralını ihlal eder mi kontrol et (en az 3 def/2 orta/1 forvet).
     const fromCat = natLineCategory(fromPos);
     const toCat = natLineCategory(zpos);
@@ -4225,6 +4262,7 @@
     const lockedFormation = _natFormation;
     const lockedPass = _natPassStyle;
     const lockedGame = _natGameStyle;
+    const lockedAttack = _natAttackDir;
     try {
       await apiFetch("/api/national/squad/lineup", {
         method: "POST",
@@ -4234,6 +4272,7 @@
           assignments,
           passStyle: lockedPass,
           gameStyle: lockedGame,
+          attackDir: lockedAttack,
           category: _natCategory,
         }),
       });
@@ -4247,6 +4286,7 @@
       _natFormation = lockedFormation;
       _natPassStyle = lockedPass;
       _natGameStyle = lockedGame;
+      _natAttackDir = lockedAttack;
       _natLineup = lockedLineup;
       _natSelectedSlot = null;
       renderNationalManage();
