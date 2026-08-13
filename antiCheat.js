@@ -381,39 +381,12 @@ function validateBidAmount(amount, clubBalance) {
 /** Maç skoru client'tan gelirse reddet (sunucu motoru yazar) */
 function rejectClientMatchResult(body) {
   if (!body || typeof body !== "object") return { ok: true };
-  const keys = Object.keys(body);
   const suspicious =
     body.homeGoals != null ||
     body.awayGoals != null ||
-    body.home_goals != null ||
-    body.away_goals != null ||
     body.score != null ||
     body.finalScore != null ||
-    body.matchResult != null ||
-    body.result != null ||
-    body.pts != null ||
-    body.standings != null ||
-    body.leagueTable != null ||
-    (body.team &&
-      (body.team.homeGoals != null ||
-        body.team.awayGoals != null ||
-        body.team.score != null ||
-        body.team.matchResult != null));
-  // Nested payload
-  if (
-    !suspicious &&
-    body.match &&
-    typeof body.match === "object" &&
-    (body.match.homeGoals != null ||
-      body.match.awayGoals != null ||
-      body.match.score != null)
-  ) {
-    return {
-      ok: false,
-      error: "Maç sonucu yalnızca sunucu tarafından yazılır",
-      code: "CLIENT_MATCH_RESULT",
-    };
-  }
+    body.matchResult != null;
   if (suspicious) {
     return {
       ok: false,
