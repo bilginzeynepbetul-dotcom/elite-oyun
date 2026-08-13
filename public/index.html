@@ -3118,24 +3118,24 @@
         touch-action: pan-x pan-y;
         padding-bottom: 8px;
       }
-      /* Milli kadro tablosu: Oyuncu | Kalite | Yaş | 12 skill | İşlem (takım yok) */
+      /* Milli kadro tablosu: Oyuncu | Kalite | Takım | Yaş | 12 skill | İşlem */
       #tacticsNatBody .nat-grid-row,
       #tacticsNatBody .tactics-skill-header.nat-grid-row,
       #tacticsNatBody .tactics-skill-row.nat-grid-row {
         display: grid !important;
-        grid-template-columns: minmax(110px, 1.4fr) 40px 36px repeat(12, 26px) 64px !important;
+        grid-template-columns: minmax(110px, 1.4fr) 40px minmax(70px, 1fr) 36px repeat(12, 26px) 64px !important;
         column-gap: 4px !important;
         align-items: center !important;
-        min-width: 680px !important;
+        min-width: 760px !important;
       }
       #tacticsNatBody .tactics-skill-row.nat-row-no-team,
       #tacticsNatBody .tactics-skill-header.no-team,
       #tacticsNatBody .nat-list-header {
         display: grid !important;
-        grid-template-columns: minmax(130px, 1.5fr) 36px 32px repeat(12, minmax(26px, 1fr)) minmax(56px, auto) !important;
+        grid-template-columns: minmax(130px, 1.5fr) 40px minmax(70px, 1fr) 36px repeat(12, minmax(26px, 1fr)) minmax(56px, auto) !important;
         column-gap: 4px !important;
         align-items: center !important;
-        min-width: 720px !important;
+        min-width: 800px !important;
         width: 100%;
         box-sizing: border-box;
       }
@@ -22296,20 +22296,6 @@ function addForumPost() {
       }
 
       function applyLeagueResult(teamA, teamB, gA, gB) {
-        // Sunucu otoriter mod: puan/gol sadece sunucu maç motoru yazar
-        try {
-          if (
-            window.__emServerAuthoritative &&
-            typeof window.__emIsServerOnline === "function" &&
-            window.__emIsServerOnline()
-          ) {
-            console.warn(
-              "[league] applyLeagueResult engellendi — sonuç sunucudan gelecek",
-            );
-            return false;
-          }
-        } catch (eAuth) {}
-        if (!teamA || !teamB) return false;
         teamA.played++;
         teamB.played++;
         teamA.gf += gA;
@@ -22330,7 +22316,6 @@ function addForumPost() {
           teamA.pts++;
           teamB.pts++;
         }
-        return true;
       }
 
       function generateMatchReport(teamA, teamB, gA, gB) {
@@ -25661,43 +25646,15 @@ function renderTransferPage() {
           }
 
           (function () {
-            const serverAuth =
-              window.__emServerAuthoritative &&
-              typeof window.__emIsServerOnline === "function" &&
-              window.__emIsServerOnline();
-            if (serverAuth) {
-              // Yerel puan tablosuna yazma — sunucu scheduler sonucu işler
-              console.log(
-                "[match-end] sunucu otoriter: yerel applyLeagueResult atlandı",
-              );
-              setTimeout(function () {
-                try {
-                  if (typeof window.syncAllFromServer === "function")
-                    window.syncAllFromServer();
-                  else if (
-                    typeof apiFetch === "function" &&
-                    typeof window.__emApplyServerStandings === "function"
-                  ) {
-                    apiFetch("/api/league/standings").then(function (st) {
-                      window.__emApplyServerStandings(st.standings || []);
-                    });
-                  }
-                } catch (eSync) {}
-              }, 2000);
-            } else {
-              const homeRow =
-                findLeagueTeamByName(teamConfig.home.name) ||
-                userHomeLeagueEntry;
-              const awayRow =
-                findLeagueTeamByName(teamConfig.away.name) ||
-                userAwayLeagueEntry;
-              applyLeagueResult(homeRow, awayRow, homeScore, awayScore);
-            }
+            const homeRow =
+              findLeagueTeamByName(teamConfig.home.name) || userHomeLeagueEntry;
+            const awayRow =
+              findLeagueTeamByName(teamConfig.away.name) || userAwayLeagueEntry;
+            applyLeagueResult(homeRow, awayRow, homeScore, awayScore);
           })();
           if (!leagueReports[USER_COUNTRY]) leagueReports[USER_COUNTRY] = {};
           if (!leagueReports[USER_COUNTRY][USER_DIVISION])
             leagueReports[USER_COUNTRY][USER_DIVISION] = [];
-          // Rapor sadece görüntü/geçmiş; sunucu modunda da local log tutulabilir
           leagueReports[USER_COUNTRY][USER_DIVISION].unshift({
             home: teamConfig.home.name,
             away: teamConfig.away.name,
@@ -25715,11 +25672,6 @@ function renderTransferPage() {
                 : awayScore > homeScore
                   ? teamConfig.away.name
                   : "Berabere",
-            serverPending: !!(
-              window.__emServerAuthoritative &&
-              typeof window.__emIsServerOnline === "function" &&
-              window.__emIsServerOnline()
-            ),
           });
           renderStandings();
           // Haftanın diğer maçları da (botlar) aynı anda oynanıp fikstüre işlensin
