@@ -53,14 +53,24 @@ async function addForumPost(userId, username, text) {
   return { ok: true, post: rows[0], posts };
 }
 
-async function deleteForumPost(postId) {
+async function deleteForumPost(postId, requesterUserId) {
   const id = String(postId || "").trim();
   // UUID veya sayısal id — Number(UUID) NaN olduğu için Sil hep "Geçersiz id" dönüyordu
   if (!id || id === "undefined" || id === "null") {
     return { ok: false, error: "Geçersiz id" };
   }
-  const { rowCount } = await query(`DELETE FROM forum_posts WHERE id = $1`, [id]);
-  if (!rowCount) return { ok: false, error: "Gönderi bulunamadı" };
+  // GÜVENLİK: requesterUserId verildiyse (admin olmayan çağrı), yalnızca
+  // kendi gönderisini silebilir — IDOR'a geri dönmeden "kendi mesajını sil"
+  // özelliğini destekler. requesterUserId null ise (admin çağrısı) herhangi
+  // bir gönderi silinebilir.
+  const params = [id];
+  let sql = `DELETE FROM forum_posts WHERE id = $1`;
+  if (requesterUserId) {
+    sql += ` AND user_id = $2`;
+    params.push(requesterUserId);
+  }
+  const { rowCount } = await query(sql, params);
+  if (!rowCount) return { ok: false, error: "Gönderi bulunamadı ya da size ait değil" };
   const posts = await listForum(50);
   return { ok: true, posts };
 }

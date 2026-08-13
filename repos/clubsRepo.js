@@ -90,6 +90,9 @@ function rowToPlayer(r) {
     goals: r.goals,
     assists: r.assists,
     minutesPlayed: r.minutes_played,
+    wage: Number(r.wage) || 0,
+    contractEndsAt: r.contract_ends_at || null,
+    lastWagePaidAt: r.last_wage_paid_at || null,
   };
 }
 
@@ -101,8 +104,82 @@ async function getTeam(clubId) {
      ORDER BY is_starter DESC, bench_order NULLS LAST, number NULLS LAST`,
     [clubId],
   );
-  const starters = rows.filter((r) => r.is_starter).map(rowToPlayer);
-  const bench = rows.filter((r) => !r.is_starter).map(rowToPlayer);
+  let starters = rows.filter((r) => r.is_starter).map(rowToPlayer);
+  let bench = rows.filter((r) => !r.is_starter).map(rowToPlayer);
+  let autoFixed = false;
+
+  // is_starter hiç / eksik işaretlenmişse saha boş kalmasın:
+  // en iyi 11'i XI yap, kalanı yedek; DB'ye de yaz (kalıcı).
+  if (starters.length < 11 && rows.length > 0) {
+    const skillSum = (r) =>
+      Number(r.pace || 0) +
+      Number(r.passing || 0) +
+      Number(r.finishing || 0) +
+      Number(r.tackle || 0) +
+      Number(r.vision || 0) +
+      Number(r.stamina || 0) +
+      Number(r.strength || 0) +
+      Number(r.technique || 0) +
+      Number(r.agility || 0) +
+      Number(r.positioning || 0) +
+      Number(r.reflex || 0) +
+      Number(r.handling || 0);
+    const sorted = rows.slice().sort((a, b) => skillSum(b) - skillSum(a));
+    const used = new Set(starters.map((p) => String(p.id)));
+    for (const r of sorted) {
+      if (starters.length >= 11) break;
+      const id = String(r.id);
+      if (used.has(id)) continue;
+      used.add(id);
+      starters.push(rowToPlayer(r));
+    }
+    bench = rows
+      .filter((r) => !used.has(String(r.id)))
+      .map(rowToPlayer);
+    autoFixed = true;
+  }
+
+  // 11'den fazla starter varsa fazlasını yedeğe al
+  if (starters.length > 11) {
+    const extra = starters.splice(11);
+    bench = extra.concat(bench);
+    autoFixed = true;
+  }
+
+  if (autoFixed && starters.length > 0) {
+    try {
+      const starterIds = starters.map((p) => p.id).filter(Boolean);
+      const benchIds = bench.map((p) => p.id).filter(Boolean);
+      if (starterIds.length) {
+        await query(
+          `UPDATE players SET is_starter = TRUE, bench_order = NULL
+           WHERE club_id = $1 AND id = ANY($2::uuid[])`,
+          [clubId, starterIds],
+        );
+      }
+      if (benchIds.length) {
+        // bench_order sıra numarası
+        for (let i = 0; i < benchIds.length; i++) {
+          await query(
+            `UPDATE players SET is_starter = FALSE, bench_order = $3
+             WHERE club_id = $1 AND id = $2`,
+            [clubId, benchIds[i], i],
+          );
+        }
+      }
+      console.log(
+        "[clubsRepo.getTeam] auto-fixed XI for club",
+        clubId,
+        "starters=",
+        starters.length,
+        "bench=",
+        bench.length,
+      );
+    } catch (e) {
+      console.warn("[clubsRepo.getTeam] persist starters failed", e.message);
+    }
+  }
+
   return {
     name: club.name,
     gameStyle: club.game_style,
@@ -136,8 +213,16 @@ async function saveTeam(clubId, team) {
       );
     }
 
-    const starters = team.players || [];
-    const bench = team.bench || [];
+    let starters = Array.isArray(team.players) ? team.players.filter(Boolean) : [];
+    let bench = Array.isArray(team.bench) ? team.bench.filter(Boolean) : [];
+    // XI kalıcılığı: en fazla 11 starter; eksikse bench'ten doldur
+    if (starters.length > 11) {
+      bench = starters.slice(11).concat(bench);
+      starters = starters.slice(0, 11);
+    }
+    while (starters.length < 11 && bench.length) {
+      starters.push(bench.shift());
+    }
     const all = [
       ...starters.map((p) => ({ p, isStarter: true, benchOrder: null })),
       ...bench.map((p, i) => ({ p, isStarter: false, benchOrder: i })),
@@ -147,6 +232,19 @@ async function saveTeam(clubId, team) {
       `SELECT id FROM players WHERE club_id = $1`,
       [clubId],
     );
+
+    // KRİTİK: Boş payload mevcut kadroyu sunucudan silmesin
+    // (client bug / repair race → tüm oyuncular kayboluyordu)
+    if (all.filter((x) => x && x.p).length === 0 && existing.length > 0) {
+      console.warn(
+        "[clubsRepo.saveTeam] empty squad rejected for club",
+        clubId,
+        "existing=",
+        existing.length,
+      );
+      return { ok: false, rejected: "empty_squad", kept: existing.length };
+    }
+
     const keep = new Set(
       all.map(({ p }) => p && p.id).filter(Boolean).map(String),
     );

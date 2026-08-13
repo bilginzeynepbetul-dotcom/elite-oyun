@@ -344,9 +344,21 @@ async function applyMatchResult(fixtureId, homeGoals, awayGoals, matchId) {
     else if (ag > hg) winnerClubId = f.away_club_id;
     else {
       penalties = true;
-      // Kaba ama makul bir penaltı ihtimali: %50/%50 (ileride takım
-      // gücüne göre ağırlıklandırılabilir)
-      winnerClubId = Math.random() < 0.5 ? f.home_club_id : f.away_club_id;
+      // 5'er penaltı simülasyonu (~%72 isabet)
+      let ph = 0;
+      let pa = 0;
+      for (let i = 0; i < 5; i++) {
+        if (Math.random() < 0.72) ph++;
+        if (Math.random() < 0.72) pa++;
+      }
+      let guard = 0;
+      while (ph === pa && guard < 10) {
+        if (Math.random() < 0.7) ph++;
+        if (Math.random() < 0.7) pa++;
+        guard++;
+      }
+      if (ph === pa) ph++;
+      winnerClubId = ph > pa ? f.home_club_id : f.away_club_id;
     }
 
     await client.query(
