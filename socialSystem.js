@@ -24,8 +24,8 @@ async function addForumPost(userId, username, text) {
   return socialRepo.addForumPost(userId, username, text);
 }
 
-async function deleteForumPost(postId) {
-  return socialRepo.deleteForumPost(postId);
+async function deleteForumPost(postId, requesterUserId) {
+  return socialRepo.deleteForumPost(postId, requesterUserId);
 }
 
 async function listMessages(userId) {

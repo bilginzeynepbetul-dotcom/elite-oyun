@@ -24,6 +24,8 @@ function checkCardEvents(match) {
     const wasSecond = (p.cards || 0) >= 1;
     p.cards = 2;
     p.sentOff = true;
+    // Ceza: ikinci sarı 1 maç, doğrudan kırmızı 2 maç
+    p.matchBan = Math.max(Number(p.matchBan) || 0, wasSecond ? 1 : 2);
     match.addLog &&
       match.addLog(
         mt(wasSecond ? "second_yellow" : "red", lang, { name: p.name }),

@@ -35,8 +35,8 @@ const LIMITS = {
   conditionMax: 100,
   formMin: -5,
   formMax: 10,
-  experienceMin: 0,
-  experienceMax: 100,
+  experienceMin: 1,
+  experienceMax: 10,
   happinessMin: 0,
   happinessMax: 100,
   qualityMin: 1,
@@ -155,12 +155,13 @@ function sanitizePlayer(p) {
     90,
   );
   out.form = clampNum(out.form, LIMITS.formMin, LIMITS.formMax, 0);
-  out.experience = clampNum(
-    out.experience,
-    LIMITS.experienceMin,
-    LIMITS.experienceMax,
-    3,
-  );
+  // Legacy 0–99 → 1–10
+  {
+    let ex = Number(out.experience);
+    if (!isFinite(ex) || ex <= 0) ex = 3;
+    else if (ex > 10) ex = 1 + (Math.min(99, ex) / 99) * 9;
+    out.experience = clampNum(ex, LIMITS.experienceMin, LIMITS.experienceMax, 3);
+  }
   out.happiness = clampNum(
     out.happiness,
     LIMITS.happinessMin,

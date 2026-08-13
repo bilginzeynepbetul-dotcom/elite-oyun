@@ -300,6 +300,48 @@ async function releaseExpired(clubId) {
   return { ok: true, released: rows };
 }
 
+/**
+ * Tek oyuncuyu manuel serbest bırak (kulüp bordroyu azaltmak için).
+ * İlk 11'deki oyuncu ve minimum kadro altına düşürecek serbest bırakma
+ * reddedilir — client'taki "Serbest Bırak" ile aynı kurallar sunucuda
+ * da zorlanır (önceden bu işlem yalnızca client hafızasında yapılıyor,
+ * DB'deki oyuncu ve haftalık bordrosu hiç etkilenmiyordu).
+ */
+const MIN_SQUAD_SIZE = 11;
+async function releasePlayer(clubId, playerId) {
+  if (!clubId) return { ok: false, error: "Kulüp yok" };
+  if (!playerId) return { ok: false, error: "playerId gerekli" };
+
+  const { rows } = await query(
+    `SELECT id, name, is_starter FROM players WHERE id = $1 AND club_id = $2`,
+    [playerId, clubId],
+  );
+  const player = rows[0];
+  if (!player) {
+    return { ok: false, error: "Oyuncu kadronuzda değil" };
+  }
+  if (player.is_starter) {
+    return { ok: false, error: "İlk 11'deki oyuncu serbest bırakılamaz. Önce yedeğe al." };
+  }
+
+  const { rows: countRows } = await query(
+    `SELECT COUNT(*)::int AS c FROM players WHERE club_id = $1`,
+    [clubId],
+  );
+  const total = countRows[0] ? countRows[0].c : 0;
+  if (total <= MIN_SQUAD_SIZE) {
+    return { ok: false, error: "Kadro çok küçük, oyuncu serbest bırakılamaz." };
+  }
+
+  await query(
+    `UPDATE players SET club_id = NULL, is_starter = FALSE, bench_order = NULL
+     WHERE id = $1 AND club_id = $2`,
+    [playerId, clubId],
+  );
+
+  return { ok: true, released: { id: player.id, name: player.name } };
+}
+
 let _timer = null;
 function startPayrollTimer(ms) {
   if (_timer) return;
@@ -323,6 +365,7 @@ module.exports = {
   renewContract,
   ensureContract,
   releaseExpired,
+  releasePlayer,
   startPayrollTimer,
   publicPlayerContract,
   WAGE_INTERVAL_MS,

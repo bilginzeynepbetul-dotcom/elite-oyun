@@ -7,7 +7,11 @@
     "start": "npm run migrate && node server.js",
     "dev": "nodemon server.js",
     "migrate": "node scripts/migrate.js",
-    "check-db": "node scripts/check-db.js"
+    "check-db": "node scripts/check-db.js",
+    "test": "node scripts/smoke.js",
+    "test:integration": "node scripts/integration-test.js",
+    "test:all": "node scripts/smoke.js && node scripts/integration-test.js",
+    "test:stress": "node scripts/stress-instant.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

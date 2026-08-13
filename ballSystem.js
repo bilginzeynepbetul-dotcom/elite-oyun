@@ -19,7 +19,16 @@ const {
   avg,
   teamStrength,
   assignFormationPositions,
+  teamAvgExperience,
+  experienceErrorFactor,
 } = require("./teamUtils");
+const {
+  normalizePressIntensity,
+  normalizeTransitionStyle,
+  normalizePassStyle,
+  normalizeAttackDir,
+} = require("./tacticNormalize");
+const { mt } = require("./matchI18n");
 
 /** match nesnesine top/possession alanlarını ekler (Match constructor'ından çağrılır) */
 function initBallState(match) {
@@ -80,7 +89,7 @@ function invalidateTeamCombat(team) {
 function _pressFactor(intensity) {
   let p = intensity;
   try {
-    p = require("./tacticNormalize").normalizePressIntensity(intensity, "orta");
+    p = normalizePressIntensity(intensity, "orta");
   } catch (_) {
     p = String(intensity || "orta").toLowerCase();
   }
@@ -104,7 +113,7 @@ function isKontraActive(team, match, side) {
   if (!team) return false;
   let tr = team.transitionStyle;
   try {
-    tr = require("./tacticNormalize").normalizeTransitionStyle(tr, "normal");
+    tr = normalizeTransitionStyle(tr, "normal");
   } catch (_) {
     tr = String(tr || "normal").toLowerCase();
   }
@@ -145,6 +154,15 @@ function turnoverProbability(match, possSide) {
   if (isKeepBallActive(match, possSide)) {
     prob -= 0.055;
   }
+
+  // Tecrübe: sahip taraf topu daha az kaybeder; rakip tecrübesi pres kalitesini artırır
+  try {
+    const myExp = teamAvgExperience(team); // 1–10
+    const theirExp = teamAvgExperience(opp);
+    // +1 seviye sahip ≈ -0.008 top kaybı; rakip +1 ≈ +0.006
+    prob -= (myExp - 5) * 0.008;
+    prob += (theirExp - 5) * 0.006;
+  } catch (_) {}
 
   return Math.max(0.035, Math.min(0.48, prob));
 }
@@ -188,7 +206,7 @@ function longPassChance(style, team, match, side) {
   }
   let s = style;
   try {
-    s = require("./tacticNormalize").normalizePassStyle(style, "kisa");
+    s = normalizePassStyle(style, "kisa");
   } catch (_) {
     s = String(style || "kisa").toLowerCase();
   }
@@ -211,7 +229,7 @@ function pickNextTeammate(team, currentIndex, match, side) {
   const famRank = { GK: -1, DF: 0, DM: 1, MF: 2, AM: 3, FW: 4 };
   let attackDir = team.attackDir || "orta";
   try {
-    attackDir = require("./tacticNormalize").normalizeAttackDir(attackDir, "orta");
+    attackDir = normalizeAttackDir(attackDir, "orta");
   } catch (_) {}
   const order = team.players
     .map((p, i) => ({ p, i }))
@@ -294,7 +312,6 @@ function circulateBall(match) {
     if (defender) defender.keyActions = (defender.keyActions || 0) + 1;
 
     if (Math.random() < 0.35) {
-      const { mt } = require("./matchI18n");
       const lang = (match && match.lang) || "en";
       event = {
         type: "turnover",

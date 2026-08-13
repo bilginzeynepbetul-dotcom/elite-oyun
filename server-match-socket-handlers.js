@@ -1,178 +1,258 @@
 // ============================================================
 // server-match-socket-handlers.js
-// ------------------------------------------------------------
-// matchEngine.Match üzerindeki applyTacticChange / applySubstitution
-// metodlarını socket.io event'lerine bağlar.
-//
-// KULLANIM: Ana sunucu dosyanda (ör. server.js / socket.js) io
-// bağlantısı kurulduktan sonra registerMatchControlHandlers(io, getMatchByFixture)
-// çağır.
-//
-// getMatchByFixture(fixtureId) → canlı Match instance veya null dönmeli.
-// İstemci event'leri:
-//   match:tactics  { fixtureId, side, tactics: {passStyle,gameStyle,attackDir} }
-//   match:sub      { fixtureId, side, outIdx, inIdx }
-// Sunucu cevapları:
-//   match:tactics:result  { ok, error? }
-//   match:sub:result      { ok, error?, out?, in?, subsLeft? }
-//   (+ başarılı olursa match:state / match:log zaten Match.broadcast ile gider)
+// Canlı maç kontrolü: taktik değişikliği + oyuncu değişikliği
+// (match:tactics / match:sub) ve taraf çözümü (resolveSideForUser).
 // ============================================================
 
 /**
- * @param {import("socket.io").Server} io
- * @param {(fixtureId: string) => any} getMatchByFixture
- *   fixtureId → Match instance (veya null)
- * @param {(socket) => {id?: string, clubId?: string}|null} [getSocketIdentity]
- *   socket'ten user kimliği; side doğrulaması için zorunlu
+ * Kullanıcının maçtaki tarafını (home | away | null) bulur.
+ * Önce userId, yoksa clubId ile eşleştirir.
+ * @param {object} match  Match instance (players.home / players.away)
+ * @param {string|number|null} userId
+ * @returns {"home"|"away"|null}
  */
-function registerMatchControlHandlers(io, getMatchByFixture, getSocketIdentity) {
+function resolveSideForUser(match, userId) {
+  if (!match || !match.players) return null;
+  const uid = userId != null ? String(userId) : null;
+  if (!uid) return null;
+
+  const home = match.players.home;
+  const away = match.players.away;
+
+  if (home && home.userId != null && String(home.userId) === uid) return "home";
+  if (away && away.userId != null && String(away.userId) === uid) return "away";
+
+  return null;
+}
+
+/**
+ * clubId üzerinden taraf çöz (userId yoksa veya bot-owned olmayan kulüpler için).
+ */
+function resolveSideForClub(match, clubId) {
+  if (!match || !match.players || clubId == null) return null;
+  const cid = String(clubId);
+  const home = match.players.home;
+  const away = match.players.away;
+  if (home && home.clubId != null && String(home.clubId) === cid) return "home";
+  if (away && away.clubId != null && String(away.clubId) === cid) return "away";
+  return null;
+}
+
+/**
+ * Socket.IO bağlantısına maç kontrol event'lerini kaydeder.
+ *
+ * @param {import('socket.io').Server} io
+ * @param {(fixtureId: string) => object|null} getMatch  liveMatches.get(fixtureId)
+ * @param {(socket) => {id, username, clubId}|null} getUser  socket.data.user
+ */
+function registerMatchControlHandlers(io, getMatch, getUser) {
+  if (!io) return;
+
   io.on("connection", (socket) => {
+    // --------------------------------------------------------
+    // match:tactics  { fixtureId, side?, tactics }
+    // --------------------------------------------------------
     socket.on("match:tactics", (payload) => {
       try {
-        const { fixtureId, side, tactics } = payload || {};
-        const match = getMatchByFixture(fixtureId);
+        const user = typeof getUser === "function" ? getUser(socket) : null;
+        if (!user || !user.id) {
+          socket.emit("match:tactics:result", {
+            ok: false,
+            error: "Oturum gerekli",
+          });
+          return;
+        }
+
+        const fixtureId =
+          payload && (payload.fixtureId || payload.matchId || payload.id);
+        if (!fixtureId) {
+          socket.emit("match:tactics:result", {
+            ok: false,
+            error: "fixtureId gerekli",
+          });
+          return;
+        }
+
+        const match = typeof getMatch === "function" ? getMatch(fixtureId) : null;
         if (!match) {
           socket.emit("match:tactics:result", {
             ok: false,
-            error: "Maç bulunamadı",
+            error: "Maç bulunamadı veya henüz canlı değil",
+            fixtureId,
           });
           return;
         }
-        if (match.status !== "live") {
+
+        if (match.status !== "live" && match.status !== "countdown") {
           socket.emit("match:tactics:result", {
             ok: false,
             error: "Maç canlı değil",
+            fixtureId,
           });
           return;
         }
-        // Sadece kendi tarafını değiştirebilsin. Bot/rakip tarafına müdahale engellenir.
-        if (typeof getSocketIdentity !== "function") {
+
+        const owned =
+          resolveSideForUser(match, user.id) ||
+          resolveSideForClub(match, user.clubId);
+
+        if (!owned) {
           socket.emit("match:tactics:result", {
             ok: false,
-            error: "Yetki doğrulanamadı",
+            error: "Bu maçta bir tarafa sahip değilsin",
+            fixtureId,
           });
           return;
         }
-        const ident = getSocketIdentity(socket);
-        if (!ident || !ident.id) {
-          socket.emit("match:tactics:result", {
-            ok: false,
-            error: "Yetki doğrulanamadı",
-          });
-          return;
-        }
-        if (side !== "home" && side !== "away") {
-          socket.emit("match:tactics:result", {
-            ok: false,
-            error: "Geçersiz taraf",
-          });
-          return;
-        }
-        const sidePlayer = match.players[side];
+
+        // İstemci side gönderdiyse doğrula (spoof koruması)
         if (
-          !sidePlayer ||
-          !sidePlayer.userId ||
-          String(sidePlayer.userId) !== String(ident.id)
+          (payload.side === "home" || payload.side === "away") &&
+          payload.side !== owned
         ) {
           socket.emit("match:tactics:result", {
             ok: false,
-            error: "Bu taraf size ait değil",
+            error: "Bu tarafa yetkin yok",
+            fixtureId,
           });
           return;
         }
-        // Taktik değişimi cooldown (spam / full state broadcast koruması)
-        if (!socket._emTacticsCooldown) socket._emTacticsCooldown = new Map();
-        {
-          const cdKey = String(fixtureId || match.id || "") + ":" + side;
-          const now = Date.now();
-          const last = socket._emTacticsCooldown.get(cdKey) || 0;
-          const COOLDOWN_MS = 20000; // 20 sn
-          if (now - last < COOLDOWN_MS) {
-            const wait = Math.ceil((COOLDOWN_MS - (now - last)) / 1000);
-            socket.emit("match:tactics:result", {
-              ok: false,
-              error: "Taktik değişimi için " + wait + " sn bekleyin",
-              code: "TACTICS_COOLDOWN",
-              retryAfterSec: wait,
-            });
-            return;
-          }
-          socket._emTacticsCooldown.set(cdKey, now);
+
+        const side = owned;
+
+        if (typeof match.applyTacticChange !== "function") {
+          socket.emit("match:tactics:result", {
+            ok: false,
+            error: "Taktik değişikliği desteklenmiyor",
+            fixtureId,
+          });
+          return;
         }
-        const result = match.applyTacticChange(side, tactics || {});
-        socket.emit("match:tactics:result", result || { ok: true });
+
+        const result = match.applyTacticChange(side, (payload && payload.tactics) || {});
+        socket.emit("match:tactics:result", {
+          ...result,
+          fixtureId,
+          side,
+        });
       } catch (e) {
         console.error("[match:tactics]", e);
         socket.emit("match:tactics:result", {
           ok: false,
-          error: "Sunucu hatası",
+          error: e.message || "Taktik uygulanamadı",
         });
       }
     });
 
+    // --------------------------------------------------------
+    // match:sub  { fixtureId, side?, outIdx, inIdx }
+    // --------------------------------------------------------
     socket.on("match:sub", (payload) => {
       try {
-        const { fixtureId, side, outIdx, inIdx } = payload || {};
-        const match = getMatchByFixture(fixtureId);
+        const user = typeof getUser === "function" ? getUser(socket) : null;
+        if (!user || !user.id) {
+          socket.emit("match:sub:result", {
+            ok: false,
+            error: "Oturum gerekli",
+          });
+          return;
+        }
+
+        const fixtureId =
+          payload && (payload.fixtureId || payload.matchId || payload.id);
+        if (!fixtureId) {
+          socket.emit("match:sub:result", {
+            ok: false,
+            error: "fixtureId gerekli",
+          });
+          return;
+        }
+
+        const match = typeof getMatch === "function" ? getMatch(fixtureId) : null;
         if (!match) {
           socket.emit("match:sub:result", {
             ok: false,
-            error: "Maç bulunamadı",
+            error: "Maç bulunamadı veya henüz canlı değil",
+            fixtureId,
           });
           return;
         }
-        if (match.status !== "live") {
+
+        if (match.status !== "live" && match.status !== "countdown") {
           socket.emit("match:sub:result", {
             ok: false,
             error: "Maç canlı değil",
+            fixtureId,
           });
           return;
         }
-        if (typeof getSocketIdentity !== "function") {
+
+        const owned =
+          resolveSideForUser(match, user.id) ||
+          resolveSideForClub(match, user.clubId);
+
+        if (!owned) {
           socket.emit("match:sub:result", {
             ok: false,
-            error: "Yetki doğrulanamadı",
+            error: "Bu maçta bir tarafa sahip değilsin",
+            fixtureId,
           });
           return;
         }
-        const ident = getSocketIdentity(socket);
-        if (!ident || !ident.id) {
-          socket.emit("match:sub:result", {
-            ok: false,
-            error: "Yetki doğrulanamadı",
-          });
-          return;
-        }
-        if (side !== "home" && side !== "away") {
-          socket.emit("match:sub:result", {
-            ok: false,
-            error: "Geçersiz taraf",
-          });
-          return;
-        }
-        const sidePlayer = match.players[side];
+
         if (
-          !sidePlayer ||
-          !sidePlayer.userId ||
-          String(sidePlayer.userId) !== String(ident.id)
+          (payload.side === "home" || payload.side === "away") &&
+          payload.side !== owned
         ) {
           socket.emit("match:sub:result", {
             ok: false,
-            error: "Bu taraf size ait değil",
+            error: "Bu tarafa yetkin yok",
+            fixtureId,
           });
           return;
         }
+
+        const side = owned;
+
+        const outIdx = Number(payload && payload.outIdx);
+        const inIdx = Number(payload && payload.inIdx);
+        if (!Number.isFinite(outIdx) || !Number.isFinite(inIdx)) {
+          socket.emit("match:sub:result", {
+            ok: false,
+            error: "outIdx / inIdx gerekli",
+            fixtureId,
+          });
+          return;
+        }
+
+        if (typeof match.applySubstitution !== "function") {
+          socket.emit("match:sub:result", {
+            ok: false,
+            error: "Değişiklik desteklenmiyor",
+            fixtureId,
+          });
+          return;
+        }
+
         const result = match.applySubstitution(side, outIdx, inIdx);
-        socket.emit("match:sub:result", result || { ok: false, error: "?" });
+        socket.emit("match:sub:result", {
+          ...result,
+          fixtureId,
+          side,
+        });
       } catch (e) {
         console.error("[match:sub]", e);
         socket.emit("match:sub:result", {
           ok: false,
-          error: "Sunucu hatası",
+          error: e.message || "Değişiklik uygulanamadı",
         });
       }
     });
   });
 }
 
-module.exports = { registerMatchControlHandlers };
+module.exports = {
+  registerMatchControlHandlers,
+  resolveSideForUser,
+  resolveSideForClub,
+};

@@ -8,25 +8,25 @@ const PLANS = {
     id: "weekly",
     title: "Haftalık",
     days: 7,
-    amountCents: 4900,
+    amountCents: 1900,
     currency: "try",
-    label: "49 ₺",
+    label: "19 ₺",
   },
   monthly: {
     id: "monthly",
     title: "Aylık",
     days: 30,
-    amountCents: 14900,
+    amountCents: 3900,
     currency: "try",
-    label: "149 ₺",
+    label: "39 ₺",
   },
   yearly: {
     id: "yearly",
     title: "Yıllık",
     days: 365,
-    amountCents: 99900,
+    amountCents: 39900,
     currency: "try",
-    label: "999 ₺",
+    label: "399 ₺",
   },
   trial: {
     id: "trial",
@@ -304,10 +304,8 @@ function eliteMiddleware(req, res, next) {
     });
 }
 
-/** Günlük ödül: herkes aynı (25.000 + seri×5.000), Elite çarpanı yok */
-const DAILY_BASE = 25000;
-const DAILY_STREAK_BONUS = 5000;
-const DAILY_STREAK_MAX = 30;
+/** Günlük ödül: herkes aynı sabit tutar, seri yok, Elite çarpanı yok */
+const DAILY_AMOUNT = 50000;
 
 function startOfLocalDay(d) {
   const x = d ? new Date(d) : new Date();
@@ -316,35 +314,24 @@ function startOfLocalDay(d) {
 
 async function getDailyStatus(userId) {
   const { rows } = await query(
-    `SELECT daily_reward_at, daily_reward_streak FROM users WHERE id = $1`,
+    `SELECT daily_reward_at FROM users WHERE id = $1`,
     [userId],
   );
   const row = rows[0] || {};
   const last = row.daily_reward_at ? new Date(row.daily_reward_at) : null;
   const today = startOfLocalDay();
   const claimedToday = !!(last && last >= today);
-  const streak = Number(row.daily_reward_streak) || 0;
-  let nextStreak = 1;
-  if (!claimedToday) {
-    const yesterday = new Date(today.getTime() - 86400000);
-    if (last && last >= yesterday && last < today) nextStreak = Math.min(DAILY_STREAK_MAX, streak + 1);
-    else nextStreak = 1;
-  } else {
-    nextStreak = streak;
-  }
-  const amount = DAILY_BASE + nextStreak * DAILY_STREAK_BONUS;
   return {
     claimedToday,
-    streak: claimedToday ? streak : nextStreak,
-    amountIfClaim: amount,
+    amountIfClaim: DAILY_AMOUNT,
     nextAt: new Date(today.getTime() + 86400000).toISOString(),
     lastAt: last ? last.toISOString() : null,
   };
 }
 
 /**
- * Atomik günlük ödül claim. Elite ile aynı tutar.
- * @returns {{ ok, amount?, streak?, balance?, code? }}
+ * Atomik günlük ödül claim. Her gün aynı tutar, seri yok.
+ * @returns {{ ok, amount?, balance?, code? }}
  */
 async function claimDailyReward(userId, clubId) {
   if (!userId || !clubId) return { ok: false, error: "Kulüp yok", code: "NO_CLUB" };
@@ -352,7 +339,7 @@ async function claimDailyReward(userId, clubId) {
   const today = startOfLocalDay();
 
   const { rows } = await query(
-    `SELECT daily_reward_at, daily_reward_streak FROM users WHERE id = $1`,
+    `SELECT daily_reward_at FROM users WHERE id = $1`,
     [userId],
   );
   const row = rows[0] || {};
@@ -366,19 +353,13 @@ async function claimDailyReward(userId, clubId) {
     };
   }
 
-  let streak = Number(row.daily_reward_streak) || 0;
-  const yesterday = new Date(today.getTime() - 86400000);
-  if (last && last >= yesterday && last < today) streak += 1;
-  else streak = 1;
-  streak = Math.min(DAILY_STREAK_MAX, streak);
-
   const claim = await query(
     `UPDATE users
-     SET daily_reward_at = NOW(), daily_reward_streak = $2
+     SET daily_reward_at = NOW(), daily_reward_streak = 0
      WHERE id = $1
-       AND (daily_reward_at IS NULL OR daily_reward_at < $3)
+       AND (daily_reward_at IS NULL OR daily_reward_at < $2)
      RETURNING id`,
-    [userId, streak, today.toISOString()],
+    [userId, today.toISOString()],
   );
   if (!claim.rows.length) {
     return {
@@ -389,7 +370,7 @@ async function claimDailyReward(userId, clubId) {
     };
   }
 
-  const amount = DAILY_BASE + streak * DAILY_STREAK_BONUS;
+  const amount = DAILY_AMOUNT;
   const ok = await clubsRepo.adjustBalance(clubId, amount, "Günlük giriş ödülü");
   if (!ok) {
     return { ok: false, error: "Bütçe güncellenemedi", code: "BALANCE" };
@@ -399,11 +380,166 @@ async function claimDailyReward(userId, clubId) {
   return {
     ok: true,
     amount,
-    streak,
     elite: !!(elite && elite.active),
     balance: eco && eco.balance,
   };
 }
+
+
+// ============================================================
+// BAĞIŞ / DESTEK OL
+// ============================================================
+
+function getDonationMethodsPublic() {
+  return {
+    iban: process.env.DONATION_IBAN || "",
+    ibanName: process.env.DONATION_IBAN_NAME || "",
+    papara: process.env.DONATION_PAPARA || "",
+    paparaName: process.env.DONATION_PAPARA_NAME || "",
+    other: process.env.DONATION_OTHER || "",
+    note:
+      process.env.DONATION_NOTE ||
+      "Açıklamaya kullanıcı adını yaz. Dekont sonrası bağış formunu doldur; yönetici onaylayınca Elite aktif olur.",
+    currency: "TRY",
+  };
+}
+
+async function createDonation(userId, payload) {
+  payload = payload || {};
+  const planId = String(payload.plan || "").trim();
+  const plan = PLANS[planId];
+  if (!plan || planId === "trial") {
+    return { ok: false, error: "Geçersiz plan (weekly / monthly / yearly)" };
+  }
+  const method = String(payload.method || "iban").toLowerCase().slice(0, 32);
+  const referenceCode = String(payload.referenceCode || payload.reference || "")
+    .trim()
+    .slice(0, 120);
+  const note = String(payload.note || "").trim().slice(0, 500);
+  const payerName = String(payload.payerName || "").trim().slice(0, 120);
+  if (!referenceCode && !payerName) {
+    return {
+      ok: false,
+      error: "Referans / dekont no veya gönderen adı gerekli",
+    };
+  }
+  // Aynı kullanıcıda çok fazla bekleyen bağış olmasın
+  const { rows: pending } = await query(
+    `SELECT COUNT(*)::int AS c FROM donations
+     WHERE user_id = $1 AND status = 'pending'`,
+    [userId],
+  );
+  if (pending[0] && pending[0].c >= 5) {
+    return {
+      ok: false,
+      error: "Zaten 5 bekleyen bağışın var. Onay bekleyin veya iptal edin.",
+    };
+  }
+  const { rows } = await query(
+    `INSERT INTO donations
+       (user_id, plan, amount_cents, currency, method, reference_code, note, payer_name, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+     RETURNING id, plan, amount_cents, currency, method, reference_code, note, payer_name, status, created_at`,
+    [
+      userId,
+      planId,
+      plan.amountCents,
+      plan.currency,
+      method,
+      referenceCode || null,
+      note || null,
+      payerName || null,
+    ],
+  );
+  // elite_payments kaydı da tut (rapor)
+  try {
+    await createPaymentRecord(
+      userId,
+      planId,
+      "donation",
+      "don_" + rows[0].id,
+    );
+  } catch (e) {}
+  return {
+    ok: true,
+    donation: rows[0],
+    message:
+      "Bağış bildirimin alındı. Yönetici onaylayınca Elite aktifleşir.",
+  };
+}
+
+async function listMyDonations(userId, limit) {
+  const lim = Math.min(50, Math.max(1, parseInt(limit, 10) || 20));
+  const { rows } = await query(
+    `SELECT id, plan, amount_cents, currency, method, reference_code, note,
+            payer_name, status, admin_note, created_at, reviewed_at
+     FROM donations WHERE user_id = $1
+     ORDER BY created_at DESC LIMIT $2`,
+    [userId, lim],
+  );
+  return rows;
+}
+
+async function cancelMyDonation(userId, donationId) {
+  const { rows } = await query(
+    `UPDATE donations SET status = 'cancelled', reviewed_at = NOW()
+     WHERE id = $1 AND user_id = $2 AND status = 'pending'
+     RETURNING id`,
+    [donationId, userId],
+  );
+  if (!rows[0]) return { ok: false, error: "İptal edilecek bekleyen bağış yok" };
+  return { ok: true, id: rows[0].id };
+}
+
+async function listPendingDonations(limit) {
+  const lim = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
+  const { rows } = await query(
+    `SELECT d.id, d.user_id, d.plan, d.amount_cents, d.currency, d.method,
+            d.reference_code, d.note, d.payer_name, d.status, d.created_at,
+            u.username
+     FROM donations d
+     JOIN users u ON u.id = d.user_id
+     WHERE d.status = 'pending'
+     ORDER BY d.created_at ASC
+     LIMIT $1`,
+    [lim],
+  );
+  return rows;
+}
+
+async function reviewDonation(donationId, adminUserId, accept, adminNote) {
+  const { rows } = await query(
+    `SELECT * FROM donations WHERE id = $1`,
+    [donationId],
+  );
+  const don = rows[0];
+  if (!don) return { ok: false, error: "Bağış bulunamadı" };
+  if (don.status !== "pending") {
+    return { ok: false, error: "Bu bağış zaten işlendi: " + don.status };
+  }
+  if (!accept) {
+    await query(
+      `UPDATE donations SET status = 'rejected', admin_note = $2,
+         reviewed_by = $3, reviewed_at = NOW()
+       WHERE id = $1`,
+      [donationId, String(adminNote || "").slice(0, 500) || null, adminUserId || null],
+    );
+    return { ok: true, status: "rejected" };
+  }
+  const act = await activatePlan(don.user_id, don.plan, {
+    provider: "donation",
+    providerRef: "don_" + don.id,
+  });
+  if (!act.ok) return act;
+  await query(
+    `UPDATE donations SET status = 'approved', admin_note = $2,
+       reviewed_by = $3, reviewed_at = NOW()
+     WHERE id = $1`,
+    [donationId, String(adminNote || "").slice(0, 500) || null, adminUserId || null],
+  );
+  return { ok: true, status: "approved", elite: act.status };
+}
+
 
 module.exports = {
   PLANS,
@@ -415,10 +551,15 @@ module.exports = {
   handleStripeWebhookEvent,
   confirmMockPayment,
   listPlansPublic,
+  getDonationMethodsPublic,
+  createDonation,
+  listMyDonations,
+  cancelMyDonation,
+  listPendingDonations,
+  reviewDonation,
   requireElite,
   eliteMiddleware,
   getDailyStatus,
   claimDailyReward,
-  DAILY_BASE,
-  DAILY_STREAK_BONUS,
+  DAILY_AMOUNT,
 };

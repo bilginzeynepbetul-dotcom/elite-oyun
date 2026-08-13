@@ -34,12 +34,32 @@ const FIRST_NAMES = [
   "Emre", "Can", "Burak", "Kerem", "Arda", "Berkay", "Volkan", "Kaan",
   "Mert", "Furkan", "Deniz", "Alp", "Yiğit", "Efe", "Umut", "Gökhan",
   "Selim", "Taner", "Baran", "Enes", "Uğur", "Erhan", "Sinan",
+  "Metehan", "Kağan", "Bora", "Eren", "Kenan", "Bahadır", "Tayfun",
+  "Oğuzhan", "Görkem", "İlker", "Rıdvan", "Semih", "Doruk", "Berkan",
+  "Cenk", "Ozan", "Hakan", "Çağatay", "Tuna", "Batuhan", "Koray",
+  "Levent", "Alper", "Faruk", "Salih", "Vedat", "Zafer", "Metin",
+  "Atakan", "Emir", "Ferhat", "Harun", "İdris", "Kuzey", "Okan",
+  "Samet", "Utku", "Yavuz", "Zeki", "Berke", "Ege", "Fırat", "Sarp",
+  "Taha", "Poyraz", "Rüzgar", "Çınar", "Alparslan", "Abdullah", "Adem",
+  "Anıl", "Berk", "Bilal", "Cengiz", "Doğan", "Erdem", "Erkan", "Fatih",
+  "Hamza", "İlyas", "Kadir", "Kemal", "Mahmut", "Mesut", "Oğuz", "Özgür",
+  "Rıza", "Sami", "Selçuk", "Tarık", "Turgut", "Ümit", "Yakup", "Yalçın",
 ];
 const LAST_NAMES = [
   "Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Aydın", "Öztürk",
   "Arslan", "Doğan", "Kılıç", "Aslan", "Koç", "Polat", "Kurt", "Yıldız",
   "Özdemir", "Çetin", "Aksoy", "Bulut", "Sarı", "Yavuz", "Erdoğan",
   "Güneş", "Korkmaz", "Kaplan", "Türk", "Avcı", "Yıldırım", "Aktaş",
+  "Öz", "Karaca", "Tunç", "Uçar", "Bozkurt", "Aygün", "Çakır", "Duman",
+  "Ergin", "Kandemir", "Özkan", "Tekin", "Yalçın", "Şimşek", "Gündoğdu",
+  "Acar", "Akın", "Ateş", "Bayram", "Can", "Çakmak", "Dal", "Durmuş",
+  "Efe", "Ekici", "Erdem", "Gezer", "Gök", "Güler", "Işık", "Kara",
+  "Karaman", "Kartal", "Keskin", "Köse", "Kutlu", "Mutlu", "Özer",
+  "Sağlam", "Sezer", "Soylu", "Taş", "Toprak", "Tuna", "Türkmen",
+  "Uysal", "Ünal", "Varol", "Yağcı", "Yaman", "Yiğit", "Zengin",
+  "Akbulut", "Akgün", "Altın", "Arı", "Atalay", "Bakır", "Başaran",
+  "Bayraktar", "Ceylan", "Çağlar", "Dağ", "Ekinci", "Gökçe", "Gürbüz",
+  "Karadağ", "Kayaalp", "Özbay", "Pektaş", "Solak", "Tan", "Ulu",
 ];
 
 /** clubId → state */
@@ -171,6 +191,35 @@ function familyOf(pos) {
 }
 
 /** generateYouthPlayer() (public/index.html) ile birebir aynı mantık */
+
+function rollYouthPotential(academyLevel, scoutLevel) {
+  const acad = Math.max(1, Math.min(5, Number(academyLevel) || 1));
+  const scout = Math.max(1, Number(scoutLevel) || 1);
+  let hardMax = 7;
+  if (acad >= 5) hardMax = 10;
+  else if (acad >= 4) hardMax = 9;
+  else if (acad >= 3) hardMax = 8;
+  const r = Math.random();
+  let pot;
+  if (r < 0.06) pot = 3;
+  else if (r < 0.22) pot = 4;
+  else if (r < 0.48) pot = 5;
+  else if (r < 0.72) pot = 6;
+  else if (r < 0.88) pot = 7;
+  else if (r < 0.96) pot = 8;
+  else if (r < 0.993) pot = 9;
+  else pot = 10;
+  if (scout >= 3 && Math.random() < 0.08) pot = Math.min(10, pot + 1);
+  if (scout >= 5 && Math.random() < 0.05) pot = Math.min(10, pot + 1);
+  pot = Math.min(pot, hardMax);
+  if (pot === 9 && Math.random() > 0.12) pot = 8;
+  if (pot === 10) {
+    if (acad < 5) pot = 8;
+    else if (Math.random() > 0.35) pot = 9;
+  }
+  return Math.max(1, Math.min(10, pot));
+}
+
 function generatePlayer(scoutLevel, academyLevel, preferredFamily, preferredSkill) {
   let positions = POSITIONS;
   if (preferredFamily && POSITIONS_BY_FAMILY[preferredFamily]) {
@@ -184,13 +233,15 @@ function generatePlayer(scoutLevel, academyLevel, preferredFamily, preferredSkil
       positions = ["MC", "DM", "OMC", "ML", "MR"];
   }
   const pos = positions[Math.floor(Math.random() * positions.length)];
-  const scoutBonus = ((scoutLevel || 1) - 1) * 0.6;
-  const acadBonus = ((academyLevel || 1) - 1) * 0.5;
+  const scoutLv = Math.max(1, Number(scoutLevel) || 1);
+  const acadLv = Math.max(1, Math.min(5, Number(academyLevel) || 1));
+  const scoutBonus = (scoutLv - 1) * 0.6;
   let quality = Math.round(1 + Math.random() * 3.5 + scoutBonus * 0.4);
-  let potential = Math.round(3 + Math.random() * 6 + acadBonus + scoutBonus * 0.5);
   quality = Math.max(1, Math.min(5, quality));
-  potential = Math.max(1, Math.min(10, Math.max(quality, potential)));
-  const age = 15 + Math.floor(Math.random() * 4);
+  // Pot 10 yalnız akademi 5; 9–10 nadir
+  let potential = rollYouthPotential(acadLv, scoutLv);
+  potential = Math.max(quality, potential);
+  const age = 16; // altyapı yalnızca 16 yaş
   const cur = 3 + quality * 1.05 + Math.random() * 1.6; // genel seviye düşük-orta
   const fam = familyOf(pos);
   const p = String(pos || "").toUpperCase();

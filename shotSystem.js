@@ -14,7 +14,13 @@ const {
   findGoalkeeper,
   avg,
   teamStrength,
+  experienceFactor,
+  experienceErrorFactor,
+  normalizeExperience,
 } = require("./teamUtils");
+const { normalizeAttackDir } = require("./tacticNormalize");
+const { isKontraActive, isKeepBallActive } = require("./ballSystem");
+const { mt } = require("./matchI18n");
 
 /** Ağırlıklı şutçu seçimi — forvet > AM > kanat > orta saha */
 function pickShooter(team) {
@@ -25,7 +31,7 @@ function pickShooter(team) {
 
   let attackDir = team.attackDir || "orta";
   try {
-    attackDir = require("./tacticNormalize").normalizeAttackDir(attackDir, "orta");
+    attackDir = normalizeAttackDir(attackDir, "orta");
   } catch (_) {}
   const weight = (p) => {
     const fam = posFamily(p.pos);
@@ -109,7 +115,6 @@ function shotQuality(shooter, attackTeam, defendTeam, match, side) {
 
   // Kontra atak: geride/berabere → hızlı geçiş şut bonusu
   try {
-    const { isKontraActive, isKeepBallActive } = require("./ballSystem");
     if (match && side && isKontraActive(attackTeam, match, side)) {
       q += 0.055;
     }
@@ -125,6 +130,17 @@ function shotQuality(shooter, attackTeam, defendTeam, match, side) {
 
   // Yorgunluk (dakika matchEngine'den gelmiyor; condition zaten proxy)
   q *= 0.85 + cond * 0.15;
+
+  // Tecrübe (1–10): soğukkanlılık + isabet; düşük seviye dalgalı
+  try {
+    const expF = experienceFactor(shooter); // 0.88–1.14
+    q *= 0.92 + (expF - 0.88) * (0.16 / 0.26); // ~0.92–1.08 bandı
+    // Acemi ekstra varyans (ortalama aynı, bazen kaçırır)
+    const lvl = normalizeExperience(shooter.experience);
+    if (lvl < 4 && Math.random() < 0.12 * (4 - lvl)) {
+      q *= 0.82;
+    }
+  } catch (_) {}
 
   return Math.max(0.08, Math.min(0.92, q));
 }
@@ -154,6 +170,11 @@ function saveStrength(gk, defendTeam) {
   if (defendTeam.gameStyle === "defansif") s += 0.04;
   else if (defendTeam.gameStyle === "hücumsel") s -= 0.025;
 
+  // Kaleci tecrübesi: zamanlama / pozisyon alışkanlığı
+  try {
+    s *= 0.94 + (experienceFactor(gk) - 0.88) * (0.12 / 0.26);
+  } catch (_) {}
+
   return Math.max(0.12, Math.min(0.88, s));
 }
 
@@ -178,7 +199,6 @@ function attemptShot(match, side) {
   const onTarget = Math.random() < onTargetChance;
 
   if (!onTarget) {
-    const { mt } = require("./matchI18n");
     const lang = (match && match.lang) || "en";
     const r = Math.random();
     const key =
@@ -220,7 +240,6 @@ function attemptShot(match, side) {
     };
     match.scorers.push(entry);
 
-    const { mt } = require("./matchI18n");
     const lang = (match && match.lang) || "en";
     const assistText = assister
       ? mt("assist", lang, { name: assister.name })
@@ -255,7 +274,6 @@ function attemptShot(match, side) {
 
   // İsabetli ama gol değil
   {
-    const { mt } = require("./matchI18n");
     const lang = (match && match.lang) || "en";
     const saveLog =
       Math.random() < 0.55

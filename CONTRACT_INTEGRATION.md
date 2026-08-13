@@ -83,6 +83,7 @@ const contractSystem = require("./contractSystem");
 |--------|------|----------|
 | GET | `/api/contracts` | Haftalık bordro + oyuncu maaşları |
 | POST | `/api/contracts/renew` | `{ playerId, years, wage }` |
+| POST | `/api/contracts/release` | `{ playerId }` — tek oyuncuyu serbest bırak (ilk 11 ve min. kadro korumalı) |
 | POST | `/api/contracts/pay` | Elle bordro (test) |
 | POST | `/api/contracts/release-expired` | Moral düşük + 14 gün geçmiş serbest |
 
@@ -100,3 +101,12 @@ Kadro satırında `wage` + `daysLeft` göster; süre bitimine 90 gün kala
 “Yenile” → `POST /api/contracts/renew`.
 
 Ekonomi paneline `weeklyTotal` ekle.
+
+**Durum: tamamlandı.** `public/index.html` içindeki Kontrat sekmesi
+(`renderSquadContractsPage`) artık gerçek `/api/contracts` verisini
+çekiyor; "Yenile" ve "Serbest Bırak" butonları sırasıyla
+`/api/contracts/renew` ve `/api/contracts/release` çağırıyor. Önceden
+bu sekme tamamen client-only rastgele veriyle çalışıyordu (gerçek
+maaş/bordro sunucuda sessizce kesiliyordu ama kullanıcı hiç
+göremiyordu, "Yenile"/"Serbest Bırak" ise hiçbir şeyi kalıcı
+değiştirmiyordu).

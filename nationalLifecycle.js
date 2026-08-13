@@ -11,6 +11,10 @@ let socialSystem = null;
 try {
   socialSystem = require("./socialSystem");
 } catch (_) {}
+let statsSystem = null;
+try {
+  statsSystem = require("./statsSystem");
+} catch (_) {}
 
 const OPP_FIRST = [
   "Marco", "Luca", "Hans", "Jan", "Pierre", "Antoine", "Erik", "Lukas",
@@ -137,7 +141,7 @@ async function startNationalFixtureMatch(opts) {
     fixtureId,
     onEnd: async (state) => {
       try {
-        await onNationalMatchEnd(state, fixture);
+        await onNationalMatchEnd(state, fixture, match);
       } finally {
         if (liveMatches) liveMatches.delete(fixtureId);
       }
@@ -152,7 +156,7 @@ async function startNationalFixtureMatch(opts) {
   return match;
 }
 
-async function onNationalMatchEnd(state, fixture) {
+async function onNationalMatchEnd(state, fixture, matchInstance) {
   if (!state) return;
   const homeGoals = state.score ? state.score.home : 0;
   const awayGoals = state.score ? state.score.away : 0;
@@ -161,6 +165,15 @@ async function onNationalMatchEnd(state, fixture) {
     await nationalRepo.finishFixture(fixture.id, homeGoals, awayGoals);
   } catch (e) {
     console.error("[nationalLifecycle] finishFixture", e);
+  }
+
+  // Oyuncu gol/asist istatistikleri anında
+  try {
+    if (statsSystem && typeof statsSystem.recordMatchStats === "function") {
+      await statsSystem.recordMatchStats(state, matchInstance || null);
+    }
+  } catch (e) {
+    console.error("[nationalLifecycle] stats", e);
   }
 
   // Not: Maç sonucu bildirimi kasıtlı olarak gönderilmiyor

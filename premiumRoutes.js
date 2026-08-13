@@ -17,7 +17,9 @@ function createPremiumRouter() {
       res.json({
         status,
         plans: premiumSystem.listPlansPublic(),
-        stripeEnabled: premiumSystem.stripeEnabled(),
+        // Stripe kaldırıldı — Destek Ol (manuel onay)
+        stripeEnabled: false,
+        supportMode: true,
         mockAllowed:
           process.env.ELITE_ALLOW_MOCK === "1" ||
           process.env.ELITE_ALLOW_MOCK === "true",
@@ -28,45 +30,35 @@ function createPremiumRouter() {
     }
   });
 
-  // POST /api/premium/checkout  { plan }
+  // POST /api/premium/checkout  — Stripe kapalı; destek modeli
   router.post("/checkout", async (req, res) => {
     try {
       const userId = req.user && req.user.id;
-      const username = req.user && req.user.username;
       if (!userId) return res.status(401).json({ error: "Giriş gerekli" });
       const plan = String((req.body && req.body.plan) || "").trim();
       if (!["weekly", "monthly", "yearly"].includes(plan)) {
         return res.status(400).json({ error: "Geçersiz plan" });
       }
 
-      if (premiumSystem.stripeEnabled()) {
-        const result = await premiumSystem.createStripeCheckout(
-          userId,
-          username,
-          plan,
-          req.body && req.body.successUrl,
-          req.body && req.body.cancelUrl,
-        );
-        if (!result.ok) return res.status(400).json(result);
-        return res.json(result);
-      }
-
-      // Stripe yok — mock yalnızca ELITE_ALLOW_MOCK açıkken
+      // Stripe bilerek kullanılmıyor
       const mockAllowed =
         process.env.ELITE_ALLOW_MOCK === "1" ||
         process.env.ELITE_ALLOW_MOCK === "true";
-      if (!mockAllowed) {
-        return res.status(503).json({
-          ok: false,
-          error: "Ödeme sistemi yapılandırılmamış (Stripe yok, mock kapalı).",
+      if (mockAllowed) {
+        return res.json({
+          ok: true,
+          mock: true,
+          plan,
+          message:
+            "Demo: Onayla ile aktifleştirebilirsin. Canlıda Destek Ol + yönetici onayı kullanılır.",
         });
       }
-      res.json({
-        ok: true,
-        mock: true,
+      return res.json({
+        ok: false,
+        supportMode: true,
         plan,
-        message:
-          "Stripe yapılandırılmadı. Demo ortamında Onayla ile aktifleştirebilirsin.",
+        error:
+          "Stripe kapalı. Elite için Destek Ol ile ödeme yapıp Bize Ulaşın üzerinden bildirin; yönetici aktif eder.",
       });
     } catch (e) {
       console.error("[premium/checkout]", e);
@@ -269,10 +261,105 @@ function createPremiumRouter() {
   });
 
 
+  // ---------- BAĞIŞ / DESTEK OL ----------
+  // GET /api/premium/donation-methods
+  router.get("/donation-methods", async (req, res) => {
+    try {
+      res.json({
+        methods: premiumSystem.getDonationMethodsPublic(),
+        plans: premiumSystem.listPlansPublic(),
+      });
+    } catch (e) {
+      console.error("[donation-methods]", e);
+      res.status(500).json({ error: "Yöntemler alınamadı" });
+    }
+  });
+
+  // POST /api/premium/donate  { plan, method, referenceCode, payerName, note }
+  router.post("/donate", async (req, res) => {
+    try {
+      const userId = req.user && req.user.id;
+      if (!userId) return res.status(401).json({ error: "Giriş gerekli" });
+      const result = await premiumSystem.createDonation(userId, req.body || {});
+      if (!result.ok) return res.status(400).json(result);
+      res.json(result);
+    } catch (e) {
+      console.error("[donate]", e);
+      res.status(500).json({ error: e.message || "Bağış kaydedilemedi" });
+    }
+  });
+
+  // GET /api/premium/my-donations
+  router.get("/my-donations", async (req, res) => {
+    try {
+      const userId = req.user && req.user.id;
+      if (!userId) return res.status(401).json({ error: "Giriş gerekli" });
+      const rows = await premiumSystem.listMyDonations(userId);
+      res.json({ donations: rows });
+    } catch (e) {
+      console.error("[my-donations]", e);
+      res.status(500).json({ error: "Liste alınamadı" });
+    }
+  });
+
+  // POST /api/premium/donate/cancel  { donationId }
+  router.post("/donate/cancel", async (req, res) => {
+    try {
+      const userId = req.user && req.user.id;
+      if (!userId) return res.status(401).json({ error: "Giriş gerekli" });
+      const id = (req.body && req.body.donationId) || req.body.id;
+      const result = await premiumSystem.cancelMyDonation(userId, id);
+      if (!result.ok) return res.status(400).json(result);
+      res.json(result);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Admin: GET /api/premium/admin/donations
+  router.get("/admin/donations", async (req, res) => {
+    try {
+      const { isAdmin } = require("./nationalSystem");
+      if (!isAdmin(req.user && req.user.username)) {
+        return res.status(403).json({ error: "Admin gerekli" });
+      }
+      const rows = await premiumSystem.listPendingDonations(100);
+      res.json({ donations: rows });
+    } catch (e) {
+      console.error("[admin donations]", e);
+      res.status(500).json({ error: "Liste alınamadı" });
+    }
+  });
+
+  // Admin: POST /api/premium/admin/donations/review  { donationId, accept, adminNote }
+  router.post("/admin/donations/review", async (req, res) => {
+    try {
+      const { isAdmin } = require("./nationalSystem");
+      if (!isAdmin(req.user && req.user.username)) {
+        return res.status(403).json({ error: "Admin gerekli" });
+      }
+      const body = req.body || {};
+      const result = await premiumSystem.reviewDonation(
+        body.donationId || body.id,
+        req.user.id,
+        body.accept !== false && body.accept !== "false",
+        body.adminNote,
+      );
+      if (!result.ok) return res.status(400).json(result);
+      res.json(result);
+    } catch (e) {
+      console.error("[admin review donation]", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+
+
   return router;
 }
 
 /** Stripe webhook — raw body gerekir; server.js ayrı mount eder */
+
 async function stripeWebhookHandler(req, res) {
   try {
     const secret = process.env.STRIPE_WEBHOOK_SECRET;

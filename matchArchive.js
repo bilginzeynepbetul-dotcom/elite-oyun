@@ -352,9 +352,62 @@ async function getCupKings(opts = {}) {
   return { goalKing, assistKing };
 }
 
+/**
+ * Takım adları + skor ile maç bul (geçmiş skor tıklamaları için).
+ * Önce birebir, sonra ters (deplasman) dener.
+ */
+async function findByTeamsAndScore(homeName, awayName, homeGoals, awayGoals) {
+  const hg = homeGoals != null ? Number(homeGoals) : null;
+  const ag = awayGoals != null ? Number(awayGoals) : null;
+  if (!homeName || !awayName) return null;
+
+  const params = [homeName, awayName];
+  let scoreSql = "";
+  if (hg != null && !Number.isNaN(hg) && ag != null && !Number.isNaN(ag)) {
+    params.push(hg, ag);
+    scoreSql =
+      "AND ((home_goals = $3 AND away_goals = $4) OR (home_goals = $4 AND away_goals = $3))";
+  }
+
+  const { rows } = await query(
+    `SELECT id, competition, home_goals AS "homeGoals", away_goals AS "awayGoals",
+            home_name AS "homeName", away_name AS "awayName",
+            scorers, stats, events, finished_at AS "finishedAt",
+            home_club_id AS "homeClubId", away_club_id AS "awayClubId"
+     FROM match_results
+     WHERE (
+       (home_name ILIKE $1 AND away_name ILIKE $2)
+       OR (home_name ILIKE $2 AND away_name ILIKE $1)
+     )
+     ${scoreSql}
+     ORDER BY finished_at DESC
+     LIMIT 5`,
+    params,
+  );
+  if (!rows.length) return null;
+
+  let best = rows[0];
+  for (const r of rows) {
+    const sameDir =
+      String(r.homeName || "").toLowerCase() ===
+        String(homeName).toLowerCase() &&
+      String(r.awayName || "").toLowerCase() ===
+        String(awayName).toLowerCase();
+    const scoreOk =
+      hg == null ||
+      (Number(r.homeGoals) === hg && Number(r.awayGoals) === ag);
+    if (sameDir && scoreOk) {
+      best = r;
+      break;
+    }
+  }
+  return best;
+}
+
 module.exports = {
   persistMatch,
   listRecentForClub,
   getMatchDetail,
   getCupKings,
+  findByTeamsAndScore,
 };

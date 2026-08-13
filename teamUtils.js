@@ -111,6 +111,78 @@ function assignFormationPositions(homeTeam, awayTeam) {
   assign(awayTeam, true);
 }
 
+// ============================================================
+// TECRÜBE (1–10 seviye)
+// ------------------------------------------------------------
+// Eski kayıtlar 0–99 ölçeğinde olabilirdi → otomatik 1–10'a sıkıştırılır.
+// Seviye 1 = acemi, 5 = ortalama, 10 = efsane.
+// ============================================================
+function clampExp(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return 3;
+  return Math.max(1, Math.min(10, n));
+}
+
+/** Ham değeri 1–10 aralığına normalize eder (legacy 0–99 destekli). */
+function normalizeExperience(raw) {
+  let n = Number(raw);
+  if (!isFinite(n) || n <= 0) return 3;
+  // Eski ölçek: 10'dan büyükse 1–10'a map
+  if (n > 10) {
+    // 0–99 → 1–10
+    n = 1 + (Math.min(99, n) / 99) * 9;
+  }
+  return clampExp(n);
+}
+
+/** Tam sayı seviye 1–10 (UI / etiket). */
+function experienceLevel(playerOrValue) {
+  const raw =
+    playerOrValue != null && typeof playerOrValue === "object"
+      ? playerOrValue.experience
+      : playerOrValue;
+  return Math.round(normalizeExperience(raw));
+}
+
+/**
+ * Çarpan: seviye 1 → ~0.88, 5 → 1.00, 10 → ~1.14
+ * Şut kalitesi, top tutma, kurtarış vb. için.
+ */
+function experienceFactor(playerOrValue) {
+  const lvl = normalizeExperience(
+    playerOrValue != null && typeof playerOrValue === "object"
+      ? playerOrValue.experience
+      : playerOrValue,
+  );
+  // (lvl - 5) * 0.028 → ±0.14 civarı
+  return 1 + (lvl - 5) * 0.028;
+}
+
+/** Hata / top kaybı risk çarpanı: yüksek tecrübe → daha az hata (0.82–1.18). */
+function experienceErrorFactor(playerOrValue) {
+  const lvl = normalizeExperience(
+    playerOrValue != null && typeof playerOrValue === "object"
+      ? playerOrValue.experience
+      : playerOrValue,
+  );
+  // seviye 10 → 0.82 (az hata), seviye 1 → 1.18
+  return 1 - (lvl - 5) * 0.04;
+}
+
+/** Takım saha ortalaması tecrübe (1–10). */
+function teamAvgExperience(team) {
+  const players = (team && team.players) || [];
+  let sum = 0;
+  let n = 0;
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
+    if (!p || p.sentOff || p.pos === "GK") continue;
+    sum += normalizeExperience(p.experience);
+    n++;
+  }
+  return n ? sum / n : 5;
+}
+
 module.exports = {
   posFamily,
   isGkPos,
@@ -121,4 +193,10 @@ module.exports = {
   avg,
   teamStrength,
   assignFormationPositions,
+  clampExp,
+  normalizeExperience,
+  experienceLevel,
+  experienceFactor,
+  experienceErrorFactor,
+  teamAvgExperience,
 };

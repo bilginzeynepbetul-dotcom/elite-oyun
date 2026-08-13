@@ -168,6 +168,146 @@ function createLeagueRouter() {
   });
 
 
+
+  // GET /api/league/ranking?country=&division=  — çok oyunculu liderlik
+  router.get("/league/ranking", async (req, res) => {
+    try {
+      const clubId = await enrichClubId(req);
+      let country = (req.query && req.query.country) || null;
+      let division = req.query && req.query.division
+        ? parseInt(req.query.division, 10)
+        : null;
+      if ((!country || !division) && clubId) {
+        const club = await clubsRepo.getClub(clubId);
+        if (club) {
+          country = country || club.country;
+          division = division || club.division;
+        }
+      }
+      country = country || "Türkiye";
+      division = division || 1;
+
+      const season = await leagueRepo.getCurrentSeason(country, division);
+      if (!season) {
+        return res.json({ country, division, ranking: [], season: null });
+      }
+      if (clubId) {
+        await leagueRepo.ensureClubInStandings(season.id, clubId);
+      }
+      const rows = await leagueRepo.getStandings(season.id);
+      const ranking = (rows || []).map((r, i) => ({
+        rank: i + 1,
+        clubId: r.clubId || r.club_id || r.id,
+        userId: r.userId || r.user_id || null,
+        name: r.name || "Kulüp",
+        country: country,
+        division: division,
+        played: Number(r.played || 0),
+        won: Number(r.w || r.won || 0),
+        drawn: Number(r.d || r.drawn || 0),
+        lost: Number(r.l || r.lost || 0),
+        gf: Number(r.gf || 0),
+        ga: Number(r.ga || 0),
+        pts: Number(r.pts || 0),
+        isBot: !!(r.isBot || r.is_bot),
+      }));
+      res.json({
+        country,
+        division,
+        season: {
+          id: season.id,
+          yearLabel: season.year_label,
+        },
+        ranking,
+      });
+    } catch (e) {
+      console.error("[league/ranking]", e);
+      res.status(500).json({ error: "Sıralama alınamadı" });
+    }
+  });
+
+  // GET /api/league/history?country=&division=
+  router.get("/league/history", async (req, res) => {
+    try {
+      const seasonLifecycle = require("./seasonLifecycle");
+      const clubsRepo = require("./repos/clubsRepo");
+      const { enrichClubId } = require("./routes/authRoutes");
+      const clubId = await enrichClubId(req);
+      let country = req.query.country;
+      let division = req.query.division
+        ? parseInt(req.query.division, 10)
+        : null;
+      if ((!country || !division) && clubId) {
+        const club = await clubsRepo.getClub(clubId);
+        if (club) {
+          country = country || club.country;
+          division = division || club.division;
+        }
+      }
+      const list = await seasonLifecycle.listSeasonHistory(
+        country || "Türkiye",
+        division || 1,
+        25,
+      );
+      res.json({
+        country: country || "Türkiye",
+        division: division || 1,
+        seasons: list,
+      });
+    } catch (e) {
+      console.error("[league/history]", e);
+      res.status(500).json({ error: "Tarihçe alınamadı" });
+    }
+  });
+
+  // POST /api/league/finalize-season  { seasonId?, country?, division?, force? }
+  router.post("/league/finalize-season", async (req, res) => {
+    try {
+      const { isAdmin } = require("./nationalSystem");
+      if (!isAdmin(req.user && req.user.username)) {
+        return res.status(403).json({ error: "Sadece admin" });
+      }
+      const seasonLifecycle = require("./seasonLifecycle");
+      const leagueRepo = require("./repos/leagueRepo");
+      let seasonId = req.body && req.body.seasonId;
+      if (!seasonId) {
+        const country = (req.body && req.body.country) || "Türkiye";
+        const division = (req.body && req.body.division) || 1;
+        const season = await leagueRepo.getCurrentSeason(country, division);
+        if (!season) return res.status(404).json({ error: "Aktif sezon yok" });
+        seasonId = season.id;
+      }
+      const force = !!(req.body && req.body.force);
+      if (!force) {
+        const done = await seasonLifecycle.isSeasonComplete(seasonId);
+        if (!done) {
+          const counts = await seasonLifecycle.countFixturesByStatus(seasonId);
+          return res.status(400).json({
+            error: "Sezon henüz bitmedi (açık maç var)",
+            counts,
+          });
+        }
+      }
+      // force: kalan scheduled maçları iptal et
+      if (force) {
+        const { query } = require("./db");
+        await query(
+          `UPDATE fixtures SET status = 'cancelled'
+           WHERE season_id = $1 AND status IN ('scheduled', 'live')`,
+          [seasonId],
+        );
+      }
+      const result = await seasonLifecycle.finalizeSeason(seasonId, {
+        openNext: true,
+        promotion: true,
+      });
+      res.json(result);
+    } catch (e) {
+      console.error("[league/finalize-season]", e);
+      res.status(500).json({ error: e.message || "Sezon kapatılamadı" });
+    }
+  });
+
   return router;
 }
 

@@ -132,12 +132,209 @@ function createInstantMatchRouter(deps) {
   });
 
   // Hemen bot ile oyna
-  router.post("/instant/vs-bot", async (req, res) => {
+  
+  // POST /api/instant/find-match — çevrimiçi rastgele rakip + otomatik challenge
+  
+  // POST /api/instant/queue/join — otomatik eşleşme kuyruğu
+  router.post("/instant/queue/join", async (req, res) => {
     try {
       const userId = getUserId(req);
       const clubId = await enrichClubId(req);
       if (!userId || !clubId)
         return res.status(401).json({ error: "Giriş gerekli" });
+      instant.setOnline(userId, {
+        username: getUsername(req),
+        clubId,
+        socketId: null,
+      });
+      const joined = instant.joinQueue({
+        userId,
+        username: getUsername(req),
+        clubId,
+      });
+      // Hemen eşleşmeyi dene
+      const liveMatches = getLiveMatches();
+      if (!instant.canStartInstantMatch(liveMatches)) {
+        return res.json({
+          ok: true,
+          queued: true,
+          matched: false,
+          reason: "CAPACITY",
+          message:
+            "Sunucu dolu — kuyruktasın, yer açılınca eşleşeceksin (" +
+            instant.countInstantLive(liveMatches) +
+            "/" +
+            instant.MAX_INSTANT_LIVE +
+            ")",
+          queue: instant.queueStatus(userId),
+        });
+      }
+      const match = instant.tryMatchFromQueue();
+      if (!match.ok) {
+        return res.json({
+          ok: true,
+          queued: true,
+          matched: false,
+          reason: match.reason || "WAIT",
+          queue: instant.queueStatus(userId),
+        });
+      }
+      // Eşleşme → challenge kabul edilmiş gibi maç başlat
+      const { home, away } = match.pair;
+      const homeP = await buildPlayer(
+        home.clubId,
+        home.userId,
+        home.username,
+        false,
+      );
+      const awayP = await buildPlayer(
+        away.clubId,
+        away.userId,
+        away.username,
+        false,
+      );
+      const fixtureId = "inst_" + Date.now() + "_" + Math.floor(Math.random() * 9999);
+      const started = startMatchInstance(homeP, awayP, {
+        fixtureId,
+        kind: "queue",
+      });
+      instant.registerInstantMeta(fixtureId, {
+        kind: "queue",
+        homeUserId: home.userId,
+        awayUserId: away.userId,
+      });
+      const io = getIo();
+      const payload = {
+        fixtureId,
+        matchId: started && started.id,
+        home: homeP.team && homeP.team.name,
+        away: awayP.team && awayP.team.name,
+        homeClubId: home.clubId,
+        awayClubId: away.clubId,
+        homeName: homeP.team && homeP.team.name,
+        awayName: awayP.team && awayP.team.name,
+      };
+      if (io) {
+        io.to("user:" + home.userId).emit("instant:match-start", payload);
+        io.to("user:" + away.userId).emit("instant:match-start", payload);
+      }
+      res.json({
+        ok: true,
+        matched: true,
+        queued: false,
+        ...payload,
+        queue: instant.queueStatus(userId),
+      });
+    } catch (e) {
+      console.error("[instant queue/join]", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  router.post("/instant/queue/leave", async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ error: "Giriş gerekli" });
+      instant.leaveQueue(userId);
+      res.json({ ok: true, queue: instant.queueStatus(userId) });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  router.get("/instant/queue/status", async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const liveMatches = getLiveMatches();
+      const st = instant.queueStatus(userId);
+      st.liveInstant = instant.countInstantLive(liveMatches);
+      st.maxLive = instant.MAX_INSTANT_LIVE;
+      res.json(st);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+router.post("/instant/find-match", async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const clubId = await enrichClubId(req);
+      if (!userId || !clubId)
+        return res.status(401).json({ error: "Giriş gerekli" });
+      instant.touch(userId);
+      const opp = instant.findRandomOnlineOpponent(userId);
+      if (!opp) {
+        return res.json({
+          ok: false,
+          code: "NO_ONLINE",
+          error: "Şu an çevrimiçi insan rakip yok. Bot ile oynayabilirsin.",
+        });
+      }
+      let toClubId = opp.clubId;
+      let toUsername = opp.username;
+      if (!toClubId) {
+        const club = await clubsRepo.getClubByUserId(opp.userId);
+        if (!club) {
+          return res.json({
+            ok: false,
+            code: "NO_CLUB",
+            error: "Rakip kulübü yok",
+          });
+        }
+        toClubId = club.id;
+        toUsername = toUsername || club.name;
+      }
+      const result = instant.createChallenge({
+        fromUserId: userId,
+        fromUsername: getUsername(req),
+        fromClubId: clubId,
+        toUserId: opp.userId,
+        toUsername: toUsername || "Rakip",
+        toClubId,
+      });
+      if (!result.ok) return res.status(400).json(result);
+      const io = getIo();
+      if (io) {
+        const target = instant.online.get(String(opp.userId));
+        if (target && target.socketId) {
+          io.to(target.socketId).emit("instant:challenge", result.challenge);
+        }
+        io.to("user:" + opp.userId).emit("instant:challenge", result.challenge);
+      }
+      res.json({
+        ok: true,
+        matched: true,
+        opponent: {
+          userId: opp.userId,
+          username: toUsername,
+          clubId: toClubId,
+        },
+        challenge: result.challenge,
+      });
+    } catch (e) {
+      console.error("[instant find-match]", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+router.post("/instant/vs-bot", async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const clubId = await enrichClubId(req);
+      if (!userId || !clubId)
+        return res.status(401).json({ error: "Giriş gerekli" });
+      if (!instant.canStartInstantMatch(getLiveMatches())) {
+        return res.status(503).json({
+          ok: false,
+          code: "CAPACITY",
+          error:
+            "Sunucu anlık maç kapasitesi dolu (" +
+            instant.countInstantLive(getLiveMatches()) +
+            "/" +
+            instant.MAX_INSTANT_LIVE +
+            "). Biraz sonra dene.",
+        });
+      }
       const bot = await instant.pickBotOpponent(clubId);
       const home = await buildPlayer(clubId, userId, getUsername(req), false);
       const away = await buildPlayer(bot.id, null, bot.name, true);

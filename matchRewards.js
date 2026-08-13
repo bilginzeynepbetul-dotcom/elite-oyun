@@ -1,10 +1,11 @@
 // ============================================================
 // matchRewards.js — Maç tipi → tecrübe + maç antrenmanı
 // ------------------------------------------------------------
-// Tecrübe (experience):
-//   Sadece maç tipine göre. Tüm oyuncular aynı oran.
+// Tecrübe (experience) — ölçek 1..10:
+//   Sadece maç tipine göre. Tüm oynayan oyuncular aynı oran.
 //   Yaş / pot / süre / mevki ETKİLEMEZ.
 //   milli A / U21  >  lig  >  kupa / dostluk (çok az)  >  kıtasal (0)
+//   Maç etkisi: şut kalitesi, kurtarış, top kaybı (teamUtils experienceFactor)
 //
 // Antrenman (skill micro-gain, maç sonu):
 //   lig (tam)  >  kupa = dostluk (aynı, daha az)  >  milli / kıtasal (0)
@@ -144,13 +145,16 @@ async function applyMatchRewards(opts) {
       // pot 1 → 0.40, pot 10 → 1.30 — sadece antrenman
       const potFactor = 0.4 + (pot / 10) * 0.9;
 
-      // ---- TECRÜBE: sadece maç tipi, herkese aynı ----
+      // ---- TECRÜBE 1–10: sadece maç tipi, herkese aynı ----
       let expGain = 0;
       if (cfg.experience > 0) {
-        const baseExp = 0.35;
-        // rastgele / yaş / pot / süre YOK
+        // 1–10 ölçeğinde küçük adımlar (lig ~0.03, milli ~0.055)
+        const baseExp = 0.055;
         expGain = baseExp * cfg.experience;
-        p.experience = Math.min(99, (Number(p.experience) || 0) + expGain);
+        // Legacy 0–99 → 1–10
+        let cur = Number(p.experience) || 3;
+        if (cur > 10) cur = 1 + (Math.min(99, cur) / 99) * 9;
+        p.experience = Math.min(10, Math.max(1, cur + expGain));
       }
 
       // ---- ANTRENMAN: pot yüksek → daha çok; kupa=dostluk ----
@@ -227,7 +231,7 @@ async function persistPlayerRewards(p, skillDeltas, expGain) {
   let i = 1;
 
   if (expGain && expGain > 0) {
-    sets.push(`experience = LEAST(99, COALESCE(experience, 0) + $${i++})`);
+    sets.push(`experience = LEAST(10, GREATEST(1, COALESCE(experience, 3) + $${i++}))`);
     params.push(expGain);
   }
   if (p.form != null) {

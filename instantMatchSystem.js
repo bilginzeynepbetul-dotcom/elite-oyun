@@ -13,6 +13,13 @@ const online = new Map();
 const challenges = new Map();
 /** matchKey (fixtureId) -> meta */
 const instantMeta = new Map();
+/** Matchmaking kuyruğu: userId -> { userId, username, clubId, at } */
+const matchQueue = new Map();
+/** Aynı anda canlı anlık maç üst sınırı (ölçek) */
+const MAX_INSTANT_LIVE = Math.max(
+  5,
+  parseInt(process.env.MAX_INSTANT_LIVE || "40", 10) || 40,
+);
 
 function uid() {
   return crypto.randomBytes(8).toString("hex");
@@ -114,6 +121,143 @@ async function listHumanOpponents(myClubId, myUserId) {
 /**
  * Challenge a human opponent (must accept).
  */
+
+function joinQueue({ userId, username, clubId }) {
+  if (!userId) return { ok: false, error: "userId gerekli" };
+  const id = String(userId);
+  // Zaten kuyruktaysa dokun
+  matchQueue.set(id, {
+    userId: id,
+    username: username || "Menajer",
+    clubId: clubId ? String(clubId) : null,
+    at: Date.now(),
+  });
+  touch(id);
+  return { ok: true, position: queuePosition(id), size: matchQueue.size };
+}
+
+function leaveQueue(userId) {
+  if (!userId) return { ok: false };
+  matchQueue.delete(String(userId));
+  return { ok: true, size: matchQueue.size };
+}
+
+function queuePosition(userId) {
+  const id = String(userId);
+  let i = 0;
+  for (const key of matchQueue.keys()) {
+    i++;
+    if (key === id) return i;
+  }
+  return 0;
+}
+
+function queueStatus(userId) {
+  cleanupStale();
+  const id = userId ? String(userId) : null;
+  return {
+    size: matchQueue.size,
+    inQueue: id ? matchQueue.has(id) : false,
+    position: id ? queuePosition(id) : 0,
+    maxLive: MAX_INSTANT_LIVE,
+  };
+}
+
+/**
+ * Kuyruktan 2 kişi eşleştir. Eşleşenler kuyruktan çıkarılır.
+ * @returns {{ ok, pair? } | { ok:false, reason }}
+ */
+function tryMatchFromQueue() {
+  cleanupStale();
+  const entries = [...matchQueue.values()].sort((a, b) => a.at - b.at);
+  if (entries.length < 2) {
+    return { ok: false, reason: "WAIT", size: matchQueue.size };
+  }
+  const a = entries[0];
+  // a ile aynı kulüp olmayan ilk rakip
+  let b = null;
+  for (let i = 1; i < entries.length; i++) {
+    if (String(entries[i].userId) !== String(a.userId)) {
+      if (
+        a.clubId &&
+        entries[i].clubId &&
+        String(entries[i].clubId) === String(a.clubId)
+      )
+        continue;
+      b = entries[i];
+      break;
+    }
+  }
+  if (!b) return { ok: false, reason: "WAIT", size: matchQueue.size };
+  matchQueue.delete(String(a.userId));
+  matchQueue.delete(String(b.userId));
+  return {
+    ok: true,
+    pair: {
+      home: a,
+      away: b,
+    },
+    size: matchQueue.size,
+  };
+}
+
+function cleanupStale() {
+  const now = Date.now();
+  // Kuyruk: 3 dk idle sil
+  for (const [id, q] of matchQueue.entries()) {
+    if (now - q.at > 3 * 60 * 1000) matchQueue.delete(id);
+  }
+  // Challenge: expired
+  for (const [id, c] of challenges.entries()) {
+    if (c.status === "pending" && c.expiresAt < now) {
+      c.status = "expired";
+    }
+    // 10 dk sonra tamamen sil
+    if (
+      c.status !== "pending" &&
+      c.respondedAt &&
+      now - c.respondedAt > 10 * 60 * 1000
+    ) {
+      challenges.delete(id);
+    } else if (c.status === "expired" && now - c.createdAt > 10 * 60 * 1000) {
+      challenges.delete(id);
+    }
+  }
+  // Online stale (10 dk) — listOnline zaten yapıyor, burada da dokun
+  for (const [id, u] of online.entries()) {
+    if (now - u.at > 10 * 60 * 1000) online.delete(id);
+  }
+}
+
+function canStartInstantMatch(liveMatches) {
+  cleanupStale();
+  if (!liveMatches || typeof liveMatches.size !== "number") return true;
+  // Sadece anlık (inst_) maçları say
+  let n = 0;
+  for (const key of liveMatches.keys()) {
+    if (String(key).indexOf("inst_") === 0 || String(key).indexOf("im_") === 0)
+      n++;
+  }
+  return n < MAX_INSTANT_LIVE;
+}
+
+function countInstantLive(liveMatches) {
+  if (!liveMatches) return 0;
+  let n = 0;
+  for (const key of liveMatches.keys()) {
+    if (String(key).indexOf("inst_") === 0 || String(key).indexOf("im_") === 0)
+      n++;
+  }
+  return n;
+}
+
+
+function findRandomOnlineOpponent(myUserId) {
+  const list = listOnline(myUserId).filter((u) => u.clubId);
+  if (!list.length) return null;
+  return list[Math.floor(Math.random() * list.length)];
+}
+
 function createChallenge({ fromUserId, fromUsername, fromClubId, toUserId, toUsername, toClubId }) {
   if (String(fromUserId) === String(toUserId)) {
     return { ok: false, error: "Kendine meydan okuyamazsın" };
@@ -199,12 +343,22 @@ module.exports = {
   touch,
   pickBotOpponent,
   listHumanOpponents,
+  findRandomOnlineOpponent,
   createChallenge,
   getChallenge,
   listPendingForUser,
   respondChallenge,
   registerInstantMeta,
   getInstantMeta,
+  joinQueue,
+  leaveQueue,
+  queueStatus,
+  tryMatchFromQueue,
+  cleanupStale,
+  canStartInstantMatch,
+  countInstantLive,
+  MAX_INSTANT_LIVE,
   challenges,
   online,
+  matchQueue,
 };

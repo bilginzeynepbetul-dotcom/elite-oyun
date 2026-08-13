@@ -129,6 +129,25 @@ async function onMatchEnd(state, matchInstance) {
     console.error("[matchLifecycle] rewards", e);
   }
 
+  // Sezon kapanışı: tüm lig maçları bittiyse şampiyon + ödül + yeni sezon
+  try {
+    if (fixtureId) {
+      const seasonLifecycle = require("./seasonLifecycle");
+      const fin = await seasonLifecycle.tryFinalizeAfterLeagueMatch(fixtureId);
+      if (fin && fin.ok && !fin.skipped) {
+        console.log(
+          "[matchLifecycle] season finalized",
+          fin.country,
+          fin.yearLabel,
+          "champion=",
+          fin.champion && fin.champion.name,
+        );
+      }
+    }
+  } catch (e) {
+    console.error("[matchLifecycle] seasonFinalize", e);
+  }
+
   // Not: Maç sonucu bildirimi kasıtlı olarak gönderilmiyor
   // (kullanıcı isteğiyle kaldırıldı — bildirimlere maç skoru gelmesin).
 }

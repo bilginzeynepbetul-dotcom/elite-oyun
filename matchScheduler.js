@@ -18,7 +18,9 @@ const { startFixtureMatch } = require("./matchLifecycle");
 const { startCupFixtureMatch } = require("./cupLifecycle");
 const { startFriendlyFixtureMatch } = require("./friendlyLifecycle");
 const { startNationalFixtureMatch } = require("./nationalLifecycle");
+const { startContinentalFixtureMatch } = require("./continentalLifecycle");
 const nationalRepo = require("./repos/nationalRepo");
+const continentalRepo = require("./repos/continentalRepo");
 const nationalSystem = require("./nationalSystem");
 const { COUNTRY } = require("./nationalRoutes");
 
@@ -53,6 +55,24 @@ async function tickCup({ io, liveMatches }) {
     await cupRepo.advanceReadyEditions();
   } catch (e) {
     console.warn("[scheduler] cup advanceReadyEditions", e.message);
+  }
+}
+
+
+async function tickContinental({ io, liveMatches }) {
+  const due = await continentalRepo.listDueFixtures(15);
+  for (const f of due) {
+    try {
+      await startContinentalFixtureMatch({
+        fixtureId: f.id,
+        io,
+        liveMatches,
+        MatchClass: Match,
+      });
+      console.log("[scheduler] CL maçı başladı", f.id);
+    } catch (e) {
+      console.warn("[scheduler] CL maçı başlatılamadı", f.id, e.message);
+    }
   }
 }
 
@@ -103,12 +123,62 @@ async function tickNational({ io, liveMatches }) {
   }
 }
 
+
+/** Biten veya takılı kalmış maçları registry'den temizle */
+function cleanupZombieMatches(liveMatches) {
+  if (!liveMatches || typeof liveMatches.entries !== "function") return 0;
+  let removed = 0;
+  const now = Date.now();
+  for (const [id, match] of liveMatches.entries()) {
+    try {
+      if (!match) {
+        liveMatches.delete(id);
+        removed++;
+        continue;
+      }
+      const st = match.status || (match.state && match.state.status);
+      if (st === "ended" || st === "finished" || st === "cancelled") {
+        try {
+          if (match.tickInterval) clearInterval(match.tickInterval);
+          if (match.circulationInterval) clearInterval(match.circulationInterval);
+        } catch (e) {}
+        liveMatches.delete(id);
+        removed++;
+        continue;
+      }
+      // 25 dk'dan uzun süren canlı maç = takılı
+      const started =
+        match.startedAt ||
+        match._startedAt ||
+        (match.state && match.state.startedAt) ||
+        0;
+      if (started && now - started > 25 * 60 * 1000) {
+        console.warn("[scheduler] zombie match force-end", id);
+        try {
+          if (typeof match.end === "function") match.end();
+        } catch (e) {}
+        liveMatches.delete(id);
+        removed++;
+      }
+    } catch (e) {
+      try {
+        liveMatches.delete(id);
+        removed++;
+      } catch (e2) {}
+    }
+  }
+  return removed;
+}
+
 async function tick(ctx) {
   if (running) return; // önceki tur bitmeden yenisini başlatma
   running = true;
   try {
+    const z = cleanupZombieMatches(ctx.liveMatches);
+    if (z) console.log("[scheduler] zombie cleaned", z);
     await tickLeague(ctx);
     await tickCup(ctx);
+    await tickContinental(ctx);
     await tickFriendly(ctx);
     await tickNational(ctx);
   } catch (e) {
@@ -144,4 +214,4 @@ function stopScheduler() {
   }
 }
 
-module.exports = { startScheduler, stopScheduler };
+module.exports = { startScheduler, stopScheduler, cleanupZombieMatches };

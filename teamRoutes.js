@@ -53,6 +53,23 @@ function createTeamRouter() {
       }
       team = sanitized.team;
 
+      // XI: players en fazla 11; fazlası bench'e
+      if (Array.isArray(team.players) && team.players.length > 11) {
+        const extra = team.players.slice(11);
+        team.players = team.players.slice(0, 11);
+        team.bench = (Array.isArray(team.bench) ? team.bench : []).concat(extra);
+      }
+      if (
+        Array.isArray(team.players) &&
+        team.players.length < 11 &&
+        Array.isArray(team.bench) &&
+        team.bench.length
+      ) {
+        while (team.players.length < 11 && team.bench.length) {
+          team.players.push(team.bench.shift());
+        }
+      }
+
       // Ciddi skill_jump / overpowered → audit
       const serious = (sanitized.flags || []).filter((f) =>
         f.type === "skill_jump" || f.type === "new_player_overpowered" || f.type === "balance_ignored"
@@ -84,7 +101,16 @@ function createTeamRouter() {
         }
       }
 
-      await clubsRepo.saveTeam(clubId, team);
+      const saveRes = await clubsRepo.saveTeam(clubId, team);
+      if (saveRes && saveRes.rejected === "empty_squad") {
+        const kept = await clubsRepo.getTeam(clubId);
+        return res.status(400).json({
+          ok: false,
+          error: "Boş kadro sunucuya yazılamaz — mevcut kadro korundu",
+          code: "EMPTY_SQUAD",
+          team: kept,
+        });
+      }
       const saved = await clubsRepo.getTeam(clubId);
       res.json({
         ok: true,

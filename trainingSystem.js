@@ -146,7 +146,11 @@ function applySkillGain(player, skill, coaches) {
   const next = Math.min(20, cur + gain);
   const delta = next - cur;
   player[skill] = next;
-  player.experience = (Number(player.experience) || 0) + 0.12 * potFactor;
+  {
+    let cur = Number(player.experience) || 3;
+    if (cur > 10) cur = 1 + (Math.min(99, cur) / 99) * 9;
+    player.experience = Math.min(10, Math.max(1, cur + 0.02 * potFactor));
+  }
 
   let condGain = 1 + Math.random() * 2;
   if (skill === "stamina") condGain = 6 + Math.random() * 6;

@@ -19,6 +19,9 @@ const {
   MAJOR_ACTION_LOCK_MS,
   SHOT_CHANCE_PER_TICK,
 } = require("./timing");
+const { applyNormalizedTacticsToTeam } = require("./tacticNormalize");
+const { invalidateTeamCombat } = require("./ballSystem");
+const { mt } = require("./matchI18n");
 
 class Match {
   constructor(id, playerA, playerB, ioNamespace, options = {}) {
@@ -56,6 +59,7 @@ class Match {
     };
     this.log = [];
     this.scorers = [];
+    this.startedAt = Date.now();
     this.status = "countdown";
     this.tickInterval = null;
     this.circulationInterval = null;
@@ -89,7 +93,6 @@ class Match {
     this._lastFullStateAt = 0;
     this._positionsDirty = true;
     this._cachedPositions = null;
-    const { mt } = require("./matchI18n");
     this.addLog(mt("match_start", this.lang));
     this.tickInterval = setInterval(() => this.tick(), this.tickMs);
     this.circulationInterval = setInterval(
@@ -217,7 +220,6 @@ class Match {
     const p = this.players[side];
     if (!p) return { ok: false, error: "Geçersiz taraf" };
     try {
-      const { applyNormalizedTacticsToTeam } = require("./tacticNormalize");
       // Whitelist + Türkçe varyant normalize; customTactics da bağlanır
       applyNormalizedTacticsToTeam(p.team, tactics || {});
     } catch (_) {
@@ -234,11 +236,9 @@ class Match {
       }
     }
     try {
-      const { invalidateTeamCombat } = require("./ballSystem");
       invalidateTeamCombat(p.team);
     } catch (_) {}
     {
-      const { mt } = require("./matchI18n");
       this.addLog(
         mt("tactic_change", this.lang, {
           min: this.minute,
@@ -278,7 +278,6 @@ class Match {
     this._positionsDirty = true;
     syncBallToValidHolder(this);
     {
-      const { mt } = require("./matchI18n");
       this.addLog(
         mt("sub", this.lang, {
           min: this.minute,
@@ -303,7 +302,6 @@ class Match {
     clearInterval(this.tickInterval);
     clearInterval(this.circulationInterval);
     {
-      const { mt } = require("./matchI18n");
       this.addLog(
         mt("match_end", this.lang, {
           home: this.players.home.username,
@@ -396,7 +394,6 @@ function ensureTeamShape(team, fallbackName) {
   team.players = Array.isArray(team.players) ? team.players : [];
   team.bench = Array.isArray(team.bench) ? team.bench : [];
   try {
-    const { applyNormalizedTacticsToTeam } = require("./tacticNormalize");
     applyNormalizedTacticsToTeam(team, {
       passStyle: team.passStyle || "kisa",
       gameStyle: team.gameStyle || "dengeli",
@@ -454,6 +451,35 @@ function ensureTeamShape(team, fallbackName) {
     }
     if (!team.bench.length) team.bench = mock.bench || [];
   }
+  // x/y yoksa formasyon slotlarına yerleştir (saha boş kalmasın)
+  const slots = [
+    { x: 50, y: 200 },
+    { x: 130, y: 50 },
+    { x: 125, y: 140 },
+    { x: 125, y: 260 },
+    { x: 130, y: 350 },
+    { x: 210, y: 200 },
+    { x: 300, y: 145 },
+    { x: 300, y: 255 },
+    { x: 410, y: 200 },
+    { x: 495, y: 55 },
+    { x: 495, y: 345 },
+  ];
+  team.players.forEach((p, i) => {
+    if (!p) return;
+    if (p.x == null || p.y == null || !Number.isFinite(Number(p.x))) {
+      const slot = slots[i] || slots[slots.length - 1];
+      p.x = slot.x;
+      p.y = slot.y;
+    }
+  });
+  (team.bench || []).forEach((p) => {
+    if (!p) return;
+    if (p.x == null || p.y == null) {
+      p.x = 300;
+      p.y = 200;
+    }
+  });
   return team;
 }
 

@@ -192,15 +192,16 @@ async function callUp(country, userId, playerId, category) {
   if (!chk.ok) return chk;
   const maxAge = (chk.team.category === "U21") ? 21 : null;
   const candidates = await nationalRepo.listCandidates(country, chk.team.id, maxAge);
-  const found = candidates.find((c) => c.playerId === playerId);
+  const pid = String(playerId || "");
+  const found = candidates.find((c) => String(c.playerId) === pid);
   if (!found) return { ok: false, error: "Oyuncu aday havuzunda değil" };
-  return nationalRepo.callUpPlayer(chk.team.id, playerId, found.clubId);
+  return nationalRepo.callUpPlayer(chk.team.id, found.playerId, found.clubId);
 }
 
 async function drop(country, userId, playerId, category) {
   const chk = await requireManager(country, userId, category);
   if (!chk.ok) return chk;
-  return nationalRepo.dropPlayer(chk.team.id, playerId);
+  return nationalRepo.dropPlayer(chk.team.id, String(playerId || ""));
 }
 
 async function saveLineup(country, userId, starterPlayerIds, formation, assignments, passStyle, gameStyle, category) {
@@ -597,6 +598,52 @@ async function getCountryProfile(country, category) {
     }
   } catch (_) {}
 
+  // Güncel milli kadro — son açıklanan / son maçta kullanılan ilk 11 + yedekler
+  let squad = [];
+  try {
+    if (natTeam && natTeam.id) {
+      const raw = await nationalRepo.getSquad(natTeam.id);
+      squad = (raw || []).map((p) => ({
+        playerId: p.playerId,
+        name: p.name,
+        pos: p.pos || p.naturalPos || "?",
+        naturalPos: p.naturalPos || p.pos || "?",
+        age: p.age,
+        overall: p.overall,
+        clubName: p.clubName || null,
+        isStarter: !!p.isStarter,
+      }));
+    }
+  } catch (_) {}
+
+  const starters = squad.filter((p) => p.isStarter);
+  const bench = squad.filter((p) => !p.isStarter);
+  const lastFx = recentFixtures && recentFixtures[0] ? recentFixtures[0] : null;
+  const lastMatch = lastFx
+    ? {
+        opponentName: lastFx.opponent_name || lastFx.opponentName || "?",
+        homeGoals:
+          lastFx.home_goals != null ? lastFx.home_goals : lastFx.homeGoals,
+        awayGoals:
+          lastFx.away_goals != null ? lastFx.away_goals : lastFx.awayGoals,
+        kickoffAt: lastFx.kickoff_at || lastFx.kickoffAt || null,
+        formation: natTeam ? natTeam.formation : "4-4-2",
+        starters,
+        bench,
+      }
+    : starters.length
+      ? {
+          opponentName: null,
+          homeGoals: null,
+          awayGoals: null,
+          kickoffAt: null,
+          formation: natTeam ? natTeam.formation : "4-4-2",
+          starters,
+          bench,
+          note: "Henüz bitmiş milli maç yok — güncel açıklanan kadro",
+        }
+      : null;
+
   const humanClubs = standings.filter((s) => !s.isBot).length;
   const botClubs = standings.filter((s) => s.isBot).length;
 
@@ -641,6 +688,8 @@ async function getCountryProfile(country, category) {
     })),
     nationalArena: c + " National Arena",
     capacity: 40000 + ((c.length * 1234) % 30000),
+    squad,
+    lastMatch,
   };
 }
 

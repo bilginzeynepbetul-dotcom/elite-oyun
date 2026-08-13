@@ -75,6 +75,22 @@ function createContractRouter(opts) {
     }
   });
 
+  // POST /api/contracts/release  { playerId }  — tek oyuncuyu serbest bırak
+  router.post("/release", async (req, res) => {
+    try {
+      const clubId = getClubId(req);
+      if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
+      const { playerId } = req.body || {};
+      if (!playerId) return res.status(400).json({ error: "playerId gerekli" });
+      const result = await contractSystem.releasePlayer(clubId, playerId);
+      if (!result.ok) return res.status(400).json(result);
+      res.json(result);
+    } catch (e) {
+      console.error("[contracts release-one]", e);
+      res.status(500).json({ error: "Serbest bırakma başarısız" });
+    }
+  });
+
   return router;
 }
 

@@ -9,6 +9,22 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 10000;
 
 // ------------------------------------------------------------
+// KRİTİK STABİLİTE DÜZELTMESİ: uygulama Render (ve benzeri) tek
+// katmanlı bir reverse proxy'nin arkasında çalışıyor, ama Express
+// varsayılan olarak proxy'ye güvenmiyor ("trust proxy" kapalı).
+// Bu durumda req.ip HER istekte proxy'nin bağlantı adresine eşit
+// oluyor — yani TÜM kullanıcılar aynı "IP" olarak görünüyor.
+// Sonuç: login / register / reset-password / security-question ve
+// genel /api rate limiter'ları (bkz. routes/authRoutes.js, antiCheat.js)
+// IP başına değil, TÜM SİTE için tek ortak sayaç gibi çalışıyor —
+// birkaç kullanıcının normal trafiği bile limiti doldurup herkesi
+// rastgele 429 ("Çok fazla istek") hatasıyla kilitliyor. PROXY_HOPS
+// env değişkeni farklı bir altyapıda (ör. Cloudflare + Render = 2 hop)
+// doğru değere ayarlanabilir; varsayılan 1, tek reverse proxy içindir.
+const PROXY_HOPS = Number(process.env.PROXY_HOPS || 1);
+app.set('trust proxy', PROXY_HOPS);
+
+// ------------------------------------------------------------
 // CORS: varsayılan olarak açık (geliştirme). Production'da
 // CORS_ORIGIN=https://senin-domain.com şeklinde kısıtla.
 // Birden fazla origin için virgülle ayır.
@@ -156,6 +172,9 @@ app.use('/api', gameAuth, createStatsRouter());
 const { createCupRouter } = require('./cupRoutes');
 app.use('/api', gameAuth, createCupRouter());
 
+const { createContinentalRouter } = require('./continentalRoutes');
+app.use('/api', gameAuth, createContinentalRouter());
+
 // ============================================================
 // TRANSFER
 // ============================================================
@@ -301,6 +320,19 @@ try {
                     socket.emit('match:log', entry);
                   });
                 }
+                // İki insan maçı: oyuncuya hangi taraf olduğunu bildir
+                try {
+                  const { resolveSideForUser } = require('./server-match-socket-handlers');
+                  const uid = socket.data && socket.data.user && socket.data.user.id;
+                  const mySide = resolveSideForUser(m, uid);
+                  if (mySide) {
+                    socket.emit('match:your-side', {
+                      fixtureId: fid,
+                      side: mySide,
+                      matchId: m.id || fid,
+                    });
+                  }
+                } catch (eSide) {}
               }
             } catch (eState) {}
           }

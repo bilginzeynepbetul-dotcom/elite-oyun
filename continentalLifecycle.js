@@ -1,18 +1,10 @@
 // ============================================================
-// friendlyLifecycle.js — Hazırlık maçı başlatma/bitirme
-// ------------------------------------------------------------
-// matchLifecycle.js / cupLifecycle.js'in hazırlık maçı karşılığı.
-// Aynı Match motorunu (matchEngine.js) kullanır, sonucu
-// friendlySystem üzerinden friendly_fixtures tablosuna yazar.
+// continentalLifecycle.js — Kıtalar Ligi maç başlat / bitir
 // ============================================================
 
-const friendlySystem = require("./friendlySystem");
+const continentalRepo = require("./repos/continentalRepo");
 const clubsRepo = require("./repos/clubsRepo");
 
-let stadiumSystem = null;
-try {
-  stadiumSystem = require("./stadiumSystem");
-} catch (_) {}
 let matchArchive = null;
 try {
   matchArchive = require("./matchArchive");
@@ -21,57 +13,104 @@ let statsSystem = null;
 try {
   statsSystem = require("./statsSystem");
 } catch (_) {}
+let matchRewards = null;
+try {
+  matchRewards = require("./matchRewards");
+} catch (_) {}
+let stadiumSystem = null;
+try {
+  stadiumSystem = require("./stadiumSystem");
+} catch (_) {}
 
-async function onFriendlyMatchEnd(state, matchInstance) {
+async function onContinentalMatchEnd(state, matchInstance) {
   if (!state) return;
   const fixtureId = state.fixtureId;
   const homeGoals = state.score ? state.score.home : 0;
   const awayGoals = state.score ? state.score.away : 0;
+  const matchId = state.id || null;
 
   try {
     if (fixtureId) {
-      await friendlySystem.finish(fixtureId, homeGoals, awayGoals);
+      const result = await continentalRepo.applyMatchResult(
+        fixtureId,
+        homeGoals,
+        awayGoals,
+        matchId,
+      );
+      if (!result.ok) {
+        console.warn("[clLifecycle] applyMatchResult", result.error);
+      } else if (result.editionId) {
+        try {
+          await continentalRepo.maybeAdvanceKnockout(result.editionId);
+        } catch (e) {
+          console.error("[clLifecycle] advance", e);
+        }
+      }
     }
   } catch (e) {
-    console.error("[friendlyLifecycle] finish", e);
+    console.error("[clLifecycle] result", e);
   }
 
   try {
     if (matchArchive && fixtureId) {
-      const fixture = await friendlySystem.getById(fixtureId);
+      const fixture = await continentalRepo.getFixtureById(fixtureId);
       await matchArchive.persistMatch(state, matchInstance || null, {
-        competition: "friendly",
+        competition: "continental",
         fixtureId,
         homeClubId: fixture && fixture.homeClubId,
         awayClubId: fixture && fixture.awayClubId,
+        homeName: fixture && fixture.homeName,
+        awayName: fixture && fixture.awayName,
       });
     }
   } catch (e) {
-    console.error("[friendlyLifecycle] archive", e);
+    console.error("[clLifecycle] archive", e);
   }
 
-  // Oyuncu gol/asist istatistikleri anında
+  try {
+    if (fixtureId && stadiumSystem && stadiumSystem.applyMatchTicketRevenue) {
+      const fixture = await continentalRepo.getFixtureById(fixtureId);
+      if (fixture && fixture.homeClubId) {
+        await stadiumSystem.applyMatchTicketRevenue(fixture.homeClubId, {
+          isHome: true,
+          comp: "kita",
+        });
+      }
+    }
+  } catch (e) {
+    console.error("[clLifecycle] tickets", e);
+  }
+
   try {
     if (statsSystem && typeof statsSystem.recordMatchStats === "function") {
       await statsSystem.recordMatchStats(state, matchInstance || null);
     }
   } catch (e) {
-    console.error("[friendlyLifecycle] stats", e);
+    console.error("[clLifecycle] stats", e);
   }
 
-  // Hazırlık maçında bilet geliri yok (kasıtlı) — sadece tecrübe/moral amaçlı.
+  try {
+    if (matchRewards && typeof matchRewards.applyMatchRewards === "function") {
+      await matchRewards.applyMatchRewards({
+        kind: "continental",
+        state,
+        matchInstance: matchInstance || null,
+      });
+    }
+  } catch (e) {
+    console.error("[clLifecycle] rewards", e);
+  }
 }
 
-/** matchLifecycle.startFixtureMatch ile aynı iskelet, friendlySystem'e bağlı. */
-async function startFriendlyFixtureMatch(opts) {
+async function startContinentalFixtureMatch(opts) {
   const { fixtureId, io, liveMatches, MatchClass } = opts;
   if (!fixtureId || !MatchClass) throw new Error("fixtureId ve MatchClass gerekli");
   if (liveMatches && liveMatches.has(fixtureId)) {
     return liveMatches.get(fixtureId);
   }
 
-  const fixture = await friendlySystem.getById(fixtureId);
-  if (!fixture) throw new Error("Hazırlık maçı fikstürü yok");
+  const fixture = await continentalRepo.getFixtureById(fixtureId);
+  if (!fixture) throw new Error("CL fikstürü yok");
   if (fixture.status === "finished") throw new Error("Maç zaten bitmiş");
 
   const homeTeam = await clubsRepo.getTeam(fixture.homeClubId);
@@ -98,7 +137,7 @@ async function startFriendlyFixtureMatch(opts) {
     clubId: fixture.awayClubId,
   };
 
-  const matchId = "fm_" + fixtureId;
+  const matchId = "cl_" + fixtureId;
   const bothBot = !!playerA.isBot && !!playerB.isBot;
   const match = new MatchClass(matchId, playerA, playerB, io, {
     fixtureId,
@@ -106,16 +145,15 @@ async function startFriendlyFixtureMatch(opts) {
     circulationMs: bothBot ? 100 : undefined,
     onEnd: async (state) => {
       try {
-        await onFriendlyMatchEnd(state, match);
+        await onContinentalMatchEnd(state, match);
       } finally {
         if (liveMatches) liveMatches.delete(fixtureId);
       }
     },
   });
 
-  await friendlySystem.setLive(fixtureId, matchId);
+  await continentalRepo.setFixtureLive(fixtureId, matchId);
   if (liveMatches) liveMatches.set(fixtureId, match);
-
   match.start();
   if (io) {
     io.to("fixture:" + fixtureId).emit("fixture:live", { fixtureId });
@@ -123,4 +161,7 @@ async function startFriendlyFixtureMatch(opts) {
   return match;
 }
 
-module.exports = { onFriendlyMatchEnd, startFriendlyFixtureMatch };
+module.exports = {
+  onContinentalMatchEnd,
+  startContinentalFixtureMatch,
+};

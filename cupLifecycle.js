@@ -19,8 +19,10 @@ try {
 } catch (_) {}
 let matchArchive = null;
 try { matchArchive = require("./matchArchive"); } catch (_) {}
+let statsSystem = null;
+try { statsSystem = require("./statsSystem"); } catch (_) {}
 
-async function onCupMatchEnd(state) {
+async function onCupMatchEnd(state, matchInstance) {
   if (!state) return;
   const fixtureId = state.fixtureId;
   const homeGoals = state.score ? state.score.home : 0;
@@ -51,6 +53,15 @@ async function onCupMatchEnd(state) {
     }
   } catch (e) {
     console.error("[cupLifecycle] tickets", e);
+  }
+
+  // Oyuncu gol/asist istatistikleri anında
+  try {
+    if (statsSystem && typeof statsSystem.recordMatchStats === "function") {
+      await statsSystem.recordMatchStats(state, matchInstance || null);
+    }
+  } catch (e) {
+    console.error("[cupLifecycle] stats", e);
   }
 
   // Not: Maç sonucu bildirimi kasıtlı olarak gönderilmiyor
@@ -110,7 +121,7 @@ async function startCupFixtureMatch(opts) {
     circulationMs: bothBot ? 100 : undefined,
     onEnd: async (state) => {
       try {
-        await onCupMatchEnd(state);
+        await onCupMatchEnd(state, match);
       } finally {
         if (liveMatches) liveMatches.delete(fixtureId);
       }
