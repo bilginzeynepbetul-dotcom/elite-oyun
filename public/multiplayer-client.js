@@ -3685,7 +3685,7 @@ function renderServerMatchState(state) {
   }
 
   /** Taktikler ana sayfasında Kulüp / A Milli / U21 modu değiştirir. */
-  window.setTacticsMode = async function (mode) {
+  window.setTacticsMode = window.setTacticsMode || async function (mode) {
     _tacticsMode = mode === "A" || mode === "U21" ? mode : "club";
     const clubView = document.getElementById("tacticsClubView");
     const natView = document.getElementById("tacticsNationalView");
@@ -4732,7 +4732,7 @@ function renderServerMatchState(state) {
     squadEl.innerHTML = html;
   }
 
-  window.goToNationalTeams = async function () {
+  window.goToNationalTeams = window.goToNationalTeams || async function () {
     hideMainMenuAndShowBack();
     switchPage("page-national");
     // Fikstür yoksa kulüp ülkesi için A + U21 dostluk üret
@@ -4752,7 +4752,7 @@ function renderServerMatchState(state) {
     const state = await fetchNationalState("A");
     renderNationalOverview(state);
   };
-  window.showNationalTab = async function (which) {
+  window.showNationalTab = window.showNationalTab || async function (which) {
     const tabA = document.getElementById("natTabA");
     const tabU21 = document.getElementById("natTabU21");
     const isU21 = which === "U21";
@@ -4774,7 +4774,7 @@ function renderServerMatchState(state) {
     await fetchNationalGroupsFromServer();
     renderNationalOverview(state);
   };
-  window.showNationalSub = function (sub) {
+  window.showNationalSub = window.showNationalSub || function (sub) {
     if (sub) _natPageSub = sub;
     // Sekme vurgusu
     document.querySelectorAll("#nationalSubTabs .nat-subtab").forEach((b) => {
@@ -4926,18 +4926,14 @@ function renderServerMatchState(state) {
     switchPage("page-tactics");
     // Yönet ekranında da aynı alt sekmeler erişilebilir kalsın
     _natManageSub = "tactic";
+    // Not: setTacticsMode artık güncel (index.html) implementasyonuna
+    // işaret ediyor ve doğru görünümü (kulüple aynı saha UI) kendisi
+    // gösterip dolduruyor. Eskiden burada natView'i zorla tekrar
+    // görünür yapıp eski renderNationalManage() ile dolduruyorduk;
+    // bu, yeni ekranın üzerine boş/"Yükleniyor…" yazan eski paneli
+    // bindiriyordu çünkü o panel artık hiç beslenmiyor. Bu yüzden
+    // setTacticsMode'un sonucuna güveniyoruz ve üzerine yazmıyoruz.
     await window.setTacticsMode(_natCategory === "U21" ? "U21" : "A");
-    // setTacticsMode sonrası görünürlük garantisi
-    try {
-      const natView = document.getElementById("tacticsNationalView");
-      const clubView = document.getElementById("tacticsClubView");
-      if (clubView) clubView.style.display = "none";
-      if (natView) {
-        natView.style.display = "block";
-        natView.style.visibility = "visible";
-      }
-      if (_natState) renderNationalManage();
-    } catch (e) {}
   };
 
   /** Kadro sekmesinden "Kadroyu Açıkla" — dizilişi kaydet + kamu duyurusu */
@@ -5075,7 +5071,7 @@ function renderServerMatchState(state) {
       if (body) body.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e) {}
   };
-  window.showNationalManageSub = async function (sub) {
+  window.showNationalManageSub = window.showNationalManageSub || async function (sub) {
     const allowed = {
       tactic: 1,
       all: 1,
@@ -5234,7 +5230,7 @@ function renderServerMatchState(state) {
       showPlayerProfile(fake, p.clubName || (state.team && state.team.country) || "Milli");
   };
 
-  window.callUpNationalPlayer = async function (playerId) {
+  window.callUpNationalPlayer = window.callUpNationalPlayer || async function (playerId) {
     try {
       _natScrollPreserve = _captureNatScroll();
       await apiFetch("/api/national/squad/call", {
@@ -5249,7 +5245,7 @@ function renderServerMatchState(state) {
       alert(e.message || "Çağrı başarısız");
     }
   };
-  window.dropNationalPlayer = async function (playerId) {
+  window.dropNationalPlayer = window.dropNationalPlayer || async function (playerId) {
     try {
       _natScrollPreserve = _captureNatScroll();
       await apiFetch("/api/national/squad/drop", {
