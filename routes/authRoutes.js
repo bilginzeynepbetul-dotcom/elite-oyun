@@ -486,35 +486,72 @@ function createAuthRouter() {
     }
   });
 
-  // Hesabı kalıcı sil (kullanıcı kendi hesabı)
+  // Hesabı kalıcı sil — YALNIZCA admin (kendi veya targetUsername)
   router.post("/delete-account", authMiddleware, async (req, res) => {
     try {
-      const userId = req.user && req.user.id;
+      const { isAdmin } = require("../nationalSystem");
+      if (!isAdmin(req.user && req.user.username)) {
+        return res
+          .status(403)
+          .json({ ok: false, error: "Yalnızca admin hesap silebilir" });
+      }
+      const targetUsername = String(
+        (req.body && req.body.targetUsername) || "",
+      ).trim();
+      let userId = req.user && req.user.id;
+      let deletedUsername = req.user && req.user.username;
+      if (targetUsername) {
+        const { rows } = await query(
+          `SELECT id, username FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1`,
+          [targetUsername],
+        );
+        if (!rows.length) {
+          return res
+            .status(404)
+            .json({ ok: false, error: "Kullanıcı bulunamadı" });
+        }
+        userId = rows[0].id;
+        deletedUsername = rows[0].username;
+      }
       if (!userId) return res.status(401).json({ error: "Giriş gerekli" });
+
       await withTransaction(async (client) => {
-        // Kulüp bağlantısını çöz
-        await client.query(
-          `UPDATE clubs SET user_id = NULL WHERE user_id = $1`,
+        const soft = async (sql, params) => {
+          try {
+            await client.query(sql, params);
+          } catch (_) {}
+        };
+        // Kulüp bağını çöz
+        await soft(`UPDATE clubs SET user_id = NULL WHERE user_id = $1`, [
+          userId,
+        ]);
+        await soft(
+          `UPDATE national_teams SET manager_user_id = NULL, manager_club_id = NULL WHERE manager_user_id = $1`,
           [userId],
         );
-        try {
-          await client.query(
-            `DELETE FROM elite_subscriptions WHERE user_id = $1`,
-            [userId],
-          );
-        } catch (_) {}
-        try {
-          await client.query(
-            `DELETE FROM national_manager_applications WHERE user_id = $1`,
-            [userId],
-          );
-        } catch (_) {}
+        await soft(
+          `DELETE FROM national_manager_applications WHERE user_id = $1`,
+          [userId],
+        );
+        await soft(`DELETE FROM elite_subscriptions WHERE user_id = $1`, [
+          userId,
+        ]);
+        await soft(`DELETE FROM elite_payments WHERE user_id = $1`, [userId]);
+        await soft(`DELETE FROM messages WHERE from_user_id = $1 OR to_user_id = $1`, [
+          userId,
+        ]);
+        await soft(`DELETE FROM notifications WHERE user_id = $1`, [userId]);
+        await soft(`DELETE FROM forum_posts WHERE user_id = $1`, [userId]);
+        await soft(`DELETE FROM anti_cheat_log WHERE user_id = $1`, [userId]);
+        await soft(`DELETE FROM transfer_bids WHERE bidder_user_id = $1`, [
+          userId,
+        ]);
         await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
       });
-      res.json({ ok: true });
+      res.json({ ok: true, deletedUsername });
     } catch (e) {
       console.error("[auth/delete-account]", e);
-      res.status(500).json({ error: "Hesap silinemedi" });
+      res.status(500).json({ ok: false, error: "Hesap silinemedi" });
     }
   });
 
