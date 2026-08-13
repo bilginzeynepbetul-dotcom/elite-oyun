@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: em
+      POSTGRES_PASSWORD: em
+      POSTGRES_DB: elite_manager
+    ports:
+      - "5432:5432"
+    volumes:
+      - em_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U em -d elite_manager"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://em:em@db:5432/elite_manager
+      # UYARI: Production'da mutlaka güçlü rastgele bir secret kullanın
+      JWT_SECRET: dev-secret-change-in-prod
+      ADMIN_USERNAME: admin
+      ELITE_ALLOW_MOCK: "0"
+      PORT: "3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "node scripts/migrate.js && node server.js"
+
+volumes:
+  em_pg:
