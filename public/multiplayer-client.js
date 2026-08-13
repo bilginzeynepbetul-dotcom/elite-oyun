@@ -28,10 +28,29 @@
 // ============================================================
 
 (function () {
-  const API_BASE = window.EM_API_BASE || "";
+  function resolveApiBase() {
+    try {
+      if (window.EM_API_BASE != null && String(window.EM_API_BASE).length)
+        return String(window.EM_API_BASE).replace(/\/$/, "");
+    } catch (e) {}
+    try {
+      if (
+        !window.location ||
+        window.location.protocol === "file:" ||
+        window.location.protocol === "app:"
+      ) {
+        return "http://localhost:3000";
+      }
+    } catch (e2) {}
+    return "";
+  }
+  const API_BASE = resolveApiBase();
   const TOKEN_KEY = "em_jwt_token";
   const CLUB_KEY = "em_club_info";
   let socket = null;
+  /** Canlı maçta bu kullanıcının tarafı (home/away) — iki insanlı maç için */
+  let _emMyMatchSide = null;
+  let _emSyncHeartbeat = null;
   let _emNextFixture = null;
   let _emFixtureCache = {}; // fixtureId -> fixture (homeClubId/awayClubId dahil)
   let _emMySide = null; // "home" | "away" | null — izlenen maçta hangi taraftayım
@@ -60,9 +79,24 @@
 
   function determineMySide(fixtureId) {
     const f = _emFixtureCache[fixtureId];
-    if (!f || !_emMyClub) return null;
-    if (f.homeClubId === _emMyClub.id) return "home";
-    if (f.awayClubId === _emMyClub.id) return "away";
+    if (!f) return null;
+    const myId = _emMyClub && _emMyClub.id != null ? String(_emMyClub.id) : null;
+    if (myId) {
+      if (f.homeClubId != null && String(f.homeClubId) === myId) return "home";
+      if (f.awayClubId != null && String(f.awayClubId) === myId) return "away";
+    }
+    // Son çare: kullanıcı adı eşleşmesi
+    try {
+      const uname = String(
+        (typeof managerName !== "undefined" && managerName) ||
+          localStorage.getItem("em_username") ||
+          "",
+      ).toLowerCase();
+      if (uname) {
+        if (String(f.homeName || "").toLowerCase().indexOf(uname) >= 0) return "home";
+        if (String(f.awayName || "").toLowerCase().indexOf(uname) >= 0) return "away";
+      }
+    } catch (e) {}
     return null;
   }
   let _emMyClub = null;
@@ -84,19 +118,40 @@
     );
     const token = getToken();
     if (token) headers["Authorization"] = "Bearer " + token;
-    const res = await fetch(
-      API_BASE + path,
-      Object.assign({}, opts, { headers }),
-    );
+    let res;
+    try {
+      res = await fetch(
+        API_BASE + path,
+        Object.assign({}, opts, { headers }),
+      );
+    } catch (netErr) {
+      throw new Error(
+        "Sunucuya ulaşılamadı. node server.js çalıştırın" +
+          (API_BASE ? " · " + API_BASE : "") +
+          (window.location && window.location.protocol === "file:"
+            ? " · file:// yerine http://localhost:PORT kullan"
+            : ""),
+      );
+    }
     let data = null;
     try {
       data = await res.json();
     } catch (e) {}
-    if (!res.ok) throw new Error((data && data.error) || "HTTP " + res.status);
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403)
+        throw new Error(
+          (data && data.error) || "Oturum gerekli — tekrar giriş yap",
+        );
+      throw new Error((data && data.error) || "HTTP " + res.status);
+    }
     return data;
   }
 
   window.apiFetch = apiFetch;
+  window.__emApiFetchReal = apiFetch;
+  try {
+    globalThis.apiFetch = apiFetch;
+  } catch (eG) {}
 
   // ------------------------------------------------------------
   // Sunucu oyuncu objesini client'ın beklediği alanlarla tamamla
@@ -111,7 +166,7 @@
     p.naturalPos = p.naturalPos || p.pos;
     p.age = p.age || 18 + Math.floor(Math.random() * 12);
     p.form = p.form != null ? p.form : 0;
-    p.experience = p.experience != null ? p.experience : 3;
+    p.experience = p.experience != null ? (Number(p.experience) > 10 ? 1 + (Math.min(99, Number(p.experience))/99)*9 : Math.max(1, Math.min(10, Number(p.experience)||3))) : 3;
     p.happiness = p.happiness != null ? p.happiness : 80;
     p.minutesPlayed = isStarter ? 90 : 0;
     p.keyActions = p.keyActions || 0;
@@ -169,12 +224,27 @@
   function applyServerTeamToClient(serverTeam) {
     if (!serverTeam || typeof teamConfig === "undefined") return;
     teamConfig.home.name = serverTeam.name || teamConfig.home.name;
-    teamConfig.home.players = (serverTeam.players || []).map((p, i) =>
+    const nextPlayers = (serverTeam.players || []).map((p, i) =>
       normalizeServerPlayer(p, i, true),
     );
-    teamConfig.home.bench = (serverTeam.bench || []).map((p, i) =>
+    const nextBench = (serverTeam.bench || []).map((p, i) =>
       normalizeServerPlayer(p, i, false),
     );
+    // Sunucu boş XI döndürdüyse mevcut client kadroyu silme
+    if (nextPlayers.length > 0) {
+      teamConfig.home.players = nextPlayers;
+      teamConfig.home.bench = nextBench;
+    } else if (
+      !(teamConfig.home.players && teamConfig.home.players.length)
+    ) {
+      teamConfig.home.players = nextPlayers;
+      teamConfig.home.bench = nextBench;
+    } else {
+      console.warn(
+        "[em] applyServerTeamToClient: empty XI ignored, kept local",
+        teamConfig.home.players.length,
+      );
+    }
     teamConfig.home.gameStyle = serverTeam.gameStyle || teamConfig.home.gameStyle;
     teamConfig.home.passStyle = serverTeam.passStyle || teamConfig.home.passStyle;
     teamConfig.home.attackDir = serverTeam.attackDir || teamConfig.home.attackDir;
@@ -391,12 +461,258 @@
           });
     } catch (eUi) {}
     console.log("[em] syncAllFromServer done, teamOk=", teamOk);
+    try {
+      const badge = document.getElementById("emOnlineBadge");
+      if (badge) {
+        badge.style.display = "inline-block";
+        badge.innerText = teamOk ? "🟢 Online" : "🟡 Kısmi";
+        badge.style.color = teamOk ? "#4ade80" : "#facc15";
+      }
+      const st = document.getElementById("menuSaveStatus");
+      if (st && teamOk)
+        st.innerText =
+          "Sunucu senkron · " +
+          new Date().toLocaleTimeString("tr-TR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+    } catch (eB) {}
   }
   window.syncAllFromServer = syncAllFromServer;
+
+  /**
+   * Sayfa açılınca ilgili veriyi sunucudan çek — yerel kalıntı ezmesin.
+   * pageId: page-training | page-youth | page-stadium | page-tactics |
+   *         page-squad | page-leagues | page-club | ...
+   */
+  async function ensureServerAuthorityOnPage(pageId) {
+    if (!getToken() || !window.__emServerAuthoritative) return;
+    const id = String(pageId || "");
+    try {
+      if (
+        id.indexOf("training") >= 0 ||
+        id.indexOf("tactics") >= 0 ||
+        id.indexOf("squad") >= 0 ||
+        id.indexOf("formation") >= 0 ||
+        id.indexOf("club") >= 0 ||
+        id === "page-match"
+      ) {
+        try {
+          const team = await apiFetch("/api/team");
+          if (team && team.team) applyServerTeamToClient(team.team);
+        } catch (e) {}
+        try {
+          const eco = await apiFetch("/api/economy");
+          applyServerEconomyToClient(eco);
+        } catch (e) {}
+      }
+      if (id.indexOf("training") >= 0) {
+        try {
+          await fetchTrainingFromServer();
+        } catch (e) {}
+      }
+      if (id.indexOf("youth") >= 0 || id.indexOf("academy") >= 0) {
+        try {
+          if (typeof fetchYouthFromServer === "function")
+            await fetchYouthFromServer();
+          else {
+            const y = await apiFetch("/api/youth");
+            if (y && y.state && typeof applyYouthStateToClient === "function")
+              applyYouthStateToClient(y.state);
+          }
+        } catch (e) {}
+      }
+      if (id.indexOf("stadium") >= 0) {
+        try {
+          await fetchStadiumFromServer();
+        } catch (e) {}
+      }
+      if (id.indexOf("league") >= 0 || id.indexOf("live") >= 0) {
+        try {
+          const st = await apiFetch("/api/league/standings");
+          if (st && typeof applyServerStandingsToClient === "function")
+            applyServerStandingsToClient(st.standings || []);
+        } catch (e) {}
+        try {
+          await refreshNextMatchFromServer();
+        } catch (e) {}
+      }
+      if (id.indexOf("transfer") >= 0 || id.indexOf("market") >= 0) {
+        try {
+          if (typeof fetchTransfersFromServer === "function")
+            await fetchTransfersFromServer();
+        } catch (e) {}
+      }
+    } catch (e) {
+      console.warn("[em] page authority", id, e);
+    }
+  }
+  window.ensureServerAuthorityOnPage = ensureServerAuthorityOnPage;
+
+
 
   // ------------------------------------------------------------
   // Socket.io — canlı maç izleme
   // ------------------------------------------------------------
+  /** Milli maç mı? (nm_ id veya cache) */
+  function isNationalFixtureId(fixtureId) {
+    const s = String(fixtureId || "");
+    if (!s) return false;
+    if (s.indexOf("nm_") === 0) return true;
+    if (/national/i.test(s)) return true;
+    try {
+      const f =
+        (typeof _emFixtureCache !== "undefined" &&
+          _emFixtureCache &&
+          _emFixtureCache[s]) ||
+        null;
+      if (
+        f &&
+        (f.competition === "national" ||
+          f.kind === "national" ||
+          f.isNational ||
+          f.category === "A" ||
+          f.category === "U21")
+      )
+        return true;
+    } catch (e) {}
+    return false;
+  }
+
+  /** 2D saha: Elite VEYA milli maç VEYA kendi maçın (katılımcı) */
+  function canViewMatch2D(fixtureId) {
+    try {
+      if (typeof isEliteMember === "function" && isEliteMember()) return true;
+    } catch (e) {}
+    const fid = fixtureId || window._emWatchingFixtureId;
+    if (isNationalFixtureId(fid)) return true;
+    // Kendi maçını oynarken / izlerken saha görünsün
+    try {
+      if (_emMySide === "home" || _emMySide === "away") return true;
+    } catch (e2) {}
+    try {
+      if (typeof determineMySide === "function" && fid) {
+        const side = determineMySide(fid);
+        if (side === "home" || side === "away") return true;
+      }
+    } catch (e3) {}
+    return false;
+  }
+
+  function setMatch2DVisible(show) {
+    try {
+      const pageEl = document.getElementById("page-match");
+      if (pageEl && !pageEl.classList.contains("active")) {
+        try {
+          document.querySelectorAll(".page.active").forEach(function (el) {
+            el.classList.remove("active");
+          });
+        } catch (eA) {}
+        pageEl.classList.add("active");
+      }
+      const fw =
+        document.querySelector("#page-match .field-wrapper") ||
+        document.querySelector(".field-wrapper");
+      const note = document.getElementById("freeMatchTextNote");
+      if (show) {
+        if (typeof ensureMatchFieldVisible === "function")
+          ensureMatchFieldVisible();
+        else if (fw) {
+          fw.style.display = "block";
+          fw.style.visibility = "visible";
+          fw.style.minHeight = "220px";
+        }
+        if (note) note.style.display = "none";
+      } else {
+        if (fw) {
+          fw.style.display = "none";
+        }
+        if (note) {
+          note.style.display = "block";
+          note.innerHTML =
+            '<div style="padding:14px;background:#0f172a;border:1px solid #facc15;border-radius:12px;text-align:center;color:#fde68a;font-size:13px;line-height:1.5;">' +
+            "📝 Bu maç metin rapor olarak izleniyor.<br/>" +
+            "<b>2D saha yalnızca Elite üyeler</b> için açılır.<br/>" +
+            "<span style=\"color:#94a3b8;font-size:12px;\">Milli takım maçları herkese 2D açıktır. Elite için Destek Ol → Elite sayfası.</span>" +
+            '<div style="margin-top:10px;"><button type="button" class="sub-btn" style="width:auto;padding:8px 14px;background:linear-gradient(90deg,#f59e0b,#d97706);font-weight:800;" onclick="typeof goToPremium===\'function\'&&goToPremium()">⭐ Elite / Destek Ol</button></div>' +
+            "</div>";
+        }
+        // Beyaz ekran olmasın: skor paneli / prematch görünsün
+        try {
+          const pre = document.getElementById("prematch-actions");
+          if (pre) {
+            pre.style.display = "block";
+            pre.style.visibility = "visible";
+          }
+          const rc = document.getElementById("report-container");
+          if (rc) {
+            rc.style.display = "block";
+            rc.style.visibility = "visible";
+          }
+        } catch (eP) {}
+      }
+    } catch (e) {
+      console.warn("setMatch2DVisible", e);
+    }
+  }
+  window.canViewMatch2D = canViewMatch2D;
+  window.isNationalFixtureId = isNationalFixtureId;
+  window.setMatch2DVisible = setMatch2DVisible;
+
+
+  function startEmSyncHeartbeat() {
+    try {
+      if (_emSyncHeartbeat) clearInterval(_emSyncHeartbeat);
+    } catch (e) {}
+    _emSyncHeartbeat = setInterval(function () {
+      try {
+        if (!getToken() || !window.__emServerAuthoritative) return;
+        if (document.hidden) return;
+        // Hafif senkron: standings + ekonomi + takım push
+        syncAllFromServer().catch(function () {});
+        if (typeof pushTeamToServer === "function") {
+          pushTeamToServer({ allowEmpty: false }).catch(function () {});
+        }
+        // Presence ping
+        apiFetch("/api/instant/presence", {
+          method: "POST",
+          body: JSON.stringify({}),
+        }).catch(function () {});
+      } catch (e) {}
+    }, 120000); // 2 dk
+  }
+  function stopEmSyncHeartbeat() {
+    try {
+      if (_emSyncHeartbeat) clearInterval(_emSyncHeartbeat);
+      _emSyncHeartbeat = null;
+    } catch (e) {}
+  }
+  window.startEmSyncHeartbeat = startEmSyncHeartbeat;
+
+  
+  function ensureConnBanner() {
+    let el = document.getElementById("emConnBanner");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "emConnBanner";
+    el.style.cssText =
+      "display:none;position:fixed;top:0;left:0;right:0;z-index:99999;padding:8px 12px;text-align:center;font-size:13px;font-weight:700;background:#7f1d1d;color:#fecaca;";
+    document.body.appendChild(el);
+    return el;
+  }
+  function setConnBanner(show, text) {
+    try {
+      const el = ensureConnBanner();
+      if (!show) {
+        el.style.display = "none";
+        return;
+      }
+      el.style.display = "block";
+      el.innerText = text || "Bağlantı koptu — yeniden bağlanılıyor…";
+    } catch (e) {}
+  }
+  window.__emSetConnBanner = setConnBanner;
+
   function connectSocket() {
     if (typeof io === "undefined") {
       console.warn("[em] socket.io client yüklenmedi");
@@ -405,6 +721,31 @@
     if (socket) socket.disconnect();
     socket = io(API_BASE, { auth: { token: getToken() } });
 
+    socket.on("connect", () => {
+      setConnBanner(false);
+      try {
+        const b = document.getElementById("emOnlineBadge");
+        if (b) {
+          b.style.display = "inline-block";
+          b.innerText = "🟢 Online";
+          b.style.color = "#4ade80";
+        }
+      } catch (eB) {}
+      try {
+        startEmSyncHeartbeat();
+      } catch (e) {}
+    });
+    socket.on("disconnect", (reason) => {
+      setConnBanner(true, "Bağlantı koptu (" + (reason || "?") + ") — yeniden deneniyor…");
+      try {
+        const b = document.getElementById("emOnlineBadge");
+        if (b) {
+          b.style.display = "inline-block";
+          b.innerText = "🔴 Offline";
+          b.style.color = "#f87171";
+        }
+      } catch (eB) {}
+    });
     socket.on("connect_error", (err) => {
       console.warn("[em] socket bağlantı hatası:", err.message);
     });
@@ -449,37 +790,97 @@
       try {
         if (!d) return;
         if (typeof matchMinute !== "undefined" && d.minute != null) matchMinute = d.minute;
-        if (d.score && typeof teamConfig !== "undefined") {
-          // skor panosu
+        if (d.score) {
+          try {
+            if (typeof homeScore !== "undefined") homeScore = d.score.home || 0;
+            if (typeof awayScore !== "undefined") awayScore = d.score.away || 0;
+          } catch (eSc) {}
           try {
             const sb = document.getElementById("scoreBoard");
-            if (sb && d.score) {
-              /* state handler zaten full günceller; tick sadece dakika */
+            if (sb) {
+              const minStr = String(d.minute != null ? d.minute : 0).padStart(2, "0");
+              const hn =
+                (typeof teamConfig !== "undefined" && teamConfig.home && teamConfig.home.name) ||
+                "Ev";
+              const an =
+                (typeof teamConfig !== "undefined" && teamConfig.away && teamConfig.away.name) ||
+                "Dep";
+              sb.innerText =
+                minStr + ":00 - " + hn + " " + (d.score.home || 0) + " - " +
+                (d.score.away || 0) + " " + an;
             }
-          } catch (e) {}
+          } catch (eSb) {}
         }
-        if (typeof updateScoreBoard === "function") {
-          try { updateScoreBoard(); } catch (e) {}
+        try {
+          const timer = document.getElementById("matchTimerDisplay");
+          if (timer && d.minute != null) timer.innerHTML = "⏱️ " + d.minute + ":00";
+        } catch (eT) {}
+        if (d.possession) {
+          try {
+            const hp = Math.round(Number(d.possession.home) || 50);
+            const elH = document.getElementById("homePossession");
+            const elA = document.getElementById("awayPossession");
+            const fill = document.getElementById("possessionFill");
+            if (elH) elH.innerText = hp + "%";
+            if (elA) elA.innerText = (100 - hp) + "%";
+            if (fill) fill.style.width = hp + "%";
+          } catch (eP) {}
         }
         if (typeof scheduleRender === "function") scheduleRender();
       } catch (e) {}
     });
 
-    socket.on("match:state", (state) => {
-      // Herkese 2D saha + pozisyon (Elite şartı kaldırıldı)
+    socket.on("match:your-side", (d) => {
       try {
-        const fw = document.querySelector(".field-wrapper");
-        if (fw) {
-          fw.style.display = "";
-          fw.style.visibility = "visible";
-          fw.style.minHeight = "200px";
+        if (d && (d.side === "home" || d.side === "away")) {
+          _emMyMatchSide = d.side;
+          _emMySide = d.side;
+          window.__emMyMatchSide = d.side;
+          window.__emMySide = d.side;
+          try {
+            if (typeof maybeShowInmatchPanel === "function") {
+              /* panel dakika kontrolü state ile */
+            }
+          } catch (eP) {}
         }
-        const note = document.getElementById("freeMatchTextNote");
-        if (note) note.style.display = "none";
-        applyServerPositions(state);
+      } catch (e) {}
+    });
+
+    socket.on("match:state", (state) => {
+      // 2D: Elite veya milli maç; diğerleri metin
+      try {
+        if (!state) return;
+        // Skor globals
+        try {
+          if (state.score) {
+            if (typeof homeScore !== "undefined") homeScore = state.score.home || 0;
+            if (typeof awayScore !== "undefined") awayScore = state.score.away || 0;
+          }
+          if (state.minute != null && typeof matchMinute !== "undefined")
+            matchMinute = state.minute;
+        } catch (eSc) {}
         renderServerMatchState(state);
         maybeShowInmatchPanel(state);
-        if (typeof scheduleRender === "function") scheduleRender();
+        const fid = window._emWatchingFixtureId || (state && state.fixtureId);
+        const allow2d = canViewMatch2D(fid);
+        setMatch2DVisible(allow2d);
+        if (allow2d) {
+          applyServerPositions(state);
+          if (typeof scheduleRender === "function") scheduleRender();
+        } else {
+          try {
+            renderTextOnlyMatchState(state);
+          } catch (eT) {}
+        }
+        // match:ended kaçarsa bile bitiş UI
+        if (state.status === "ended" && window._emServerMatchActive) {
+          try {
+            const status = document.getElementById("matchStatus");
+            if (status) status.innerText = "🏁 Maç bitti";
+            const timer = document.getElementById("matchTimerDisplay");
+            if (timer) timer.innerHTML = "⏱️ MAÇ BİTTİ";
+          } catch (eEnd) {}
+        }
       } catch (e) {
         try {
           renderTextOnlyMatchState(state);
@@ -576,26 +977,64 @@
     // mevcut lerp'i (this.x += (targetX-this.x)*speed) yumuşatır.
     socket.on("match:ball", (d) => {
       try {
-        const elite =
-          typeof isEliteMember === "function" ? isEliteMember() : false;
-        if (!elite) return; // 2D top hareketi sadece Elite
+        if (!d) return;
+        // 2D kapalıysa (Elite değil / milli değil) top animasyonu yok
+        if (!canViewMatch2D(window._emWatchingFixtureId) && !window._emForce2dBall)
+          return;
         if (typeof ball === "undefined") return;
         ball.holder = null;
         if (d.x != null) {
-          ball.x = d.x;
-          ball.y = d.y;
           ball.targetX = d.x;
-          ball.targetY = d.y;
+          ball.targetY = d.y != null ? d.y : ball.y;
+          // Ani zıplama yerine hedefe yönlendir (lerp ball.update'de)
+          if (Math.abs((ball.x || 0) - d.x) > 120) {
+            ball.x = d.x;
+            ball.y = d.y != null ? d.y : ball.y;
+          }
         }
+        if (typeof scheduleRender === "function") scheduleRender();
       } catch (e) {}
     });
 
     socket.on("match:goal", (d) => {
       try {
+        if (d && d.score) {
+          try {
+            if (typeof homeScore !== "undefined") homeScore = d.score.home || 0;
+            if (typeof awayScore !== "undefined") awayScore = d.score.away || 0;
+          } catch (eSc) {}
+          try {
+            const sb = document.getElementById("scoreBoard");
+            if (sb) {
+              const minStr = String(
+                d.minute != null
+                  ? d.minute
+                  : typeof matchMinute !== "undefined"
+                    ? matchMinute
+                    : 0,
+              ).padStart(2, "0");
+              const hn =
+                (typeof teamConfig !== "undefined" && teamConfig.home && teamConfig.home.name) ||
+                "Ev";
+              const an =
+                (typeof teamConfig !== "undefined" && teamConfig.away && teamConfig.away.name) ||
+                "Dep";
+              sb.innerText =
+                minStr + ":00 - " + hn + " " + (d.score.home || 0) + " - " +
+                (d.score.away || 0) + " " + an;
+            }
+          } catch (eSb) {}
+        }
         addLog(
-          "⚽ GOL! " + d.scorer + (d.assist ? " (Asist: " + d.assist + ")" : ""),
+          "⚽ GOL! " +
+            (d && d.scorer ? d.scorer : "?") +
+            (d && d.assist ? " (Asist: " + d.assist + ")" : ""),
           "goal",
         );
+        try {
+          if (typeof announceGoal === "function" && d && d.scorer) announceGoal(d.scorer);
+        } catch (eA) {}
+        if (typeof scheduleRender === "function") scheduleRender();
       } catch (e) {}
     });
 
@@ -609,6 +1048,24 @@
       try {
         const hs = (state && state.score && state.score.home) || 0;
         const as = (state && state.score && state.score.away) || 0;
+        // Son state'i uygula (skor/istatistik/2D pozisyon)
+        try {
+          if (state) {
+            renderServerMatchState(state);
+            if (typeof canViewMatch2D === "function" &&
+                canViewMatch2D(window._emWatchingFixtureId || (state && state.fixtureId))) {
+              applyServerPositions(state);
+              if (typeof setMatch2DVisible === "function") setMatch2DVisible(true);
+            }
+            if (typeof scheduleRender === "function") scheduleRender();
+          }
+        } catch (eState) {}
+        try {
+          if (typeof homeScore !== "undefined") homeScore = hs;
+          if (typeof awayScore !== "undefined") awayScore = as;
+          if (typeof matchMinute !== "undefined" && state && state.minute != null)
+            matchMinute = state.minute;
+        } catch (eSc) {}
         try {
           if (typeof ml === "function") {
             addLog(
@@ -624,25 +1081,30 @@
             addLog("🏁 Full time: " + hs + " - " + as, "match-end");
           }
         } catch (e0) {
-          addLog("🏁 " + hs + " - " + as, "match-end");
+          try { addLog("🏁 " + hs + " - " + as, "match-end"); } catch (e00) {}
         }
         const status = document.getElementById("matchStatus");
-        if (status) status.innerText = "🏁 " + hs + " - " + as;
+        if (status) status.innerText = "🏁 Maç bitti · " + hs + " - " + as;
+        const timer = document.getElementById("matchTimerDisplay");
+        if (timer) timer.innerHTML = "⏱️ MAÇ BİTTİ";
         // Skor panosu
         try {
           const scoreBoard = document.getElementById("scoreBoard");
           if (scoreBoard) {
             const hn =
-              (state.players &&
+              (state && state.players &&
                 state.players.home &&
-                (state.players.home.username || state.players.home.teamName)) ||
+                (state.players.home.teamName || state.players.home.username)) ||
+              (typeof teamConfig !== "undefined" && teamConfig.home && teamConfig.home.name) ||
               "Home";
             const an =
-              (state.players &&
+              (state && state.players &&
                 state.players.away &&
-                (state.players.away.username || state.players.away.teamName)) ||
+                (state.players.away.teamName || state.players.away.username)) ||
+              (typeof teamConfig !== "undefined" && teamConfig.away && teamConfig.away.name) ||
               "Away";
-            scoreBoard.innerText = hn + " " + hs + " - " + as + " " + an;
+            scoreBoard.innerText =
+              "MAÇ BİTTİ - " + hn + " " + hs + " - " + as + " " + an;
           }
         } catch (e1) {}
         // Özet katmanı
@@ -658,21 +1120,52 @@
           }
           if (ov) ov.classList.add("active");
         } catch (e2) {}
-        if (window._emWatchingFixtureId) {
-          try {
+        // Yerel simülasyon + sunucu izleme bayraklarını kapat
+        try {
+          if (window._emWatchingFixtureId) {
             window.lastPlayedFixtureId = window._emWatchingFixtureId;
             if (typeof lastPlayedFixtureId !== "undefined") {
               lastPlayedFixtureId = window._emWatchingFixtureId;
             }
-          } catch (e3) {}
-        }
+          }
+        } catch (e3) {}
         if (window._emWatchPoll) {
           clearInterval(window._emWatchPoll);
           window._emWatchPoll = null;
         }
-        matchStarted = false;
+        try {
+          if (typeof matchInterval !== "undefined" && matchInterval) {
+            clearInterval(matchInterval);
+            matchInterval = null;
+          }
+          if (typeof circulationInterval !== "undefined" && circulationInterval) {
+            clearInterval(circulationInterval);
+            circulationInterval = null;
+          }
+        } catch (eInt) {}
+        try {
+          matchEnded = true;
+          matchStarted = false;
+          matchPaused = false;
+          inMajorAction = false;
+          window._majorActionSince = 0;
+        } catch (eFl) {}
+        window._emServerMatchActive = false;
         window._emWatchingFixtureId = null;
-      } catch (e) {}
+        try {
+          if (typeof unlockPrematchPanels === "function") unlockPrematchPanels();
+        } catch (eU) {}
+        try {
+          if (typeof updateMatchLiveTabsVisibility === "function")
+            updateMatchLiveTabsVisibility();
+        } catch (eTab) {}
+        try {
+          if (typeof ensureMatchFieldVisible === "function")
+            ensureMatchFieldVisible();
+        } catch (eF) {}
+      } catch (e) {
+        console.warn("[em] match:ended handler", e);
+      }
       // Maç sonucu bildirim DEĞİL — sadece senkron
       try {
         await refreshNextMatchFromServer();
@@ -692,41 +1185,61 @@
   // ------------------------------------------------------------
   function applyServerPositions(state) {
     if (!state) return;
-    if (state.positions) {
-      if (Array.isArray(state.positions.home)) {
-        state.positions.home.forEach((sp, i) => {
-          const p = teamConfig.home.players[i];
-          if (p && sp) {
-            p.x = sp.x;
-            p.y = sp.y;
-            if (sp.pos) p.pos = sp.pos;
-          }
+    function mergeSide(sideKey) {
+      if (!state.positions || !Array.isArray(state.positions[sideKey])) return;
+      const arr = state.positions[sideKey];
+      // Boş diziyle mevcut kadroyu silme — saha oyuncusuz kalmasın
+      if (!arr.length) return;
+      if (!teamConfig[sideKey]) teamConfig[sideKey] = { players: [], name: sideKey };
+      const prev = teamConfig[sideKey].players || [];
+      teamConfig[sideKey].players = arr.map(function (sp, i) {
+        const existing = prev[i] || {};
+        const x =
+          sp && sp.x != null
+            ? sp.x
+            : existing.x != null
+              ? existing.x
+              : 50 + i * 40;
+        const y =
+          sp && sp.y != null
+            ? sp.y
+            : existing.y != null
+              ? existing.y
+              : 80 + (i % 4) * 70;
+        return Object.assign({}, existing, {
+          name: (sp && sp.name) || existing.name || ("P" + (i + 1)),
+          pos: (sp && sp.pos) || existing.pos || "MC",
+          x: x,
+          y: y,
+          number: existing.number || (sp && sp.number) || i + 1,
         });
-      }
-      if (Array.isArray(state.positions.away)) {
-        // Rakip kadrosu sadece izleme amaçlı — client'ta yoksa oluştur
-        teamConfig.away.players = state.positions.away.map((sp, i) => {
-          const existing = teamConfig.away.players[i] || {};
-          existing.name = sp.name;
-          existing.pos = sp.pos;
-          existing.x = sp.x;
-          existing.y = sp.y;
-          existing.number = existing.number || i + 1;
-          return existing;
-        });
-        try {
-          teamConfig.away.name =
-            (state.players && state.players.away && state.players.away.teamName) ||
-            teamConfig.away.name;
-        } catch (e) {}
-      }
+      });
+      try {
+        if (state.players && state.players[sideKey] && state.players[sideKey].teamName) {
+          teamConfig[sideKey].name = state.players[sideKey].teamName;
+        }
+      } catch (e) {}
     }
+    try {
+      mergeSide("home");
+      mergeSide("away");
+    } catch (eM) {}
+    try {
+      if (typeof ensureMatchPitchPositions === "function")
+        ensureMatchPitchPositions();
+    } catch (ePos) {}
     if (state.ball && typeof ball !== "undefined") {
-      ball.holder = null;
-      ball.x = state.ball.x;
-      ball.y = state.ball.y;
-      ball.targetX = state.ball.x;
-      ball.targetY = state.ball.y;
+      try {
+        ball.holder = null;
+        if (state.ball.x != null) {
+          ball.x = state.ball.x;
+          ball.targetX = state.ball.x;
+        }
+        if (state.ball.y != null) {
+          ball.y = state.ball.y;
+          ball.targetY = state.ball.y;
+        }
+      } catch (eB) {}
     }
   }
 
@@ -740,7 +1253,7 @@
       const min = state.minute != null ? state.minute : "?";
       if (status) {
         status.innerText =
-          "📝 " + min + "' · " + hs + " - " + as + " (metin rapor · Elite=2D)";
+          "📝 " + min + "' · " + hs + " - " + as + " (metin · Elite=2D)";
       }
       const homeScoreEl = document.getElementById("homeScore");
       const awayScoreEl = document.getElementById("awayScore");
@@ -748,26 +1261,23 @@
       if (awayScoreEl) awayScoreEl.innerText = String(as);
       const timer = document.getElementById("matchTimerDisplay");
       if (timer) timer.innerText = min + "'";
-      const fw = document.querySelector(".field-wrapper");
-      // Hızlı maç / anlık: saha görünsün
-      if (fw) {
-        fw.style.display = "";
-        fw.style.visibility = "visible";
-        fw.style.minHeight = "200px";
+      // Metin modunda saha kapalı (milli değilse)
+      if (!canViewMatch2D(window._emWatchingFixtureId)) {
+        setMatch2DVisible(false);
       }
-      const note = document.getElementById("freeMatchTextNote");
-      if (note) note.style.display = "none";
-      try {
-        if (typeof scheduleRender === "function") scheduleRender();
-      } catch (e) {}
     } catch (e) {}
   }
 
 function renderServerMatchState(state) {
-    if (!state || !state.score || !state.stats) return;
-    const minStr = String(state.minute).padStart(2, "0");
-    const homeName = (state.players && state.players.home.teamName) || teamConfig.home.name;
-    const awayName = (state.players && state.players.away.teamName) || "Rakip";
+    if (!state || !state.score) return;
+    const minStr = String(state.minute != null ? state.minute : 0).padStart(2, "0");
+    const homeName =
+      (state.players && state.players.home && state.players.home.teamName) ||
+      (teamConfig.home && teamConfig.home.name) ||
+      "Ev";
+    const awayName =
+      (state.players && state.players.away && state.players.away.teamName) ||
+      "Rakip";
     const set = (id, v) => {
       const el = document.getElementById(id);
       if (el) el.innerText = v;
@@ -775,17 +1285,41 @@ function renderServerMatchState(state) {
     const sb = document.getElementById("scoreBoard");
     if (sb)
       sb.innerText =
-        minStr + ":00 - " + homeName + " " + state.score.home + " - " + state.score.away + " " + awayName;
-    set("homeShots", state.stats.home.shots);
-    set("awayShots", state.stats.away.shots);
-    set("homeOnTarget", state.stats.home.onTarget);
-    set("awayOnTarget", state.stats.away.onTarget);
-    set("homeGoals", state.stats.home.goals);
-    set("awayGoals", state.stats.away.goals);
-    set("homePossession", Math.round(state.stats.home.possession) + "%");
-    set("awayPossession", Math.round(state.stats.away.possession) + "%");
+        minStr +
+        ":00 - " +
+        homeName +
+        " " +
+        state.score.home +
+        " - " +
+        state.score.away +
+        " " +
+        awayName;
+    const stHome = (state.stats && state.stats.home) || {};
+    const stAway = (state.stats && state.stats.away) || {};
+    set("homeShots", stHome.shots != null ? stHome.shots : "0");
+    set("awayShots", stAway.shots != null ? stAway.shots : "0");
+    set("homeOnTarget", stHome.onTarget != null ? stHome.onTarget : "0");
+    set("awayOnTarget", stAway.onTarget != null ? stAway.onTarget : "0");
+    set("homeGoals", stHome.goals != null ? stHome.goals : state.score.home);
+    set("awayGoals", stAway.goals != null ? stAway.goals : state.score.away);
+    // possession sunucuda state.possession = {home,away}; stats içinde değil
+    let hp = 50, ap = 50;
+    if (state.possession && (state.possession.home != null || state.possession.away != null)) {
+      hp = Math.round(Number(state.possession.home) || 50);
+      ap = Math.round(Number(state.possession.away) != null ? state.possession.away : 100 - hp);
+    } else {
+      const ht = Number(stHome.possessionTicks) || 0;
+      const at = Number(stAway.possessionTicks) || 0;
+      const tot = ht + at;
+      if (tot > 0) {
+        hp = Math.round((ht / tot) * 100);
+        ap = 100 - hp;
+      }
+    }
+    set("homePossession", hp + "%");
+    set("awayPossession", ap + "%");
     const fill = document.getElementById("possessionFill");
-    if (fill) fill.style.width = Math.round(state.stats.home.possession) + "%";
+    if (fill) fill.style.width = hp + "%";
     const timer = document.getElementById("matchTimerDisplay");
     if (timer) timer.innerHTML = "⏱️ " + minStr + ":00";
     if (state.status === "ended") {
@@ -840,6 +1374,89 @@ function renderServerMatchState(state) {
       switchPage("page-match");
       resetMatchEngineState();
     } catch (e) {}
+    // Prematch: home kadro dolu olsun; away boşsa isimli placeholder XI
+    try {
+      if (typeof teamConfig !== "undefined") {
+        if (
+          !teamConfig.home.players ||
+          teamConfig.home.players.length < 11
+        ) {
+          // Sunucudan gelmemişse en azından mevcut listeyi koru
+          if (!teamConfig.home.players) teamConfig.home.players = [];
+        }
+        const f = _emFixtureCache[fixtureId];
+        if (f) {
+          const myId =
+            _emMyClub && _emMyClub.id != null ? String(_emMyClub.id) : null;
+          let awayName = f.awayName;
+          let homeName = f.homeName;
+          if (myId && String(f.homeClubId) === myId) {
+            awayName = f.awayName;
+          } else if (myId && String(f.awayClubId) === myId) {
+            awayName = f.homeName;
+          }
+          if (
+            (!teamConfig.away.players || !teamConfig.away.players.length) &&
+            typeof generatePlayersForTeam === "function"
+          ) {
+            const an = awayName || teamConfig.away.name || "Rakip";
+            teamConfig.away.name = an;
+            const country =
+              typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "Türkiye";
+            teamConfig.away.players = generatePlayersForTeam(
+              { name: an },
+              country,
+              11,
+              false,
+            );
+            teamConfig.away.bench = [];
+          } else if (awayName) {
+            teamConfig.away.name = awayName;
+          }
+          if (homeName && myId && String(f.awayClubId) === myId) {
+            // Kullanıcı deplasmanda: isimler skorboard için
+            if (teamConfig.home && !teamConfig.home.name)
+              teamConfig.home.name = homeName;
+          }
+        }
+        if (typeof ensureMatchPitchPositions === "function")
+          ensureMatchPitchPositions();
+        if (typeof scheduleRender === "function") scheduleRender();
+      }
+    } catch (ePrematch) {}
+    // Yerel simülasyonu tamamen durdur — sunucu otoriter
+    try {
+      if (typeof matchInterval !== "undefined" && matchInterval) {
+        clearInterval(matchInterval);
+        matchInterval = null;
+      }
+      if (typeof circulationInterval !== "undefined" && circulationInterval) {
+        clearInterval(circulationInterval);
+        circulationInterval = null;
+      }
+    } catch (eI) {}
+    window._emWatchingFixtureId = fixtureId;
+    window._emServerMatchActive = true;
+    if (!socket) connectSocket();
+    try {
+      matchStarted = true; // UI: canlı maç
+      matchEnded = false;
+      matchPaused = false;
+      inMajorAction = false;
+      window._majorActionSince = 0;
+      matchWallStartMs = 0; // catchUp yerel tick çalıştırmasın
+    } catch (eFl) {}
+    _emInmatchPanelShown = false;
+    _emMySide = determineMySide(fixtureId);
+    // 2D: Elite / milli / kendi maçı — taraf belirlendikten sonra
+    try {
+      const allow2d = canViewMatch2D(fixtureId);
+      setMatch2DVisible(allow2d);
+      if (allow2d && typeof scheduleRender === "function") scheduleRender();
+      try {
+        if (typeof showMatchSubTab === "function") showMatchSubTab("pitch");
+      } catch (eP) {}
+    } catch (eF) {}
     const status0 = document.getElementById("matchStatus");
     if (status0) status0.innerText = "⏳ Sunucuya bağlanılıyor...";
     // Ücretsiz Render planında sunucu ~15 dk hareketsizlikten sonra uyur;
@@ -853,16 +1470,17 @@ function renderServerMatchState(state) {
           "⏳ Sunucu uyandırılıyor (ücretsiz planda ilk istek yavaş olabilir)...";
       }
     }, 4000);
-    if (!socket) connectSocket();
-    matchStarted = true; // lokal simülasyon kilitli — sunucu yönetiyor
-    _emInmatchPanelShown = false;
-    _emMySide = determineMySide(fixtureId);
     if (_emMySide == null) {
       // Fikstür önbellekte yoksa (ör. doğrudan link/eski liste) bir kere çek
       apiFetch("/api/fixtures")
         .then((data) => {
           (data.fixtures || []).forEach(cacheFixture);
           _emMySide = determineMySide(fixtureId);
+          try {
+            const allow2d = canViewMatch2D(fixtureId);
+            setMatch2DVisible(allow2d);
+            if (allow2d && typeof scheduleRender === "function") scheduleRender();
+          } catch (e2) {}
         })
         .catch(() => {});
     }
@@ -1044,6 +1662,12 @@ function renderServerMatchState(state) {
     try {
       if (typeof refreshInstantOpponents === "function") refreshInstantOpponents();
     } catch (e2) {}
+    try {
+      if (typeof loadInstantRankingPanel === "function") loadInstantRankingPanel();
+    } catch (e3) {}
+    try {
+      if (typeof startInstantLobbyRefresh === "function") startInstantLobbyRefresh();
+    } catch (e4) {}
   };
 
   // ------------------------------------------------------------
@@ -1687,6 +2311,7 @@ function renderServerMatchState(state) {
       updateServerStatusUI();
     } catch (e) {}
     connectSocket();
+    try { startEmSyncHeartbeat(); } catch (eH) {}
     // Önce sunucudan çek — yerel kariyer üzerine yazılır (otorite: sunucu)
     await syncAllFromServer();
     // İlk senkron sonrası kadroyu sunucuya da hizala (eksik alanlar)
@@ -2470,6 +3095,32 @@ function renderServerMatchState(state) {
     return null;
   }
 
+
+  // switchPage: sunucu otoritesi
+  (function hookSwitchPageAuthority() {
+    function install() {
+      if (typeof window.switchPage !== "function") return false;
+      if (window.switchPage.__emServerHooked) return true;
+      const _orig = window.switchPage;
+      window.switchPage = function (pageId) {
+        const r = _orig.apply(this, arguments);
+        try {
+          if (getToken() && window.__emServerAuthoritative) {
+            ensureServerAuthorityOnPage(pageId).catch(function () {});
+          }
+        } catch (e) {}
+        return r;
+      };
+      window.switchPage.__emServerHooked = true;
+      return true;
+    }
+    if (!install()) {
+      setTimeout(install, 200);
+      setTimeout(install, 1000);
+      setTimeout(install, 3000);
+    }
+  })();
+
   function wireTrainingToServer() {
     const _origGo = window.goToTraining;
     window.goToTraining = async function () {
@@ -2560,17 +3211,88 @@ function renderServerMatchState(state) {
 
     window.trainSelectedPlayers = async function () {
       const note = document.getElementById("trainingResultNote");
-      if (note)
-        note.innerText =
-          "Manuel antrenman kapalı. Skill artışı maç oynanınca otomatik verilir.";
-      if (typeof pushNotification === "function")
-        pushNotification(
-          "ℹ️",
-          "Antrenman otomatik: maç sonu skill artışı",
-          "Antrenman",
+      if (!getToken() || !window.__emServerAuthoritative) {
+        if (note)
+          note.innerText =
+            "Sunucu bağlantısı yok — antrenman için giriş gerekli.";
+        return;
+      }
+      try {
+        if (note) note.innerText = "Sunucuda antrenman uygulanıyor…";
+        // Seçili skill: bulk select veya varsayılan stamina
+        let skill = "stamina";
+        try {
+          const bulk =
+            document.getElementById("trainingBulkSkill") ||
+            document.getElementById("bulkTrainSkillSelect");
+          if (bulk && bulk.value) skill = bulk.value;
+        } catch (eS) {}
+        // İşaretli oyuncular varsa tek tek; yoksa tüm kadro
+        const cbs = document.querySelectorAll(
+          "#trainingSquadList input[type=checkbox]:checked, .train-player-cb:checked",
         );
+        let results = [];
+        if (cbs && cbs.length) {
+          for (let i = 0; i < cbs.length; i++) {
+            const cb = cbs[i];
+            const pid =
+              cb.dataset.playerId ||
+              cb.getAttribute("data-player-id") ||
+              cb.value;
+            if (!pid) continue;
+            // satırdaki skill select
+            let sk = skill;
+            try {
+              const row = cb.closest("div");
+              const sel = row && row.querySelector("select");
+              if (sel && sel.value) sk = sel.value;
+            } catch (eR) {}
+            const res = await apiFetch("/api/training/player", {
+              method: "POST",
+              body: JSON.stringify({ playerId: pid, skill: sk }),
+            });
+            if (res && res.result) results.push(res.result);
+          }
+        } else {
+          const res = await apiFetch("/api/training/squad", {
+            method: "POST",
+            body: JSON.stringify({ skill: skill }),
+          });
+          if (res && Array.isArray(res.results)) results = res.results;
+          else if (res && res.result) results = [res.result];
+        }
+        // Takımı sunucudan tazele
+        try {
+          const t = await apiFetch("/api/team");
+          if (t && t.team) applyServerTeamToClient(t.team);
+        } catch (eT) {}
+        try {
+          await fetchTrainingFromServer();
+        } catch (eF) {}
+        try {
+          if (typeof renderTrainingSquadList === "function")
+            renderTrainingSquadList();
+        } catch (eL) {}
+        if (note) {
+          if (results.length) {
+            note.innerText =
+              results.length +
+              " oyuncu antrenman aldı (sunucu). Örn: " +
+              (results[0].name || "") +
+              " +" +
+              (results[0].delta != null ? Number(results[0].delta).toFixed(2) : "?");
+          } else {
+            note.innerText = "Antrenman tamam (değişiklik yok veya limit).";
+          }
+        }
+        if (typeof pushNotification === "function")
+          pushNotification("🏋️", "Antrenman sunucuya işlendi", "Antrenman");
+      } catch (e) {
+        if (note) note.innerText = e.message || "Antrenman başarısız";
+      }
     };
     window.trainWholeSquadSameSkill = window.trainSelectedPlayers;
+    window.trainWholeTeamWithCoach = window.trainSelectedPlayers;
 
   // Elite isim değiştirme (sunucu)
   window.__emRenameStadiumServer = async function (name) {
@@ -3151,8 +3873,18 @@ function renderServerMatchState(state) {
           if (gameNotifications.length > 40) gameNotifications.pop();
         }
       } catch (e) {}
-      const dot = document.getElementById("notifDot");
-      if (dot) dot.classList.add("active");
+      if (typeof setHeaderBadge === "function") {
+        const n = (typeof gameNotifications !== "undefined"
+          ? gameNotifications.length
+          : 1) || 1;
+        setHeaderBadge("notifDot", n);
+      } else {
+        const dot = document.getElementById("notifDot");
+        if (dot) {
+          dot.classList.add("active");
+          dot.textContent = "1";
+        }
+      }
     };
 
     window.openNotifications = async function (e) {
@@ -3213,8 +3945,14 @@ function renderServerMatchState(state) {
             .join("");
         }
       }
-      const dot = document.getElementById("notifDot");
-      if (dot) dot.classList.remove("active");
+      if (typeof setHeaderBadge === "function") setHeaderBadge("notifDot", 0);
+      else {
+        const dot = document.getElementById("notifDot");
+        if (dot) {
+          dot.classList.remove("active");
+          dot.textContent = "";
+        }
+      }
       const modal = document.getElementById("notificationsModal");
       if (modal) {
         modal.style.zIndex = "100050";
@@ -3228,10 +3966,19 @@ function renderServerMatchState(state) {
         if (!getToken()) return;
         try {
           const data = await apiFetch("/api/notifications");
-          const dot = document.getElementById("notifDot");
-          if (dot) {
-            if ((data.unread || 0) > 0) dot.classList.add("active");
-            else dot.classList.remove("active");
+          const u = data.unread || 0;
+          if (typeof setHeaderBadge === "function") setHeaderBadge("notifDot", u);
+          else {
+            const dot = document.getElementById("notifDot");
+            if (dot) {
+              if (u > 0) {
+                dot.classList.add("active");
+                dot.textContent = u > 99 ? "99+" : String(u);
+              } else {
+                dot.classList.remove("active");
+                dot.textContent = "";
+              }
+            }
           }
         } catch (e) {}
         try {
@@ -3240,10 +3987,18 @@ function renderServerMatchState(state) {
           const unread = msgs.filter(function (m) {
             return m.from !== "me" && !m.read;
           }).length;
-          const md = document.getElementById("msgDot");
-          if (md) {
-            if (unread > 0) md.classList.add("active");
-            else md.classList.remove("active");
+          if (typeof setHeaderBadge === "function") setHeaderBadge("msgDot", unread);
+          else {
+            const md = document.getElementById("msgDot");
+            if (md) {
+              if (unread > 0) {
+                md.classList.add("active");
+                md.textContent = unread > 99 ? "99+" : String(unread);
+              } else {
+                md.classList.remove("active");
+                md.textContent = "";
+              }
+            }
           }
           // Yeni mesaj geldiyse mesaj kutusuna kırmızı uyarı için globali güncelle
           if (typeof userMessages !== "undefined" && unread > 0) {
@@ -3800,7 +4555,8 @@ function renderServerMatchState(state) {
   }
 
   function natSquadPlayerById(playerId) {
-    return (_natState?.squad || []).find((p) => p.playerId === playerId) || null;
+    const pid = String(playerId || "");
+    return (_natState?.squad || []).find((p) => String(p.playerId) === pid) || null;
   }
 
   async function fetchNationalState(category) {
@@ -4018,6 +4774,8 @@ function renderServerMatchState(state) {
           html +=
             '<div class="clickable-player" onclick="openCountryProfile(\'' +
             String(r.c || "").replace(/'/g, "\\'") +
+            "','" +
+            which +
             '\')" style="font-size:12px;color:#e2e8f0;padding:2px 0;cursor:pointer;text-decoration:underline;">' +
             r.flag +
             " " +
@@ -4040,7 +4798,9 @@ function renderServerMatchState(state) {
           const p = [9, 7, 4, 1][i] || 0;
           html +=
             '<div class="clickable-player" onclick="openCountryProfile && openCountryProfile(\'' +
-            r.c +
+            String(r.c || "").replace(/'/g, "\\'") +
+            "','" +
+            which +
             '\')" style="padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;cursor:pointer;">' +
             (i + 1) +
             ". " +
@@ -4063,7 +4823,9 @@ function renderServerMatchState(state) {
       rows.forEach((r, i) => {
         html +=
           '<div class="clickable-player" onclick="openCountryProfile && openCountryProfile(\'' +
-          r.c +
+          String(r.c || "").replace(/'/g, "\\'") +
+          "','" +
+          which +
           '\')" style="display:flex;justify-content:space-between;padding:8px 10px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;cursor:pointer;">' +
           "<span>" +
           (i + 1) +
@@ -4774,7 +5536,7 @@ function renderServerMatchState(state) {
     await fetchNationalGroupsFromServer();
     renderNationalOverview(state);
   };
-  window.showNationalSub = window.showNationalSub || function (sub) {
+  window.showNationalSub = function (sub) {
     if (sub) _natPageSub = sub;
     // Sekme vurgusu
     document.querySelectorAll("#nationalSubTabs .nat-subtab").forEach((b) => {
@@ -4785,10 +5547,25 @@ function renderServerMatchState(state) {
     const list = document.getElementById("nationalTeamsList");
     if (!list) return;
     if (_natPageSub === "kit") {
-      if (typeof natKitEditorHtml === "function") {
-        list.innerHTML = natKitEditorHtml();
-        if (typeof refreshKitAccessFor === "function")
-          refreshKitAccessFor("natKit", "national");
+      try {
+        const htmlFn =
+          typeof window.natKitEditorHtml === "function"
+            ? window.natKitEditorHtml
+            : null;
+        if (htmlFn) {
+          list.innerHTML = htmlFn();
+          if (typeof window.refreshKitAccessFor === "function") {
+            window.refreshKitAccessFor("natKit", "national");
+          }
+        } else {
+          list.innerHTML =
+            '<div style="color:#f87171;padding:16px;text-align:center;">Forma editörü yüklenemedi. Sayfayı yenile (Ctrl+F5).</div>';
+        }
+      } catch (eKit) {
+        list.innerHTML =
+          '<div style="color:#f87171;padding:16px;text-align:center;">Forma: ' +
+          ((eKit && eKit.message) || eKit) +
+          "</div>";
       }
       return;
     }
@@ -4807,9 +5584,15 @@ function renderServerMatchState(state) {
     renderNationalOverview(_natState);
   };
 
-  window.openCountryProfile = async function (country) {
+  window.openCountryProfile = async function (country, category) {
     if (!country) return;
-    const cat = _natCategory === "U21" ? "U21" : "A";
+    // A ve U21 ayrı veri — parametre veya aktif milli sekme
+    const cat =
+      category === "U21" || category === "A"
+        ? category
+        : _natCategory === "U21"
+          ? "U21"
+          : "A";
     const modal = document.getElementById("genericModal") || document.getElementById("modalOverlay");
     // Basit overlay
     let box = document.getElementById("emCountryProfileModal");
@@ -4826,7 +5609,9 @@ function renderServerMatchState(state) {
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
       '<div style="font-weight:800;font-size:16px;color:#e2e8f0;">Yükleniyor…</div>' +
       '<button type="button" style="background:#334155;color:#fff;border:0;border-radius:8px;padding:6px 10px;cursor:pointer;" onclick="document.getElementById(\'emCountryProfileModal\').style.display=\'none\'">Kapat</button></div>' +
-      '<div style="color:#94a3b8;font-size:13px;">Ülke profili getiriliyor…</div></div>';
+      '<div style="color:#94a3b8;font-size:13px;">Ülke profili getiriliyor (' +
+      cat +
+      ")…</div></div>";
     try {
       const p = await apiFetch(
         "/api/national/country-profile?country=" +
@@ -4872,9 +5657,25 @@ function renderServerMatchState(state) {
         flag +
         " " +
         p.country +
-        (cat === "U21" ? " U21" : "") +
+        (cat === "U21" ? " U21" : " A Milli") +
         "</div>" +
         '<button type="button" style="background:#334155;color:#fff;border:0;border-radius:8px;padding:6px 10px;cursor:pointer;" onclick="document.getElementById(\'emCountryProfileModal\').style.display=\'none\'">Kapat</button></div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:12px;">' +
+        '<button type="button" style="flex:1;padding:7px;border-radius:8px;border:0;cursor:pointer;font-weight:800;font-size:12px;' +
+        (cat === "A"
+          ? "background:linear-gradient(90deg,#0369a1,#0ea5e9);color:#fff;"
+          : "background:#1e293b;color:#94a3b8;") +
+        "\" onclick=\"openCountryProfile('" +
+        String(p.country || "").replace(/'/g, "\\'") +
+        "', 'A')\">A Milli</button>" +
+        '<button type="button" style="flex:1;padding:7px;border-radius:8px;border:0;cursor:pointer;font-weight:800;font-size:12px;' +
+        (cat === "U21"
+          ? "background:linear-gradient(90deg,#0369a1,#0ea5e9);color:#fff;"
+          : "background:#1e293b;color:#94a3b8;") +
+        "\" onclick=\"openCountryProfile('" +
+        String(p.country || "").replace(/'/g, "\\'") +
+        "', 'U21')\">U21</button>" +
+        "</div>" +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">' +
         '<div style="background:#111827;border-radius:10px;padding:10px;"><div style="font-size:11px;color:#64748b;">Sıralama</div><div style="font-size:18px;font-weight:800;color:#facc15;">#' +
         (p.rank || "-") +
@@ -4905,6 +5706,8 @@ function renderServerMatchState(state) {
         " · Formasyon " +
         (p.formation || "4-4-2") +
         "</div>" +
+        '<button type="button" class="sub-btn" style="width:100%;margin:8px 0 12px;padding:10px;font-weight:800;background:linear-gradient(90deg,#0369a1,#0ea5e9);color:#fff;border:none;border-radius:10px;cursor:pointer;" onclick="window.__emToggleCountrySquad && window.__emToggleCountrySquad()">👥 Kadroyu Gör (Son Maç)</button>' +
+        '<div id="emCountrySquadPanel" style="display:none;margin-bottom:12px;"></div>' +
         '<div class="youth-section-title">1. Lig Puan Durumu</div>' +
         (standHtml ||
           '<div style="color:#64748b;font-size:12px;">Lig verisi yok</div>') +
@@ -4913,6 +5716,97 @@ function renderServerMatchState(state) {
             fxHtml
           : "") +
         "</div>";
+      // Son maç kadrosu paneli (toggle)
+      window.__emCountryProfileLastMatch = p.lastMatch || null;
+      window.__emToggleCountrySquad = function () {
+        const panel = document.getElementById("emCountrySquadPanel");
+        if (!panel) return;
+        if (panel.style.display !== "none") {
+          panel.style.display = "none";
+          return;
+        }
+        const lm = window.__emCountryProfileLastMatch;
+        if (!lm || (!(lm.starters || []).length && !(lm.bench || []).length)) {
+          panel.style.display = "block";
+          panel.innerHTML =
+            '<div style="color:#94a3b8;font-size:12px;padding:8px;background:#111827;border-radius:10px;">Kadro bilgisi yok — henüz oyuncu çağrılmamış veya maç oynanmamış.</div>';
+          return;
+        }
+        function rowHtml(pl, tag) {
+          return (
+            '<div style="display:flex;gap:8px;align-items:center;padding:5px 4px;border-bottom:1px solid #1e293b;font-size:12px;">' +
+            '<span style="width:36px;color:#38bdf8;font-weight:800;">' +
+            escapeHtml(pl.pos || pl.naturalPos || "?") +
+            '</span><span style="flex:1;color:#e2e8f0;">' +
+            escapeHtml(pl.name || "?") +
+            '</span><span style="color:#94a3b8;font-size:11px;">' +
+            escapeHtml(pl.clubName || "") +
+            '</span><span style="color:#facc15;font-weight:700;width:28px;text-align:right;">' +
+            (pl.overall != null ? pl.overall : "—") +
+            "</span>" +
+            (tag
+              ? '<span style="font-size:10px;color:#64748b;margin-left:4px;">' +
+                tag +
+                "</span>"
+              : "") +
+            "</div>"
+          );
+        }
+        let head = '<div class="youth-section-title" style="margin:0 0 6px;">Son Maç Kadrosu</div>';
+        if (lm.opponentName) {
+          head +=
+            '<div style="font-size:12px;color:#cbd5e1;margin-bottom:8px;">' +
+            escapeHtml(p.country || "") +
+            " <b>" +
+            (lm.homeGoals != null ? lm.homeGoals : "-") +
+            "-" +
+            (lm.awayGoals != null ? lm.awayGoals : "-") +
+            "</b> " +
+            escapeHtml(lm.opponentName) +
+            (lm.formation
+              ? ' · <span style="color:#94a3b8;">' +
+                escapeHtml(lm.formation) +
+                "</span>"
+              : "") +
+            "</div>";
+        } else if (lm.note) {
+          head +=
+            '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">' +
+            escapeHtml(lm.note) +
+            "</div>";
+        }
+        const st = (lm.starters || [])
+          .slice()
+          .sort(function (a, b) {
+            return String(a.pos || "").localeCompare(String(b.pos || ""));
+          })
+          .map(function (pl) {
+            return rowHtml(pl, "İlk 11");
+          })
+          .join("");
+        const bn = (lm.bench || [])
+          .slice()
+          .sort(function (a, b) {
+            return (b.overall || 0) - (a.overall || 0);
+          })
+          .map(function (pl) {
+            return rowHtml(pl, "Yedek");
+          })
+          .join("");
+        panel.style.display = "block";
+        panel.innerHTML =
+          '<div style="background:#111827;border-radius:10px;padding:10px;">' +
+          head +
+          (st
+            ? '<div style="font-size:11px;color:#64748b;margin:6px 0 2px;">İlk 11</div>' +
+              st
+            : '<div style="color:#64748b;font-size:12px;">İlk 11 boş</div>') +
+          (bn
+            ? '<div style="font-size:11px;color:#64748b;margin:10px 0 2px;">Yedekler</div>' +
+              bn
+            : "") +
+          "</div>";
+      };
     } catch (e) {
       box.innerHTML =
         '<div style="background:#0f172a;border:1px solid #2c3a52;border-radius:14px;padding:16px;color:#f87171;">Profil yüklenemedi: ' +
@@ -5230,34 +6124,106 @@ function renderServerMatchState(state) {
       showPlayerProfile(fake, p.clubName || (state.team && state.team.country) || "Milli");
   };
 
-  window.callUpNationalPlayer = window.callUpNationalPlayer || async function (playerId) {
+  // Seç / Çıkar — API + hem index.html hem MC UI yenilemesi
+  window.callUpNationalPlayer = async function (playerId) {
+    const pid = String(playerId || "");
+    if (!pid) {
+      alert("Oyuncu kimliği yok");
+      return;
+    }
+    const cat =
+      (typeof window._tacticsMode === "string" &&
+        (window._tacticsMode === "U21" || window._tacticsMode === "A") &&
+        window._tacticsMode) ||
+      _natCategory ||
+      "A";
     try {
       _natScrollPreserve = _captureNatScroll();
+      _natCategory = cat === "U21" ? "U21" : "A";
       await apiFetch("/api/national/squad/call", {
         method: "POST",
-        body: JSON.stringify({ playerId: playerId, category: _natCategory }),
+        body: JSON.stringify({ playerId: pid, category: _natCategory }),
       });
-      await fetchNationalState();
-      renderNationalManage();
+      let refreshed = false;
+      try {
+        if (typeof window.loadNationalTacticsState === "function") {
+          await window.loadNationalTacticsState(true);
+        }
+        if (typeof window.renderNationalTacticsBody === "function") {
+          await window.renderNationalTacticsBody(false);
+          refreshed = true;
+        }
+      } catch (e1) {
+        console.warn("[em] callUp refresh index UI", e1);
+      }
+      // index.html yolu başarılıysa MC render'ı üzerine yazmasın
+      if (!refreshed) {
+        try {
+          await fetchNationalState(_natCategory);
+          _natManageSub = "all";
+          if (typeof renderNationalManage === "function") renderNationalManage();
+        } catch (e2) {
+          console.warn("[em] callUp refresh MC UI", e2);
+        }
+      } else {
+        try {
+          await fetchNationalState(_natCategory);
+        } catch (e3) {}
+      }
       _restoreNatScroll();
     } catch (e) {
       _natScrollPreserve = null;
-      alert(e.message || "Çağrı başarısız");
+      alert((e && e.message) || "Çağrı başarısız");
     }
   };
-  window.dropNationalPlayer = window.dropNationalPlayer || async function (playerId) {
+  window.dropNationalPlayer = async function (playerId) {
+    const pid = String(playerId || "");
+    if (!pid) {
+      alert("Oyuncu kimliği yok");
+      return;
+    }
+    const cat =
+      (typeof window._tacticsMode === "string" &&
+        (window._tacticsMode === "U21" || window._tacticsMode === "A") &&
+        window._tacticsMode) ||
+      _natCategory ||
+      "A";
     try {
       _natScrollPreserve = _captureNatScroll();
+      _natCategory = cat === "U21" ? "U21" : "A";
       await apiFetch("/api/national/squad/drop", {
         method: "POST",
-        body: JSON.stringify({ playerId: playerId, category: _natCategory }),
+        body: JSON.stringify({ playerId: pid, category: _natCategory }),
       });
-      await fetchNationalState();
-      renderNationalManage();
+      let refreshed = false;
+      try {
+        if (typeof window.loadNationalTacticsState === "function") {
+          await window.loadNationalTacticsState(true);
+        }
+        if (typeof window.renderNationalTacticsBody === "function") {
+          await window.renderNationalTacticsBody(false);
+          refreshed = true;
+        }
+      } catch (e1) {
+        console.warn("[em] drop refresh index UI", e1);
+      }
+      if (!refreshed) {
+        try {
+          await fetchNationalState(_natCategory);
+          _natManageSub = "all";
+          if (typeof renderNationalManage === "function") renderNationalManage();
+        } catch (e2) {
+          console.warn("[em] drop refresh MC UI", e2);
+        }
+      } else {
+        try {
+          await fetchNationalState(_natCategory);
+        } catch (e3) {}
+      }
       _restoreNatScroll();
     } catch (e) {
       _natScrollPreserve = null;
-      alert(e.message || "İşlem başarısız");
+      alert((e && e.message) || "İşlem başarısız");
     }
   };
   window.setNationalFormation = function (formation) {
@@ -5930,6 +6896,13 @@ function renderServerMatchState(state) {
 
   window.__emSaveSecondTeamServer = async function (data) {
     try {
+      if (!data || !data.name) return false;
+      // Boş kadroyu sunucuya yazma
+      const pl = (data.players || []).length + (data.bench || []).length;
+      if (pl < 1) {
+        console.warn("[em] second team empty skip");
+        return false;
+      }
       const res = await apiFetch("/api/premium/second-team", {
         method: "POST",
         body: JSON.stringify({ secondTeam: data }),
@@ -5938,6 +6911,51 @@ function renderServerMatchState(state) {
     } catch (e) {
       console.warn("[em] second team", e);
       return false;
+    }
+  };
+
+  /** Elite 2. takımı sunucudan yükle → secondTeamState */
+  window.__emLoadSecondTeamServer = async function () {
+    try {
+      const res = await apiFetch("/api/premium/second-team");
+      if (!res || !res.secondTeam || !res.secondTeam.name) return null;
+      const st = res.secondTeam;
+      try {
+        if (typeof secondTeamState !== "undefined") {
+          secondTeamState = st;
+        } else {
+          window.secondTeamState = st;
+        }
+      } catch (e1) {
+        window.secondTeamState = st;
+      }
+      try {
+        if (typeof persistSecondTeam === "function") persistSecondTeam();
+        else if (typeof secondTeamKey === "function") {
+          localStorage.setItem(secondTeamKey(), JSON.stringify(st));
+        }
+      } catch (e2) {}
+      try {
+        if (typeof registerSecondTeamInLeague === "function")
+          registerSecondTeamInLeague();
+      } catch (e3) {}
+      return st;
+    } catch (e) {
+      console.warn("[em] second team load", e);
+      return null;
+    }
+  };
+
+  /** Lig liderlik tablosu (çok oyunculu) */
+  window.__emFetchLeagueRanking = async function (country, division) {
+    try {
+      let q = "/api/league/ranking?";
+      if (country) q += "country=" + encodeURIComponent(country) + "&";
+      if (division) q += "division=" + encodeURIComponent(division);
+      return await apiFetch(q);
+    } catch (e) {
+      console.warn("[em] ranking", e);
+      return null;
     }
   };
 
@@ -5961,8 +6979,7 @@ function renderServerMatchState(state) {
             "🎁",
             "Günlük ödül: +" +
               Number(res.amount || 0).toLocaleString("tr-TR") +
-              " € · seri " +
-              (res.streak || 1),
+              " €",
             "Ödül",
           );
         }
@@ -6005,6 +7022,9 @@ function renderServerMatchState(state) {
     const _al = afterServerLogin;
     afterServerLogin = async function (data) {
       await _al(data);
+      try {
+        await window.__emLoadSecondTeamServer();
+      } catch (eSt) {}
       try {
         await window.__emLoadKitServer();
       } catch (e) {}
@@ -6118,10 +7138,18 @@ function renderServerMatchState(state) {
         if (sum) sum.innerText = "Admin yetkisi yok.";
         const ac = document.getElementById("adminAntiCheatPanel");
         if (ac) ac.style.display = "none";
+        const donHide = document.getElementById("adminDonationPanel");
+        if (donHide) donHide.style.display = "none";
         return;
       }
       const ac = document.getElementById("adminAntiCheatPanel");
       if (ac) ac.style.display = "block";
+      const donP = document.getElementById("adminDonationPanel");
+      if (donP) donP.style.display = "block";
+      try {
+        if (typeof window.adminDonationsRefresh === "function")
+          window.adminDonationsRefresh();
+      } catch (eD) {}
 
       const [summary, logs] = await Promise.all([
         apiFetch("/api/admin/anti-cheat/summary"),
@@ -6382,4 +7410,926 @@ function renderServerMatchState(state) {
     };
   } catch (e) {}
 
+
+  // ---------- Bağış / Destek Ol paneli ----------
+  window.__emRenderDonationPanel = async function () {
+    const box = document.getElementById("premiumSupportBox");
+    const formBox = document.getElementById("premiumDonationForm");
+    const listBox = document.getElementById("premiumMyDonations");
+    if (!box && !formBox) return;
+    try {
+      const data = await apiFetch("/api/premium/donation-methods");
+      const methods = (data && data.methods) || {};
+      const plans = (data && data.plans) || [];
+      if (box) {
+        let html =
+          '<div style="padding:14px;background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #f59e0b;border-radius:14px;">' +
+          '<div style="font-weight:800;color:#fbbf24;margin-bottom:8px;">💝 Destek Ol — Bağış bilgileri</div>' +
+          '<div style="font-size:12px;color:#cbd5e1;line-height:1.55;margin-bottom:10px;">' +
+          escapeHtml(methods.note || "") +
+          "</div>";
+        if (methods.iban) {
+          html +=
+            '<div style="margin-bottom:8px;padding:10px;background:#020617;border-radius:10px;border:1px solid #334155;">' +
+            '<div style="font-size:11px;color:#94a3b8;">IBAN</div>' +
+            '<div style="font-weight:700;color:#e2e8f0;word-break:break-all;" id="donIbanText">' +
+            escapeHtml(methods.iban) +
+            "</div>" +
+            (methods.ibanName
+              ? '<div style="font-size:11px;color:#94a3b8;margin-top:4px;">' +
+                escapeHtml(methods.ibanName) +
+                "</div>"
+              : "") +
+            '<button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;margin-top:6px;" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById(\'donIbanText\').innerText)">Kopyala</button></div>';
+        }
+        if (methods.papara) {
+          html +=
+            '<div style="margin-bottom:8px;padding:10px;background:#020617;border-radius:10px;border:1px solid #334155;">' +
+            '<div style="font-size:11px;color:#94a3b8;">Papara</div>' +
+            '<div style="font-weight:700;color:#e2e8f0;" id="donPaparaText">' +
+            escapeHtml(methods.papara) +
+            "</div>" +
+            (methods.paparaName
+              ? '<div style="font-size:11px;color:#94a3b8;margin-top:4px;">' +
+                escapeHtml(methods.paparaName) +
+                "</div>"
+              : "") +
+            '<button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;margin-top:6px;" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById(\'donPaparaText\').innerText)">Kopyala</button></div>';
+        }
+        if (methods.other) {
+          html +=
+            '<div style="font-size:12px;color:#94a3b8;margin-top:6px;">' +
+            escapeHtml(methods.other) +
+            "</div>";
+        }
+        if (!methods.iban && !methods.papara && !methods.other) {
+          html +=
+            '<div style="font-size:12px;color:#f87171;">Yönetici henüz IBAN/Papara tanımlamadı. Ortam değişkenleri: DONATION_IBAN, DONATION_PAPARA</div>';
+        }
+        html +=
+          '<div style="margin-top:10px;font-size:12px;color:#94a3b8;">Paketler: ' +
+          plans
+            .filter(function (p) {
+              return p.id !== "trial";
+            })
+            .map(function (p) {
+              return (
+                "<b style=\"color:#e2e8f0;\">" +
+                escapeHtml(p.title || p.id) +
+                "</b> " +
+                escapeHtml(p.label || "")
+              );
+            })
+            .join(" · ") +
+          "</div></div>";
+        box.innerHTML = html;
+      }
+      if (formBox) {
+        const planOpts = plans
+          .filter(function (p) {
+            return p.id !== "trial";
+          })
+          .map(function (p) {
+            return (
+              '<option value="' +
+              escapeHtml(p.id) +
+              '">' +
+              escapeHtml(p.title) +
+              " — " +
+              escapeHtml(p.label) +
+              "</option>"
+            );
+          })
+          .join("");
+        formBox.innerHTML =
+          '<div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:14px;">' +
+          '<div style="font-weight:800;color:#e2e8f0;margin-bottom:8px;">📝 Bağış bildir</div>' +
+          '<div style="display:grid;gap:8px;">' +
+          '<label style="font-size:11px;color:#94a3b8;">Plan<select id="donPlan" style="display:block;width:100%;margin-top:4px;padding:8px;border-radius:8px;background:#020617;color:#e2e8f0;border:1px solid #334155;">' +
+          planOpts +
+          "</select></label>" +
+          '<label style="font-size:11px;color:#94a3b8;">Yöntem<select id="donMethod" style="display:block;width:100%;margin-top:4px;padding:8px;border-radius:8px;background:#020617;color:#e2e8f0;border:1px solid #334155;"><option value="iban">IBAN / Havale</option><option value="papara">Papara</option><option value="other">Diğer</option></select></label>' +
+          '<label style="font-size:11px;color:#94a3b8;">Gönderen ad<select style="display:none"></select><input id="donPayerName" placeholder="Hesap / ad soyad" style="display:block;width:100%;margin-top:4px;padding:8px;border-radius:8px;background:#020617;color:#e2e8f0;border:1px solid #334155;"/></label>' +
+          '<label style="font-size:11px;color:#94a3b8;">Dekont / referans no<input id="donRef" placeholder="İşlem no" style="display:block;width:100%;margin-top:4px;padding:8px;border-radius:8px;background:#020617;color:#e2e8f0;border:1px solid #334155;"/></label>' +
+          '<label style="font-size:11px;color:#94a3b8;">Not (isteğe bağlı)<input id="donNote" placeholder="Kullanıcı adın vb." style="display:block;width:100%;margin-top:4px;padding:8px;border-radius:8px;background:#020617;color:#e2e8f0;border:1px solid #334155;"/></label>' +
+          '<button type="button" class="sub-btn" style="width:100%;padding:12px;font-weight:800;background:linear-gradient(90deg,#f59e0b,#d97706);" onclick="submitEliteDonation()">Bağışı bildir</button>' +
+          '<div id="donFormNote" style="font-size:12px;color:#94a3b8;text-align:center;"></div></div></div>';
+      }
+      // list
+      if (listBox) {
+        const mine = await apiFetch("/api/premium/my-donations");
+        const rows = (mine && mine.donations) || [];
+        if (!rows.length) {
+          listBox.innerHTML = "";
+        } else {
+          listBox.innerHTML =
+            '<div class="youth-section-title">Bağışlarım</div>' +
+            rows
+              .map(function (d) {
+                const stColor =
+                  d.status === "approved"
+                    ? "#4ade80"
+                    : d.status === "pending"
+                      ? "#fbbf24"
+                      : "#f87171";
+                const amt = ((d.amount_cents || 0) / 100).toFixed(0) + " ₺";
+                return (
+                  '<div style="padding:8px 10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:12px;color:#e2e8f0;display:flex;justify-content:space-between;gap:8px;align-items:center;">' +
+                  "<div><b>" +
+                  escapeHtml(d.plan) +
+                  "</b> · " +
+                  amt +
+                  ' · <span style="color:' +
+                  stColor +
+                  ';">' +
+                  escapeHtml(d.status) +
+                  "</span>" +
+                  (d.reference_code
+                    ? '<div style="font-size:11px;color:#64748b;">Ref: ' +
+                      escapeHtml(d.reference_code) +
+                      "</div>"
+                    : "") +
+                  "</div>" +
+                  (d.status === "pending"
+                    ? '<button type="button" class="sub-btn" style="width:auto;padding:4px 8px;font-size:11px;background:#7f1d1d;" onclick="cancelEliteDonation(' +
+                      d.id +
+                      ')">İptal</button>'
+                    : "") +
+                  "</div>"
+                );
+              })
+              .join("");
+        }
+      }
+    } catch (e) {
+      if (box)
+        box.innerHTML =
+          '<div style="padding:12px;color:#f87171;font-size:12px;">Bağış paneli: ' +
+          escapeHtml(e.message || String(e)) +
+          "</div>";
+    }
+  };
+
+  window.submitEliteDonation = async function () {
+    const note = document.getElementById("donFormNote");
+    try {
+      const plan = (document.getElementById("donPlan") || {}).value;
+      const method = (document.getElementById("donMethod") || {}).value;
+      const payerName = (document.getElementById("donPayerName") || {}).value;
+      const referenceCode = (document.getElementById("donRef") || {}).value;
+      const dnote = (document.getElementById("donNote") || {}).value;
+      if (note) note.innerText = "Gönderiliyor…";
+      const res = await apiFetch("/api/premium/donate", {
+        method: "POST",
+        body: JSON.stringify({
+          plan: plan,
+          method: method,
+          payerName: payerName,
+          referenceCode: referenceCode,
+          note: dnote,
+        }),
+      });
+      if (note)
+        note.innerText =
+          (res && res.message) || "Bağış bildirildi — onay bekleniyor.";
+      if (typeof pushNotification === "function")
+        pushNotification("💝", "Bağış bildirimin alındı", "Elite");
+      window.__emRenderDonationPanel();
+    } catch (e) {
+      if (note) note.innerText = e.message || "Hata";
+    }
+  };
+
+  window.cancelEliteDonation = async function (id) {
+    try {
+      await apiFetch("/api/premium/donate/cancel", {
+        method: "POST",
+        body: JSON.stringify({ donationId: id }),
+      });
+      window.__emRenderDonationPanel();
+    } catch (e) {
+      alert(e.message || "İptal başarısız");
+    }
+  };
+
+
+
+  // Online iken loadCareer yerel kadroyu ezmesin — ardından sunucudan çek
+  (function hookLoadCareer() {
+    function install() {
+      if (typeof window.loadCareer !== "function") return false;
+      if (window.loadCareer.__emServerHooked) return true;
+      const _orig = window.loadCareer;
+      window.loadCareer = function (username) {
+        const r = _orig.apply(this, arguments);
+        try {
+          if (
+            window.__emServerAuthoritative &&
+            typeof window.syncAllFromServer === "function"
+          ) {
+            window.syncAllFromServer().catch(function () {});
+          }
+        } catch (e) {}
+        return r;
+      };
+      window.loadCareer.__emServerHooked = true;
+      return true;
+    }
+    if (!install()) {
+      setTimeout(install, 300);
+      setTimeout(install, 1500);
+    }
+  })();
+
+  // Presence + kuyruk: periyodik match denemesi (karşı taraf beklerken)
+  (function queuePresenceLoop() {
+    let t = null;
+    function tick() {
+      try {
+        if (!getToken() || !window.__emServerAuthoritative) return;
+        apiFetch("/api/instant/presence", {
+          method: "POST",
+          body: JSON.stringify({}),
+        }).catch(function () {});
+        // Kuyruktaysa status kontrol (eşleşme socket ile de gelir)
+        apiFetch("/api/instant/queue/status")
+          .then(function (s) {
+            if (s && s.inQueue) {
+              return apiFetch("/api/instant/queue/join", {
+                method: "POST",
+                body: JSON.stringify({}),
+              }).then(function (r) {
+                if (r && r.matched && r.fixtureId) {
+                  if (typeof window.__emWatchInstantMatch === "function")
+                    window.__emWatchInstantMatch(r);
+                  else if (typeof watchFixture === "function")
+                    watchFixture(r.fixtureId);
+                }
+              });
+            }
+          })
+          .catch(function () {});
+      } catch (e) {}
+    }
+    function start() {
+      if (t) clearInterval(t);
+      t = setInterval(tick, 12000);
+    }
+    start();
+    window.__emRestartPresenceLoop = start;
+  })();
+
+  // ============================================================
+  // Bağlantısız küçük özellikler — kupa sıradaki maç, sezon ödülleri,
+  // maç arşivi detay sayfası
+  // ============================================================
+
+  /** Kupa "sıradaki maç" — GET /api/cup/next */
+  window.loadCupNextMatch = async function () {
+    try {
+      if (!getToken()) return null;
+      const data = await apiFetch("/api/cup/next");
+      window.__emCupNext = data && data.fixture ? data.fixture : null;
+      return data;
+    } catch (e) {
+      window.__emCupNext = null;
+      return null;
+    }
+  };
+
+  /** Sezon ödülleri + krallıklar — GET /api/league/stats (awards dahil) */
+  window.loadSeasonAwards = async function (country, division) {
+    try {
+      if (!getToken()) return null;
+      const c =
+        country ||
+        (typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "Türkiye");
+      const d =
+        division ||
+        (typeof USER_DIVISION !== "undefined" ? USER_DIVISION : 1);
+      const data = await apiFetch(
+        "/api/league/stats?country=" +
+          encodeURIComponent(c) +
+          "&division=" +
+          encodeURIComponent(d),
+      );
+      window.__emSeasonAwards = data;
+      return data;
+    } catch (e) {
+      window.__emSeasonAwards = null;
+      return null;
+    }
+  };
+
+  /** Maç arşivi listesi — GET /api/matches/recent */
+  window.loadMatchArchive = async function (limit) {
+    try {
+      if (!getToken()) return [];
+      const data = await apiFetch(
+        "/api/matches/recent" + (limit ? "?limit=" + limit : ""),
+      );
+      const list = (data && data.matches) || [];
+      window.__emMatchArchive = list;
+      return list;
+    } catch (e) {
+      window.__emMatchArchive = [];
+      return [];
+    }
+  };
+
+  /** Maç arşivi detay — GET /api/matches/:id */
+  window.loadMatchArchiveDetail = async function (matchId) {
+    try {
+      if (!getToken() || !matchId) return null;
+      const data = await apiFetch("/api/matches/" + encodeURIComponent(matchId));
+      return data;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  /**
+   * Kupa sıradaki maç bilgisini HTML olarak döndürür (UI'ye enjekte edilebilir).
+   */
+  window.renderCupNextMatchHTML = function (fixture) {
+    const f = fixture || window.__emCupNext;
+    if (!f) {
+      return (
+        '<div style="color:#64748b;font-size:12px;padding:8px;text-align:center;">' +
+        "Sıradaki kupa maçı yok (elenmiş veya henüz eşleşme yapılmamış)." +
+        "</div>"
+      );
+    }
+    const home = escapeHtml(f.homeName || "?");
+    const away = escapeHtml(f.awayName || "?");
+    const round = escapeHtml(f.roundLabel || f.round || "");
+    const status =
+      f.status === "live"
+        ? '<span style="color:#f87171;font-weight:700;">CANLI</span>'
+        : '<span style="color:#38bdf8;">Planlandı</span>';
+    let kick = "";
+    if (f.kickoffAt) {
+      try {
+        const d = new Date(f.kickoffAt);
+        kick =
+          d.toLocaleString("tr-TR", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }) || "";
+      } catch (e) {}
+    }
+    return (
+      '<div style="background:rgba(30,41,59,0.6);border:1px solid #334155;border-radius:8px;padding:10px 12px;margin:6px 0;">' +
+      '<div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">🏆 Sıradaki Kupa Maçı' +
+      (round ? " · " + round : "") +
+      "</div>" +
+      '<div style="font-size:14px;font-weight:700;color:#e2e8f0;">' +
+      home +
+      ' <span style="color:#64748b;">vs</span> ' +
+      away +
+      "</div>" +
+      '<div style="font-size:12px;margin-top:4px;">' +
+      status +
+      (kick ? ' · <span style="color:#94a3b8;">' + kick + "</span>" : "") +
+      "</div></div>"
+    );
+  };
+
+  /**
+   * Sezon ödülleri listesini HTML olarak döndürür.
+   */
+  window.renderSeasonAwardsHTML = function (data) {
+    const d = data || window.__emSeasonAwards;
+    if (!d) {
+      return (
+        '<div style="color:#64748b;font-size:12px;padding:8px;text-align:center;">Ödül verisi yüklenemedi.</div>'
+      );
+    }
+    const awards = d.awards || [];
+    const poty = d.playerOfYearPreview || [];
+    const pom = d.playerOfMonth || [];
+    let html =
+      '<div class="youth-section-title">Sezon Ödülleri</div>';
+    if (d.season && d.season.yearLabel) {
+      html +=
+        '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Sezon: ' +
+        escapeHtml(d.season.yearLabel) +
+        (d.month
+          ? " · Ay: " + d.month.year + "/" + String(d.month.month).padStart(2, "0")
+          : "") +
+        "</div>";
+    }
+
+    // Kaydedilmiş ödüller
+    if (awards.length) {
+      html +=
+        '<div style="font-size:12px;font-weight:700;color:#facc15;margin:8px 0 4px;">🏆 Verilen Ödüller</div>';
+      awards.slice(0, 12).forEach(function (a) {
+        const typeMap = {
+          goal_king: "Gol Kralı",
+          assist_king: "Asist Kralı",
+          player_of_year: "Yılın Oyuncusu",
+          player_of_month: "Ayın Oyuncusu",
+        };
+        const label = typeMap[a.awardType] || a.awardType || "Ödül";
+        html +=
+          '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);font-size:12px;">' +
+          "<span>" +
+          escapeHtml(label) +
+          ": <b>" +
+          escapeHtml(a.playerName || "?") +
+          "</b> <span style=\"color:#64748b;\">(" +
+          escapeHtml(a.clubName || "-") +
+          ")</span></span>" +
+          '<b style="color:#4ade80;">' +
+          (a.value != null ? a.value : "") +
+          "</b></div>";
+      });
+    }
+
+    // Önizleme: Yılın oyuncusu adayları
+    if (poty.length) {
+      html +=
+        '<div style="font-size:12px;font-weight:700;color:#facc15;margin:12px 0 4px;">⭐ Yılın Oyuncusu (önizleme)</div>';
+      poty.slice(0, 8).forEach(function (s, i) {
+        html +=
+          '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;">' +
+          "<span>" +
+          (i + 1) +
+          ". " +
+          escapeHtml(s.playerName || "?") +
+          ' <span style="color:#64748b;">(' +
+          escapeHtml(s.clubName || "-") +
+          ")</span></span>" +
+          '<b style="color:#38bdf8;">' +
+          (s.score != null ? s.score : (s.goals || 0) + "G " + (s.assists || 0) + "A") +
+          "</b></div>";
+      });
+    }
+
+    // Ayın oyuncusu panosu
+    if (pom.length) {
+      html +=
+        '<div style="font-size:12px;font-weight:700;color:#facc15;margin:12px 0 4px;">📅 Ayın Oyuncusu panosu</div>';
+      pom.slice(0, 8).forEach(function (s, i) {
+        html +=
+          '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;">' +
+          "<span>" +
+          (i + 1) +
+          ". " +
+          escapeHtml(s.playerName || "?") +
+          ' <span style="color:#64748b;">(' +
+          escapeHtml(s.clubName || "-") +
+          ")</span></span>" +
+          '<b style="color:#f472b6;">' +
+          (s.score != null ? s.score : "") +
+          "</b></div>";
+      });
+    }
+
+    if (!awards.length && !poty.length && !pom.length) {
+      html +=
+        '<div style="color:#64748b;text-align:center;padding:10px;">Henüz ödül veya önizleme verisi yok.</div>';
+    }
+    return html;
+  };
+
+  /**
+   * Maç arşivi listesi HTML.
+   */
+  window.renderMatchArchiveListHTML = function (list) {
+    const matches = list || window.__emMatchArchive || [];
+    if (!matches.length) {
+      return (
+        '<div style="color:#64748b;font-size:12px;padding:12px;text-align:center;">Arşivde maç yok.</div>'
+      );
+    }
+    let html =
+      '<div class="youth-section-title">Maç Arşivi</div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Son oynanan maçlar · tıkla detay</div>';
+    matches.forEach(function (m) {
+      const id = m.id;
+      const home = escapeHtml(m.homeName || "?");
+      const away = escapeHtml(m.awayName || "?");
+      const score =
+        (m.homeGoals != null ? m.homeGoals : "?") +
+        " - " +
+        (m.awayGoals != null ? m.awayGoals : "?");
+      const comp = escapeHtml(m.competition || "");
+      let when = "";
+      if (m.finishedAt) {
+        try {
+          when = new Date(m.finishedAt).toLocaleString("tr-TR", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        } catch (e) {}
+      }
+      html +=
+        '<div class="card-box" style="cursor:pointer;padding:8px 10px;margin:4px 0;border:1px solid #334155;border-radius:6px;" ' +
+        'onclick="window.openMatchArchiveDetail && window.openMatchArchiveDetail(' +
+        JSON.stringify(String(id)) +
+        ')">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+        "<span>" +
+        home +
+        ' <b style="color:#facc15;">' +
+        score +
+        "</b> " +
+        away +
+        "</span>" +
+        '<span style="font-size:11px;color:#64748b;">' +
+        comp +
+        (when ? " · " + when : "") +
+        "</span></div></div>";
+    });
+    return html;
+  };
+
+  /**
+   * Maç arşivi detay modalı açar.
+   */
+  window.openMatchArchiveDetail = async function (matchId) {
+    const data = await window.loadMatchArchiveDetail(matchId);
+    if (!data || !data.match) {
+      if (typeof addLog === "function") addLog("Maç detayı alınamadı.");
+      else alert("Maç detayı alınamadı.");
+      return;
+    }
+    const m = data.match;
+    const logs = data.logs || [];
+    const home = escapeHtml(m.home_name || m.homeName || "?");
+    const away = escapeHtml(m.away_name || m.awayName || "?");
+    const hg = m.home_goals != null ? m.home_goals : m.homeGoals;
+    const ag = m.away_goals != null ? m.away_goals : m.awayGoals;
+    const score = (hg != null ? hg : "?") + " - " + (ag != null ? ag : "?");
+    const comp = escapeHtml(m.competition || "");
+
+    let eventsHtml = "";
+    if (logs.length) {
+      eventsHtml =
+        '<div style="max-height:220px;overflow-y:auto;margin-top:10px;font-size:12px;">';
+      logs.forEach(function (l) {
+        eventsHtml +=
+          '<div style="padding:2px 0;border-bottom:1px solid rgba(51,65,85,0.25);">' +
+          '<span style="color:#64748b;min-width:36px;display:inline-block;">' +
+          (l.minute != null ? l.minute + "'" : "") +
+          "</span> " +
+          escapeHtml(l.text || "") +
+          "</div>";
+      });
+      eventsHtml += "</div>";
+    } else {
+      eventsHtml =
+        '<div style="color:#64748b;font-size:12px;margin-top:8px;">Olay kaydı yok.</div>';
+    }
+
+    // Basit modal — mevcut modal altyapısı varsa onu kullan, yoksa alert benzeri
+    let modal = document.getElementById("emMatchArchiveModal");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "emMatchArchiveModal";
+      modal.style.cssText =
+        "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;";
+      document.body.appendChild(modal);
+    }
+    modal.innerHTML =
+      '<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;max-width:480px;width:100%;max-height:90vh;overflow:auto;padding:16px 18px;position:relative;">' +
+      '<button type="button" style="position:absolute;top:10px;right:12px;background:transparent;border:none;color:#94a3b8;font-size:20px;cursor:pointer;" onclick="document.getElementById(\'emMatchArchiveModal\').style.display=\'none\'">×</button>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Maç Arşivi Detayı · ' +
+      comp +
+      "</div>" +
+      '<div style="font-size:18px;font-weight:800;color:#e2e8f0;text-align:center;margin:8px 0;">' +
+      home +
+      ' <span style="color:#facc15;">' +
+      score +
+      "</span> " +
+      away +
+      "</div>" +
+      eventsHtml +
+      "</div>";
+    modal.style.display = "flex";
+    modal.onclick = function (e) {
+      if (e.target === modal) modal.style.display = "none";
+    };
+  };
+
+  /** Kupa bracket — GET /api/cup/bracket */
+  window.loadCupBracket = async function (country) {
+    try {
+      if (!getToken()) return null;
+      const c =
+        country ||
+        (typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "Türkiye");
+      const data = await apiFetch(
+        "/api/cup/bracket?country=" + encodeURIComponent(c),
+      );
+      window.__emCupBracket = data;
+      return data;
+    } catch (e) {
+      window.__emCupBracket = null;
+      return null;
+    }
+  };
+
+  /**
+   * Gerçek kupa bracket HTML.
+   * bracket: [{ id, round, roundLabel, slot, homeName, awayName, homeGoals, awayGoals, status, ... }]
+   * round: genelde 1=QF, 2=SF, 3=Final (veya roundLabel ile)
+   */
+  window.renderCupBracketHTML = function (data) {
+    const edition = data && data.edition;
+    const bracket = (data && data.bracket) || [];
+    const myName =
+      (typeof teamConfig !== "undefined" &&
+        teamConfig.home &&
+        teamConfig.home.name) ||
+      "";
+    const myId =
+      window.__emMyClub && window.__emMyClub.id != null
+        ? String(window.__emMyClub.id)
+        : null;
+
+    if (!edition && !bracket.length) {
+      return (
+        '<div class="youth-section-title">Kupa — Eleme Ağacı</div>' +
+        '<div style="color:#64748b;font-size:12px;padding:12px;text-align:center;">' +
+        "Bu ülke için aktif kupa yok. Yönetim panelinden veya kupa oluşturma ile başlatılabilir." +
+        "</div>"
+      );
+    }
+
+    // Turları grupla
+    const byRound = {};
+    bracket.forEach(function (f) {
+      const key = f.round != null ? String(f.round) : f.roundLabel || "0";
+      if (!byRound[key]) byRound[key] = [];
+      byRound[key].push(f);
+    });
+    const roundKeys = Object.keys(byRound).sort(function (a, b) {
+      return Number(a) - Number(b);
+    });
+
+    // round label tahmin
+    function roundTitle(key, fixtures) {
+      if (fixtures && fixtures[0] && fixtures[0].roundLabel)
+        return fixtures[0].roundLabel;
+      const n = fixtures ? fixtures.length : 0;
+      if (n >= 4) return "Çeyrek Final";
+      if (n === 2) return "Yarı Final";
+      if (n === 1) return "Final";
+      return "Tur " + key;
+    }
+
+    function isMe(f) {
+      if (myId) {
+        if (f.homeClubId != null && String(f.homeClubId) === myId) return true;
+        if (f.awayClubId != null && String(f.awayClubId) === myId) return true;
+      }
+      if (myName) {
+        if (f.homeName === myName || f.awayName === myName) return true;
+      }
+      return false;
+    }
+
+    function teamSpan(name, clubId) {
+      const safe = escapeHtml(name || "TBD");
+      const click =
+        name && name !== "TBD"
+          ? ' style="cursor:pointer;text-decoration:underline;" onclick="event.stopPropagation();openClubProfileByName(' +
+            JSON.stringify(name) +
+            ')"'
+          : "";
+      return "<span" + click + ">" + safe + "</span>";
+    }
+
+    function matchCard(f) {
+      const home = f.homeName || "TBD";
+      const away = f.awayName || "TBD";
+      const played =
+        f.status === "finished" ||
+        (f.homeGoals != null && f.awayGoals != null);
+      let scoreHtml;
+      if (played) {
+        const sc =
+          (f.homeGoals != null ? f.homeGoals : "?") +
+          "-" +
+          (f.awayGoals != null ? f.awayGoals : "?");
+        const pen = f.penalties ? " (p)" : "";
+        scoreHtml =
+          ' <b style="color:#facc15;cursor:pointer;text-decoration:underline;" title="Maç raporu" ' +
+          "onclick='event.stopPropagation();openMatchReportByScore(" +
+          JSON.stringify(home) +
+          "," +
+          JSON.stringify(away) +
+          "," +
+          JSON.stringify(sc) +
+          ")'>" +
+          sc +
+          pen +
+          "</b> ";
+      } else if (f.status === "live") {
+        scoreHtml =
+          ' <b style="color:#f87171;">CANLI</b> <span style="color:#64748b;">vs</span> ';
+      } else {
+        scoreHtml = ' <span style="color:#64748b;">vs</span> ';
+      }
+      const meMark = isMe(f)
+        ? '<span style="color:#4ade80;font-weight:700;">● </span>'
+        : "";
+      let statusLine = "";
+      if (f.status === "scheduled" && f.kickoffAt) {
+        try {
+          statusLine =
+            '<div style="font-size:10px;color:#94a3b8;margin-top:2px;">' +
+            new Date(f.kickoffAt).toLocaleString("tr-TR", {
+              day: "2-digit",
+              month: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            }) +
+            "</div>";
+        } catch (e) {}
+      } else if (played) {
+        statusLine =
+          '<div style="font-size:10px;color:#64748b;margin-top:2px;">Oynandı</div>';
+      } else if (f.status === "live") {
+        statusLine =
+          '<div style="font-size:10px;color:#f87171;margin-top:2px;">Canlı</div>';
+      } else {
+        statusLine =
+          '<div style="font-size:10px;color:#38bdf8;margin-top:2px;">Bekliyor</div>';
+      }
+      return (
+        '<div class="cup-bracket-match" style="margin-bottom:6px;">' +
+        meMark +
+        teamSpan(home, f.homeClubId) +
+        scoreHtml +
+        teamSpan(away, f.awayClubId) +
+        statusLine +
+        "</div>"
+      );
+    }
+
+    let html =
+      '<div class="youth-section-title">Kupa — Eleme Ağacı</div>';
+    if (edition) {
+      html +=
+        '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">' +
+        escapeHtml(edition.country || "") +
+        (edition.year_label || edition.yearLabel
+          ? " · " + escapeHtml(edition.year_label || edition.yearLabel)
+          : "") +
+        (edition.status ? " · " + escapeHtml(edition.status) : "") +
+        "</div>";
+    }
+    html += '<div id="cupNextMatchBox" style="margin-bottom:10px;"></div>';
+    html += '<div class="cup-bracket" style="display:flex;flex-wrap:wrap;gap:12px;">';
+    roundKeys.forEach(function (key) {
+      const fixtures = byRound[key].slice().sort(function (a, b) {
+        return (a.slot || 0) - (b.slot || 0);
+      });
+      html +=
+        '<div class="cup-bracket-col" style="flex:1;min-width:140px;">' +
+        "<h4>" +
+        escapeHtml(roundTitle(key, fixtures)) +
+        "</h4>";
+      fixtures.forEach(function (f) {
+        html += matchCard(f);
+      });
+      html += "</div>";
+    });
+    html += "</div>";
+
+    // Sıradaki maç kutusunu doldur (async)
+    setTimeout(function () {
+      const box = document.getElementById("cupNextMatchBox");
+      if (!box) return;
+      if (typeof window.loadCupNextMatch === "function") {
+        window
+          .loadCupNextMatch()
+          .then(function (d) {
+            if (typeof window.renderCupNextMatchHTML === "function") {
+              box.innerHTML = window.renderCupNextMatchHTML(
+                d && d.fixture,
+              );
+            }
+          })
+          .catch(function () {
+            box.innerHTML = "";
+          });
+      }
+    }, 0);
+
+    return html;
+  };
+
+  /**
+   * Kupa fikstür listesi (düz liste) — bracket verisinden.
+   */
+  window.renderCupFixtureListHTML = function (data) {
+    const bracket = (data && data.bracket) || [];
+    if (!bracket.length) {
+      return (
+        '<div class="youth-section-title">Kupa — Fikstür</div>' +
+        '<div style="color:#64748b;font-size:12px;padding:10px;text-align:center;">Fikstür yok.</div>'
+      );
+    }
+    const myName =
+      (typeof teamConfig !== "undefined" &&
+        teamConfig.home &&
+        teamConfig.home.name) ||
+      "";
+    let html =
+      '<div class="youth-section-title">Kupa — Eleme Fikstürü</div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Takım / skor tıklanabilir</div>';
+    const byRound = {};
+    bracket.forEach(function (f) {
+      const key = f.round != null ? String(f.round) : f.roundLabel || "0";
+      if (!byRound[key]) byRound[key] = [];
+      byRound[key].push(f);
+    });
+    Object.keys(byRound)
+      .sort(function (a, b) {
+        return Number(a) - Number(b);
+      })
+      .forEach(function (key) {
+        const fixtures = byRound[key];
+        const label =
+          (fixtures[0] && fixtures[0].roundLabel) || "Tur " + key;
+        html +=
+          '<div style="font-size:12px;font-weight:700;color:#facc15;margin:10px 0 4px;">' +
+          escapeHtml(label) +
+          "</div>";
+        fixtures
+          .slice()
+          .sort(function (a, b) {
+            return (a.slot || 0) - (b.slot || 0);
+          })
+          .forEach(function (f) {
+            const home = f.homeName || "TBD";
+            const away = f.awayName || "TBD";
+            const me = home === myName || away === myName;
+            const played =
+              f.status === "finished" ||
+              (f.homeGoals != null && f.awayGoals != null);
+            let scoreHtml;
+            if (played) {
+              const sc =
+                (f.homeGoals != null ? f.homeGoals : "?") +
+                "-" +
+                (f.awayGoals != null ? f.awayGoals : "?");
+              scoreHtml =
+                ' <b style="color:#facc15;cursor:pointer;text-decoration:underline;" onclick="event.stopPropagation();openMatchReportByScore(' +
+                JSON.stringify(home) +
+                "," +
+                JSON.stringify(away) +
+                "," +
+                JSON.stringify(sc) +
+                ')">' +
+                sc +
+                "</b> ";
+            } else {
+              scoreHtml = ' <span style="color:#64748b;">vs</span> ';
+            }
+            html +=
+              '<div style="padding:6px 8px;margin:3px 0;border:1px solid #334155;border-radius:6px;font-size:13px;">' +
+              (me
+                ? '<span style="color:#4ade80;font-weight:700;">● </span>'
+                : "") +
+              '<span style="color:#60a5fa;cursor:pointer;text-decoration:underline;" onclick="openClubProfileByName(' +
+              JSON.stringify(home) +
+              ')">' +
+              escapeHtml(home) +
+              "</span>" +
+              scoreHtml +
+              '<span style="color:#f87171;cursor:pointer;text-decoration:underline;" onclick="openClubProfileByName(' +
+              JSON.stringify(away) +
+              ')">' +
+              escapeHtml(away) +
+              "</span>" +
+              (played
+                ? ' <span style="color:#64748b;font-size:11px;">(Oynandı)</span>'
+                : ' <span style="color:#38bdf8;font-size:11px;">(Bekliyor)</span>') +
+              "</div>";
+          });
+      });
+    return html;
+  };
+
+  // Senkron sırasında kupa sıradaki maçı da çek
+  const _origSyncAll = window.syncAllFromServer;
+  if (typeof _origSyncAll === "function") {
+    window.syncAllFromServer = async function () {
+      const r = await _origSyncAll.apply(this, arguments);
+      try {
+        await window.loadCupNextMatch();
+      } catch (e) {}
+      return r;
+    };
+  }
 })();
