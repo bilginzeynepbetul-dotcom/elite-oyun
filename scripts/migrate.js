@@ -37,6 +37,9 @@ const files = [
   "018_anti_cheat.sql",
   "019_ban_fields.sql",
   "020_register_club_country.sql",
+  "021_donations.sql",
+  "022_season_close.sql",
+  "023_continental.sql",
 ];
 
 async function main() {
