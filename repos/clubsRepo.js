@@ -85,6 +85,7 @@ function rowToPlayer(r) {
     fromAcademy: r.from_academy,
     fromMarket: r.from_market,
     injured: r.injured,
+    injuryDaysLeft: Number(r.injury_days_left) || 0,
     sentOff: r.sent_off,
     cards: r.cards,
     goals: r.goals,
