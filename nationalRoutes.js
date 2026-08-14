@@ -54,8 +54,17 @@ function createNationalRouter(opts) {
         return res.status(404).json({ error: "Milli takım bulunamadı" });
       res.json(state);
     } catch (e) {
-      console.error("[national/state]", e);
-      res.status(500).json({ error: "Milli takım bilgisi alınamadı" });
+      console.error(
+        "[national/state]",
+        e && e.message ? e.message : e,
+        e && e.code ? e.code : "",
+      );
+      if (e && e.stack) console.error(e.stack);
+      res.status(500).json({
+        error: "Milli takım bilgisi alınamadı",
+        detail: String((e && e.message) || e).slice(0, 300),
+        code: e && e.code ? e.code : undefined,
+      });
     }
   });
 

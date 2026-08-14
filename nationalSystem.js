@@ -57,18 +57,38 @@ function isAdmin(username) {
 }
 
 async function getState(country, userId, clubId, username, category) {
+  try {
+    const { ensureNationalSchema } = require("./ensureNationalSchema");
+    await ensureNationalSchema();
+  } catch (_) {}
   const team = await ensureTeam(country, category);
   if (!team) return null;
   const cat = team.category || (String(category || "A").toUpperCase() === "U21" ? "U21" : "A");
   const maxAge = cat === "U21" ? 21 : null;
-  const [squad, candidatesRaw, nextFixture, recent, myApplication] = await Promise.all([
+  // Tek sorgu patlasın diye hepsini birden düşürme — settled ile izole et
+  const settled = await Promise.allSettled([
     nationalRepo.getSquad(team.id),
     nationalRepo.listCandidates(country, team.id, maxAge),
     nationalRepo.getUpcomingFixture(team.id),
     nationalRepo.listRecentFixtures(team.id, 5),
     nationalRepo.getMyApplication(team.id, userId),
   ]);
-  const candidates = candidatesRaw.filter((c) => !c.called);
+  const pick = (i, fallback) => {
+    const s = settled[i];
+    if (s.status === "fulfilled") return s.value;
+    console.warn(
+      "[national.getState] partial fail",
+      i,
+      s.reason && s.reason.message ? s.reason.message : s.reason,
+    );
+    return fallback;
+  };
+  const squad = pick(0, []);
+  const candidatesRaw = pick(1, []);
+  const nextFixture = pick(2, null);
+  const recent = pick(3, []);
+  const myApplication = pick(4, null);
+  const candidates = (candidatesRaw || []).filter((c) => !c.called);
 
   let managerName = null;
   if (team.managerClubId) {

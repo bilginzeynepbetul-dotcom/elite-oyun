@@ -1187,6 +1187,16 @@ try {
   socialSystem.seedForumIfEmpty().catch(() => {});
 } catch (_) {}
 
+// Milli takım şeması (007/009/011) — Render DB shell olmadan da tamamlanır
+try {
+  const { ensureNationalSchema } = require("./ensureNationalSchema");
+  ensureNationalSchema().catch((e) =>
+    console.warn("[boot] ensureNationalSchema", e && e.message ? e.message : e),
+  );
+} catch (e) {
+  console.warn("[boot] ensureNationalSchema load", e.message);
+}
+
 server.listen(PORT, () => {
   logger.info("Elite Manager API dinleniyor", {
     port: PORT,
