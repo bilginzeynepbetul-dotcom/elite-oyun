@@ -1,329 +1,196 @@
 // ============================================================
-// trainingSystem.js — SUNUCU TARAFLI ANTRENMAN + ANTRENÖR
-// ------------------------------------------------------------
-// configure({ getClub, adjustBalance, getTeam, saveTeam,
-//             getTrainingState, saveTrainingState })
+// trainingSystem.js — bireysel / kadro antrenmanı
 // ============================================================
 
-const SKILL_LABELS = {
-  reflex: "Refleks",
-  handling: "Top Tutma",
-  positioning: "Pozisyon",
-  passing: "Pas",
-  finishing: "Bitiricilik",
-  tackle: "Müdahale",
-  vision: "Görüş",
-  pace: "Hız",
-  dribbling: "Top Sürme",
-  stamina: "Dayanıklılık",
-  strength: "Güç",
-  technique: "Teknik",
-  agility: "Çeviklik",
-};
+const clubsRepo = require("./repos/clubsRepo");
+const trainingRepo = require("./repos/trainingRepo");
+const staffSystem = require("./staffSystem");
+const { query } = require("./db");
 
-const VALID_SKILLS = Object.keys(SKILL_LABELS);
-const MAX_COACHES = 3;
+const TRAINABLE = [
+  "pace",
+  "passing",
+  "finishing",
+  "tackle",
+  "vision",
+  "stamina",
+  "strength",
+  "technique",
+  "agility",
+  "positioning",
+  "reflex",
+  "handling",
+];
 
-/** clubId → { coaches: [], recent: [] } */
-const store = new Map();
-
-let deps = {
-  getClub: null,
-  adjustBalance: null,
-  getTeam: null,
-  saveTeam: null,
-  getTrainingState: null,
-  saveTrainingState: null,
-  log: console.log,
-};
-
-function configure(next) {
-  deps = Object.assign(deps, next || {});
-}
-
-async function _call(fn, ...args) {
-  if (typeof fn !== "function") return undefined;
-  return await Promise.resolve(fn(...args));
-}
-
-function defaultState() {
-  return {
-    coaches: [
-      {
-        id: "coach_default_stamina",
-        name: "Dayanıklılık Antrenörü",
-        level: 1,
-        salary: 8000,
-        skill: "stamina",
-        skillLabel: "Dayanıklılık",
-      },
-    ],
-    recent: [],
-  };
-}
-
-async function loadState(clubId) {
-  if (store.has(clubId)) return store.get(clubId);
-  let s = null;
-  if (typeof deps.getTrainingState === "function") {
-    try {
-      s = await _call(deps.getTrainingState, clubId);
-    } catch (e) {}
-  }
-  if (!s) s = defaultState();
-  if (!Array.isArray(s.coaches)) s.coaches = defaultState().coaches;
-  if (!Array.isArray(s.recent)) s.recent = [];
-  store.set(clubId, s);
-  return s;
-}
-
-async function persist(clubId, s) {
-  store.set(clubId, s);
-  if (typeof deps.saveTrainingState === "function") {
-    try {
-      await _call(deps.saveTrainingState, clubId, s);
-    } catch (e) {}
-  }
-}
-
-function coachTrainingFactor(coaches, skill) {
-  const list = Array.isArray(coaches) ? coaches : [];
-  if (!list.length) return 0.3;
-  let best = list[0];
-  if (skill) {
-    const match = list.find((c) => c.skill === skill);
-    if (match) best = match;
-    else {
-      best = list.slice().sort((a, b) => (b.level || 1) - (a.level || 1))[0];
-      const lv = Math.max(1, Math.min(5, best.level || 1));
-      return (0.35 + (lv - 1) * (0.65 / 4)) * 0.25;
-    }
-  }
-  const lv = Math.max(1, Math.min(5, best.level || 1));
-  return 0.35 + (lv - 1) * (0.65 / 4);
-}
-
-function estimatePotential(p) {
-  if (p.basePotential != null) return Number(p.basePotential) || 5;
-  const keys = [
-    "pace",
-    "passing",
-    "finishing",
-    "tackle",
-    "vision",
-    "stamina",
-    "strength",
-    "technique",
-    "agility",
-    "positioning",
+async function getState(clubId) {
+  const base = await trainingRepo.getTrainingState(clubId);
+  const team = await clubsRepo.getTeam(clubId);
+  const players = [
+    ...((team && team.players) || []),
+    ...((team && team.bench) || []),
   ];
-  const avg =
-    keys.reduce((s, k) => s + (Number(p[k]) || 10), 0) / keys.length;
-  return Math.max(1, Math.min(10, Math.round(avg / 2)));
-}
-
-function applySkillGain(player, skill, coaches) {
-  if (!player || !skill || VALID_SKILLS.indexOf(skill) < 0) {
-    return { ok: false, error: "Geçersiz skill" };
+  let sum = 0;
+  let low = 0;
+  let n = 0;
+  for (const p of players) {
+    if (!p) continue;
+    const c = Number(p.condition) || 0;
+    sum += c;
+    n++;
+    if (c < 70) low++;
   }
-  const potential = estimatePotential(player);
-  const age = player.age || 18;
-  const ageFactor =
-    age <= 20 ? 1.55 : age < 25 ? 1.2 : age < 28 ? 0.85 : 0.4;
-  const potFactor = 0.4 + (potential / 10) * 0.9;
-  const baseGain = 0.22 * (potential / 10);
-  const cond = Number(player.condition) || 80;
-  const condFactor = cond < 70 ? 0.45 : cond < 80 ? 0.75 : 1;
-  let gain =
-    baseGain *
-    ageFactor *
-    coachTrainingFactor(coaches, skill) *
-    condFactor *
-    (0.9 + Math.random() * 0.2);
-
-  if (player[skill] == null) player[skill] = 8 + Math.random() * 3;
-  const cur = Number(player[skill]) || 10;
-  const next = Math.min(20, cur + gain);
-  const delta = next - cur;
-  player[skill] = next;
-  {
-    let cur = Number(player.experience) || 3;
-    if (cur > 10) cur = 1 + (Math.min(99, cur) / 99) * 9;
-    player.experience = Math.min(10, Math.max(1, cur + 0.02 * potFactor));
-  }
-
-  let condGain = 1 + Math.random() * 2;
-  if (skill === "stamina") condGain = 6 + Math.random() * 6;
-  player.condition = Math.min(100, (Number(player.condition) || 80) + condGain);
-
   return {
-    ok: true,
-    playerId: player.id,
-    name: player.name,
-    skill,
-    skillLabel: SKILL_LABELS[skill] || skill,
-    from: Math.round(cur * 100) / 100,
-    to: Math.round(next * 100) / 100,
-    delta: Math.round(delta * 100) / 100,
-    condition: Math.round(player.condition),
+    ...base,
+    conditionSummary: {
+      avg: n ? Math.round(sum / n) : 0,
+      low,
+      count: n,
+    },
   };
 }
 
-function findPlayerInTeam(team, playerId) {
-  const pid = String(playerId);
-  for (const list of [team.players || [], team.bench || []]) {
-    const idx = list.findIndex((p) => p && String(p.id) === pid);
-    if (idx >= 0) return { list, idx, player: list[idx] };
-  }
-  return null;
+function coachBonus(coaches, skill) {
+  const c = (coaches || []).find((x) => x.skill === skill);
+  if (!c) return 0;
+  return 0.15 * (Number(c.level) || 1);
 }
 
 async function trainPlayer(clubId, playerId, skill) {
-  if (typeof deps.getTeam !== "function" || typeof deps.saveTeam !== "function") {
-    return { ok: false, error: "Takım depolama yapılandırılmadı" };
+  const sk = String(skill || "").toLowerCase();
+  if (!TRAINABLE.includes(sk)) {
+    return { ok: false, error: "Geçersiz skill" };
   }
-  const team = await _call(deps.getTeam, clubId);
-  if (!team) return { ok: false, error: "Takım yok" };
-  const found = findPlayerInTeam(team, playerId);
-  if (!found) return { ok: false, error: "Oyuncu kadroda değil" };
-
-  const s = await loadState(clubId);
-  const result = applySkillGain(found.player, skill, s.coaches);
-  if (!result.ok) return result;
-
-  found.list[found.idx] = found.player;
-  await _call(deps.saveTeam, clubId, team);
-
-  s.recent.unshift({
-    name: result.name,
-    skill: result.skill,
-    skillLabel: result.skillLabel,
-    delta: result.delta,
-    to: result.to,
-    at: Date.now(),
-  });
-  if (s.recent.length > 40) s.recent.length = 40;
-  await persist(clubId, s);
-
-  deps.log && deps.log("[train]", clubId, result.name, skill, "+" + result.delta);
-  return { ok: true, result, recent: s.recent.slice(0, 15) };
-}
-
-async function trainSquad(clubId, skill) {
-  if (typeof deps.getTeam !== "function" || typeof deps.saveTeam !== "function") {
-    return { ok: false, error: "Takım depolama yapılandırılmadı" };
-  }
-  const team = await _call(deps.getTeam, clubId);
-  if (!team) return { ok: false, error: "Takım yok" };
-  const s = await loadState(clubId);
+  const team = await clubsRepo.getTeam(clubId);
+  if (!team) return { ok: false, error: "Kulüp yok" };
   const all = [...(team.players || []), ...(team.bench || [])];
-  const results = [];
-  all.forEach((p) => {
-    if (!p) return;
-    const r = applySkillGain(p, skill, s.coaches);
-    if (r.ok) {
-      results.push(r);
-      s.recent.unshift({
-        name: r.name,
-        skill: r.skill,
-        skillLabel: r.skillLabel,
-        delta: r.delta,
-        to: r.to,
-        at: Date.now(),
-      });
-    }
+  const player = all.find((p) => p && String(p.id) === String(playerId));
+  if (!player) return { ok: false, error: "Oyuncu yok" };
+  if (player.injured) return { ok: false, error: "Sakat oyuncu antrenman yapamaz" };
+
+  const coaches = await staffSystem.listCoaches(clubId);
+  const cond = Number(player.condition) || 80;
+  if (cond < 40) return { ok: false, error: "Kondisyon çok düşük" };
+
+  const base = 0.15 + Math.random() * 0.35;
+  const bonus = coachBonus(coaches, sk);
+  const condFactor = cond >= 80 ? 1.1 : cond >= 60 ? 1.0 : 0.75;
+  let delta = Math.round((base + bonus) * condFactor * 100) / 100;
+  const cur = Number(player[sk]) || 10;
+  const next = Math.min(20, Math.round((cur + delta) * 10) / 10);
+  delta = Math.round((next - cur) * 100) / 100;
+
+  player[sk] = next;
+  player.condition = Math.max(20, cond - (2 + Math.floor(Math.random() * 3)));
+
+  // DB güncelle
+  await query(
+    `UPDATE players SET ${sk} = $2, condition = $3 WHERE id = $1 AND club_id = $4`,
+    [player.id, next, player.condition, clubId],
+  );
+  await trainingRepo.logTraining(clubId, {
+    playerId: player.id,
+    name: player.name,
+    skill: sk,
+    delta,
+    to: next,
   });
-  if (s.recent.length > 40) s.recent.length = 40;
-  await _call(deps.saveTeam, clubId, team);
-  await persist(clubId, s);
+
+  const state = await getState(clubId);
+  try {
+    const { rows } = await query(`SELECT user_id FROM clubs WHERE id = $1`, [clubId]);
+    const uid = rows[0] && rows[0].user_id;
+    if (uid) {
+      try { await require("./dailyChallengeSystem").onTrain(uid); } catch (_) {}
+    }
+  } catch (_) {}
   return {
     ok: true,
-    count: results.length,
-    skill,
-    skillLabel: SKILL_LABELS[skill] || skill,
-    results: results.slice(0, 20),
-    recent: s.recent.slice(0, 15),
+    state,
+    result: { name: player.name, skill: sk, delta, to: next },
   };
 }
 
-function coachSalary(level) {
-  return Math.round(5000 + level * 6000 + level * level * 1500);
-}
+async function trainSquad(clubId, focusSkill) {
+  const team = await clubsRepo.getTeam(clubId);
+  if (!team) return { ok: false, error: "Kulüp yok" };
+  const coaches = await staffSystem.listCoaches(clubId);
+  let focus = focusSkill;
+  if (!focus && coaches.length) {
+    coaches.sort((a, b) => (b.level || 0) - (a.level || 0));
+    focus = coaches[0].skill;
+  }
+  focus = focus || TRAINABLE[Math.floor(Math.random() * 6)];
 
-async function hireCoach(clubId, skill, level) {
-  level = Math.max(1, Math.min(5, Math.floor(Number(level) || 1)));
-  if (VALID_SKILLS.indexOf(skill) < 0)
-    return { ok: false, error: "Geçersiz skill" };
+  const results = [];
+  const all = [...(team.players || []), ...(team.bench || [])];
+  for (const p of all) {
+    if (!p || !p.id || p.injured) continue;
+    const sk = focus;
+    if (!TRAINABLE.includes(sk)) continue;
+    const cond = Number(p.condition) || 80;
+    if (cond < 35) continue;
+    const base = 0.08 + Math.random() * 0.2;
+    const bonus = coachBonus(coaches, sk) * 0.7;
+    let delta = Math.round((base + bonus) * 100) / 100;
+    const cur = Number(p[sk]) || 10;
+    const next = Math.min(20, Math.round((cur + delta) * 10) / 10);
+    delta = Math.round((next - cur) * 100) / 100;
+    p[sk] = next;
+    // Manuel antrenman yorgunluk
+    p.condition = Math.max(20, cond - (2 + Math.floor(Math.random() * 3)));
+    await query(
+      `UPDATE players SET ${sk} = $2, condition = $3 WHERE id = $1 AND club_id = $4`,
+      [p.id, next, p.condition, clubId],
+    );
+    await trainingRepo.logTraining(clubId, {
+      playerId: p.id,
+      name: p.name,
+      skill: sk,
+      delta,
+      to: next,
+    });
+    results.push({ name: p.name, skill: sk, delta, to: next });
+  }
 
-  const s = await loadState(clubId);
-  const existing = s.coaches.findIndex((c) => c.skill === skill);
-  const salary = coachSalary(level);
-  const coach = {
-    id: "coach_" + skill + "_" + level,
-    name: (SKILL_LABELS[skill] || skill) + " Antrenörü",
-    level,
-    salary,
-    skill,
-    skillLabel: SKILL_LABELS[skill] || skill,
-  };
-
-  if (existing >= 0) {
-    s.coaches[existing] = coach;
-  } else {
-    if (s.coaches.length >= MAX_COACHES) {
-      return {
-        ok: false,
-        error: "En fazla " + MAX_COACHES + " antrenör. Önce birini çıkar.",
-      };
+  const state = await getState(clubId);
+  try {
+    const { rows } = await query(`SELECT user_id FROM clubs WHERE id = $1`, [clubId]);
+    const uid = rows[0] && rows[0].user_id;
+    if (uid) {
+      try { await require("./dailyChallengeSystem").onTrain(uid); } catch (_) {}
     }
-    s.coaches.push(coach);
-  }
-  await persist(clubId, s);
-  return { ok: true, coaches: s.coaches };
+  } catch (_) {}
+  return { ok: true, state, results, focus };
 }
 
-async function removeCoach(clubId, skill) {
-  const s = await loadState(clubId);
-  s.coaches = s.coaches.filter((c) => c.skill !== skill);
-  if (!s.coaches.length) {
-    s.coaches = defaultState().coaches;
-  }
-  await persist(clubId, s);
-  return { ok: true, coaches: s.coaches };
+/** Auto-train varyantı: skill artışı + condition toparlanma */
+async function trainSquadAuto(clubId, focusSkill) {
+  const r = await trainSquad(clubId, focusSkill);
+  if (!r.ok) return r;
+  // Auto: condition +4
+  await query(
+    `UPDATE players SET condition = LEAST(100, condition + 4)
+     WHERE club_id = $1 AND COALESCE(injured, FALSE) = FALSE`,
+    [clubId],
+  );
+  r.state = await getState(clubId);
+  return r;
 }
 
-async function getState(clubId) {
-  const s = await loadState(clubId);
-  let conditionSummary = null;
-  if (typeof deps.getTeam === "function") {
-    const team = await _call(deps.getTeam, clubId);
-    if (team) {
-      const all = [...(team.players || []), ...(team.bench || [])];
-      const avg = all.length
-        ? Math.round(
-            all.reduce((a, p) => a + (Number(p.condition) || 90), 0) /
-              all.length,
-          )
-        : 0;
-      const low = all.filter((p) => (Number(p.condition) || 90) < 70).length;
-      conditionSummary = { avg, low, count: all.length };
-    }
-  }
-  return {
-    coaches: s.coaches,
-    recent: s.recent.slice(0, 15),
-    conditionSummary,
-    skills: SKILL_LABELS,
-  };
+async function restRecovery(clubId) {
+  await query(
+    `UPDATE players SET condition = LEAST(100, condition + 3)
+     WHERE club_id = $1 AND condition < 92 AND COALESCE(injured, FALSE) = FALSE`,
+    [clubId],
+  );
+  return { ok: true };
 }
 
 module.exports = {
-  configure,
   getState,
   trainPlayer,
   trainSquad,
-  hireCoach,
-  removeCoach,
-  SKILL_LABELS,
-  VALID_SKILLS,
+  trainSquadAuto,
+  restRecovery,
+  TRAINABLE,
 };

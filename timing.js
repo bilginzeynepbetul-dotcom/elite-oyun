@@ -1,10 +1,17 @@
+// ============================================================
+// timing.js — Maç motoru zaman sabitleri
+// ============================================================
+
+const MATCH_MINUTES = 90;
+const TICK_MS = Number(process.env.MATCH_TICK_MS) || 1800;
+const CIRCULATION_MS = Number(process.env.MATCH_CIRCULATION_MS) || 1000;
+const MAJOR_ACTION_LOCK_MS = Number(process.env.MATCH_MAJOR_LOCK_MS) || 700;
+const SHOT_CHANCE_PER_TICK = Number(process.env.MATCH_SHOT_CHANCE) || 0.12;
+
 module.exports = {
-  MATCH_MINUTES: 90,
-  // 1x: 40 sn / oyun dakikası → 90' = 60 gerçek dakika
-  TICK_MS: 40000,
-  CIRCULATION_MS: 32000,
-  // Gol / büyük aksiyon kilidi (gerçek süreye orantılı)
-  MAJOR_ACTION_LOCK_MS: 12000,
-  // ~90 tick × 0.13 ≈ 12 şut/maç (iki takım toplam)
-  SHOT_CHANCE_PER_TICK: 0.13,
+  MATCH_MINUTES,
+  TICK_MS,
+  CIRCULATION_MS,
+  MAJOR_ACTION_LOCK_MS,
+  SHOT_CHANCE_PER_TICK,
 };

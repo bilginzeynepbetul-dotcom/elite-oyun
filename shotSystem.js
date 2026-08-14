@@ -1,291 +1,130 @@
 // ============================================================
-// shotSystem.js — Beceri tabanlı şut / gol motoru
-// ------------------------------------------------------------
-// Eski stub yerine: forvet bitiricilik, kaleci refleks/handling,
-// defans tackle, formasyon, oyun stili, yorgunluk, skor farkı.
-// matchEngine.attemptShot(match, side) imzası aynı kalır.
+// shotSystem.js — Basit otoriter şut / gol motoru
 // ============================================================
 
-const {
-  posFamily,
-  isGkPos,
-  isFwdPos,
-  findStriker,
-  findGoalkeeper,
-  avg,
-  teamStrength,
-  experienceFactor,
-  experienceErrorFactor,
-  normalizeExperience,
-} = require("./teamUtils");
-const { normalizeAttackDir } = require("./tacticNormalize");
-const { isKontraActive, isKeepBallActive } = require("./ballSystem");
+const { isGkPos, findStriker, findGoalkeeper, skillOf } = require("./teamUtils");
 const { mt } = require("./matchI18n");
 
-/** Ağırlıklı şutçu seçimi — forvet > AM > kanat > orta saha */
-function pickShooter(team) {
-  const pool = (team.players || []).filter(
-    (p) => p && !p.sentOff && !p.injured && !isGkPos(p.pos),
-  );
-  if (!pool.length) return team.players && team.players[0];
-
-  let attackDir = team.attackDir || "orta";
-  try {
-    attackDir = normalizeAttackDir(attackDir, "orta");
-  } catch (_) {}
-  const weight = (p) => {
-    const fam = posFamily(p.pos);
-    const pos = String(p.pos || "").toUpperCase();
-    let w = 1;
-    if (fam === "FW") w = 6;
-    else if (fam === "AM") w = 4;
-    else if (fam === "MF") w = 2;
-    else if (fam === "DM") w = 1.2;
-    else w = 0.8; // DF — ara sıra şut
-    // Hücum yönü: kanatlardan / sol / sağ → kanat oyuncularına ağırlık
-    const isLeftWing = pos === "FL" || pos === "ML" || pos === "DL" || pos === "AML";
-    const isRightWing = pos === "FR" || pos === "MR" || pos === "DR" || pos === "AMR";
-    const isWing = isLeftWing || isRightWing || pos === "WL" || pos === "WR";
-    if (attackDir === "kanatlardan" && isWing) w *= 1.85;
-    else if (attackDir === "sol" && isLeftWing) w *= 2.1;
-    else if (attackDir === "sag" && isRightWing) w *= 2.1;
-    else if (attackDir === "orta" && (fam === "FW" || fam === "AM") && !isWing) w *= 1.25;
-    const fin = Number(p.finishing) || 10;
-    const tech = Number(p.technique) || 10;
-    const form = 1 + (Number(p.form) || 0) * 0.03;
-    const cond = Math.max(0.5, (Number(p.condition) || 90) / 100);
-    return w * (fin * 0.6 + tech * 0.4) * form * cond;
-  };
-
-  const total = pool.reduce((s, p) => s + weight(p), 0);
-  let r = Math.random() * total;
-  for (const p of pool) {
-    r -= weight(p);
-    if (r <= 0) return p;
+function pickShooter(match, side) {
+  const team = match.players[side] && match.players[side].team;
+  if (!team) return null;
+  const idx = match.possessionIndex;
+  const players = team.players || [];
+  let p = players[idx];
+  if (!p || isGkPos(p.pos) || p.sentOff || p.injured) {
+    p = findStriker(team);
   }
-  return pool[pool.length - 1];
-}
-
-/** Asist adayı — şutçu hariç, pas/vizyon yüksek oyuncu */
-function pickAssister(team, shooter) {
-  if (Math.random() > 0.62) return null; // ~%38 şutlar asistsiz
-  const pool = (team.players || []).filter(
-    (p) =>
-      p &&
-      !p.sentOff &&
-      !p.injured &&
-      p !== shooter &&
-      !isGkPos(p.pos),
-  );
-  if (!pool.length) return null;
-  const weight = (p) => {
-    const fam = posFamily(p.pos);
-    let w = fam === "AM" || fam === "MF" ? 3 : fam === "FW" ? 1.5 : 1;
-    return w * ((Number(p.passing) || 10) + (Number(p.vision) || 10));
-  };
-  const total = pool.reduce((s, p) => s + weight(p), 0);
-  let r = Math.random() * total;
-  for (const p of pool) {
-    r -= weight(p);
-    if (r <= 0) return p;
+  if (!p || p.sentOff || p.injured) {
+    p = players.find((x) => x && !isGkPos(x.pos) && !x.sentOff && !x.injured);
   }
-  return pool[0];
+  return p || null;
+}
+
+function gkOf(match, defendingSide) {
+  const team = match.players[defendingSide] && match.players[defendingSide].team;
+  return findGoalkeeper(team);
 }
 
 /**
- * Şut kalitesini 0–1 aralığında üretir.
- * Yüksek = isabet + gol ihtimali artar.
- */
-function shotQuality(shooter, attackTeam, defendTeam, match, side) {
-  const fin = Number(shooter.finishing) || 10;
-  const tech = Number(shooter.technique) || 10;
-  const pos = Number(shooter.positioning) || 10;
-  const pace = Number(shooter.pace) || 10;
-  const cond = Math.max(0.45, (Number(shooter.condition) || 90) / 100);
-
-  // Şutçu bireysel (~0–20 ölçeği → normalize)
-  let q = (fin * 0.45 + tech * 0.25 + pos * 0.2 + pace * 0.1) / 20;
-
-  // Hücum takım desteği
-  const atkBonus = (attackTeam.matchBonuses || {}).attack || 0;
-  q += atkBonus * 0.015;
-
-  if (attackTeam.gameStyle === "hücumsel") q += 0.04;
-  else if (attackTeam.gameStyle === "defansif") q -= 0.03;
-
-  // Kontra atak: geride/berabere → hızlı geçiş şut bonusu
-  try {
-    if (match && side && isKontraActive(attackTeam, match, side)) {
-      q += 0.055;
-    }
-    // Zaman kazanma: öndeyken geç şut riskini düşür
-    if (match && side && isKeepBallActive(match, side)) {
-      q -= 0.06;
-    }
-  } catch (_) {}
-
-  // Takım gücü farkı
-  const gap = (teamStrength(attackTeam) - teamStrength(defendTeam)) / 100;
-  q += gap * 0.12;
-
-  // Yorgunluk (dakika matchEngine'den gelmiyor; condition zaten proxy)
-  q *= 0.85 + cond * 0.15;
-
-  // Tecrübe (1–10): soğukkanlılık + isabet; düşük seviye dalgalı
-  try {
-    const expF = experienceFactor(shooter); // 0.88–1.14
-    q *= 0.92 + (expF - 0.88) * (0.16 / 0.26); // ~0.92–1.08 bandı
-    // Acemi ekstra varyans (ortalama aynı, bazen kaçırır)
-    const lvl = normalizeExperience(shooter.experience);
-    if (lvl < 4 && Math.random() < 0.12 * (4 - lvl)) {
-      q *= 0.82;
-    }
-  } catch (_) {}
-
-  return Math.max(0.08, Math.min(0.92, q));
-}
-
-/**
- * Kaleci + defans kurtarış gücü (0–1).
- */
-function saveStrength(gk, defendTeam) {
-  const reflex = Number(gk.reflex) || 10;
-  const handling = Number(gk.handling) || 10;
-  const positioning = Number(gk.positioning) || 10;
-  const cond = Math.max(0.5, (Number(gk.condition) || 90) / 100);
-
-  let s = (reflex * 0.45 + handling * 0.35 + positioning * 0.2) / 20;
-  s *= 0.85 + cond * 0.15;
-
-  const defs = (defendTeam.players || []).filter(
-    (p) => isGkPos(p.pos) === false && !p.sentOff && posFamily(p.pos) === "DF",
-  );
-  const defAvg =
-    avg(defs, "tackle", 10) * 0.5 + avg(defs, "positioning", 10) * 0.5;
-  s += (defAvg / 20) * 0.18;
-
-  const defBonus = (defendTeam.matchBonuses || {}).defense || 0;
-  s += defBonus * 0.012;
-
-  if (defendTeam.gameStyle === "defansif") s += 0.04;
-  else if (defendTeam.gameStyle === "hücumsel") s -= 0.025;
-
-  // Kaleci tecrübesi: zamanlama / pozisyon alışkanlığı
-  try {
-    s *= 0.94 + (experienceFactor(gk) - 0.88) * (0.12 / 0.26);
-  } catch (_) {}
-
-  return Math.max(0.12, Math.min(0.88, s));
-}
-
-/**
- * Ana giriş: matchEngine.tick → attemptShot(match, side)
- * @returns {{ scored: boolean, scorer?: string, assist?: string, onTarget?: boolean }}
+ * @returns {{ scored: boolean, text: string, shooter?: object } | null}
  */
 function attemptShot(match, side) {
-  const other = side === "home" ? "away" : "home";
-  const attack = match.players[side].team;
-  const defend = match.players[other].team;
+  const shooter = pickShooter(match, side);
+  if (!shooter) return null;
+
+  const defending = side === "home" ? "away" : "home";
+  const gk = gkOf(match, defending);
+
+  const finishing =
+    skillOf(shooter, "finishing") * 0.55 +
+    skillOf(shooter, "technique") * 0.25 +
+    skillOf(shooter, "pace") * 0.1 +
+    (Number(shooter.form) || 0) * 0.4 +
+    (Number(shooter.condition) || 80) * 0.02;
+
+  const gkSkill = gk
+    ? skillOf(gk, "reflex") * 0.55 +
+      skillOf(gk, "handling") * 0.25 +
+      skillOf(gk, "positioning") * 0.2
+    : 10;
+
+  // Moral / form çarpanı
+  let moraleMod = 1;
+  try {
+    if (match.morale && match.morale[side] != null) {
+      moraleMod = 0.85 + (Number(match.morale[side]) / 100) * 0.3;
+    }
+  } catch (_) {}
+
+  const attackBonus =
+    (match.players[side].team &&
+      match.players[side].team.matchBonuses &&
+      match.players[side].team.matchBonuses.attack) ||
+    0;
+
+  const chance = Math.max(
+    0.08,
+    Math.min(
+      0.72,
+      ((finishing + attackBonus * 0.5) / (finishing + gkSkill + 8)) * moraleMod,
+    ),
+  );
 
   match.stats[side].shots = (match.stats[side].shots || 0) + 1;
 
-  const shooter = pickShooter(attack) || findStriker(attack) || { name: "Oyuncu" };
-  const gk = findGoalkeeper(defend) || { name: "Kaleci", reflex: 10, handling: 10 };
-  const quality = shotQuality(shooter, attack, defend, match, side);
-  const save = saveStrength(gk, defend);
-
-  // İsabet: gerçekçi ~%35–45 isabet; üst sınır sıkı
-  const onTargetChance = Math.max(0.2, Math.min(0.58, 0.28 + quality * 0.42));
-  const onTarget = Math.random() < onTargetChance;
-
-  if (!onTarget) {
-    const lang = (match && match.lang) || "en";
-    const r = Math.random();
-    const key =
-      r < 0.45 ? "shot_wide" : r < 0.75 ? "shot_blocked" : "shot_post";
-    match.addLog && match.addLog(mt(key, lang, { name: shooter.name }));
-    return { scored: false, onTarget: false, scorer: shooter.name };
+  const onTarget = Math.random() < chance + 0.25;
+  if (onTarget) {
+    match.stats[side].onTarget = (match.stats[side].onTarget || 0) + 1;
   }
 
-  match.stats[side].onTarget = (match.stats[side].onTarget || 0) + 1;
-
-  // İsabetli şuttan gol: ortalama ~%28–32 (çok yüksek skorları kes)
-  let goalChance = 0.18 + (quality - save) * 0.38;
-  goalChance = Math.max(0.08, Math.min(0.4, goalChance));
-
-  // Ev sahibi hafif avantaj (şut tarafı home ise)
-  if (side === "home") goalChance += 0.02;
-
-  // Skor farkı: önde olan biraz daha az, geride olan biraz daha istekli
-  const diff = (match.score[side] || 0) - (match.score[other] || 0);
-  if (diff <= -2) goalChance += 0.025;
-  else if (diff >= 2) goalChance -= 0.03;
-  if (diff >= 3) goalChance -= 0.02; // fark açılınca daha da zor
-
-  const scored = Math.random() < goalChance;
+  const scored = onTarget && Math.random() < chance;
+  const name = shooter.name || "Oyuncu";
+  const lang = match.lang || "tr";
 
   if (scored) {
     match.score[side] = (match.score[side] || 0) + 1;
     match.stats[side].goals = (match.stats[side].goals || 0) + 1;
-
     shooter.goals = (shooter.goals || 0) + 1;
-    const assister = pickAssister(attack, shooter);
-    if (assister) assister.assists = (assister.assists || 0) + 1;
-
-    const entry = {
+    match.scorers = match.scorers || [];
+    match.scorers.push({
       side,
-      name: shooter.name,
+      name,
       minute: match.minute,
-      assist: assister ? assister.name : null,
-    };
-    match.scorers.push(entry);
-
-    const lang = (match && match.lang) || "en";
-    const assistText = assister
-      ? mt("assist", lang, { name: assister.name })
-      : "";
-    match.addLog &&
-      match.addLog(
-        mt("goal", lang, {
-          scorer: shooter.name,
-          assist: assistText,
-          min: match.minute,
-          hs: match.score.home,
-          as: match.score.away,
-        }),
-      );
-
+      playerId: shooter.id || null,
+    });
+    const text =
+      typeof mt === "function"
+        ? mt(lang, "goal", { name, minute: match.minute }) ||
+          `⚽ GOL! ${name} (${match.minute}')`
+        : `⚽ GOL! ${name} (${match.minute}')`;
+    match.addLog && match.addLog(text);
     match.broadcast &&
       match.broadcast("match:goal", {
         side,
-        scorer: shooter.name,
-        assist: assister ? assister.name : null,
+        scorer: name,
         minute: match.minute,
-        score: { home: match.score.home, away: match.score.away },
+        score: { ...match.score },
       });
-
-    return {
-      scored: true,
-      onTarget: true,
-      scorer: shooter.name,
-      assist: assister ? assister.name : null,
-    };
+    return { scored: true, text, shooter };
   }
 
-  // İsabetli ama gol değil
-  {
-    const lang = (match && match.lang) || "en";
-    const saveLog =
-      Math.random() < 0.55
-        ? mt("save", lang, {
-            gk: gk.name || "GK",
-            name: shooter.name,
-          })
-        : mt("shot_gk", lang, { name: shooter.name });
-    if (gk.saves != null) gk.saves = (gk.saves || 0) + 1;
-    match.addLog && match.addLog(saveLog);
+  if (onTarget && gk) {
+    gk.saves = (gk.saves || 0) + 1;
+    const text =
+      typeof mt === "function"
+        ? mt(lang, "save", { name: gk.name, shooter: name }) ||
+          `🧤 ${gk.name} kurtardı (${name})`
+        : `🧤 ${(gk && gk.name) || "Kaleci"} kurtardı (${name})`;
+    match.addLog && match.addLog(text);
+    return { scored: false, text, shooter };
   }
-  return { scored: false, onTarget: true, scorer: shooter.name };
+
+  const text =
+    typeof mt === "function"
+      ? mt(lang, "shot_miss", { name }) || `🎯 ${name} şut — isabetsiz`
+      : `🎯 ${name} şut — isabetsiz`;
+  match.addLog && match.addLog(text);
+  return { scored: false, text, shooter };
 }
 
-module.exports = { attemptShot, pickShooter, shotQuality, saveStrength };
+module.exports = { attemptShot };

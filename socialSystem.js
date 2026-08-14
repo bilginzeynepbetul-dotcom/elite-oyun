@@ -1,19 +1,23 @@
 // ============================================================
-// socialSystem.js — Forum / mesaj / bildirim (DB-backed)
-// ------------------------------------------------------------
-// configure opsiyonel; asıl iş repos/socialRepo.js
-// Eski in-memory API korunur (async).
+// socialSystem.js — forum / mesaj / bildirim sarmalayıcı
 // ============================================================
 
 const socialRepo = require("./repos/socialRepo");
 
-let deps = {
-  listUsernames: null,
-  log: console.log,
-};
+async function pushNotification(userId, icon, text, category) {
+  return socialRepo.pushNotification(userId, icon, text, category);
+}
 
-function configure(next) {
-  deps = Object.assign(deps, next || {});
+async function listNotifications(userId) {
+  return socialRepo.listNotifications(userId);
+}
+
+async function markRead(userId) {
+  return socialRepo.markNotificationsRead(userId);
+}
+
+async function unreadCount(userId) {
+  return socialRepo.unreadCount(userId);
 }
 
 async function listForum(limit) {
@@ -42,49 +46,31 @@ async function sendMessage(fromUserId, fromUsername, toUserId, toUsername, text)
   );
 }
 
-async function listRecipients(excludeUserId) {
-  let rows;
-  if (typeof deps.listUsernames === "function") {
-    rows = await Promise.resolve(deps.listUsernames());
-  } else {
-    rows = await socialRepo.listUsernames();
-  }
-  return (rows || [])
-    .filter((u) => String(u.userId) !== String(excludeUserId))
-    .map((u) => ({ userId: u.userId, username: u.username }));
-}
-
-async function listNotifications(userId) {
-  return socialRepo.listNotifications(userId);
-}
-
-async function pushNotification(userId, icon, text, category) {
-  return socialRepo.pushNotification(userId, icon, text, category);
-}
-
-async function markNotificationsRead(userId) {
-  return socialRepo.markNotificationsRead(userId);
-}
-
-async function unreadCount(userId) {
-  return socialRepo.unreadCount(userId);
+async function listUsernames() {
+  return socialRepo.listUsernames();
 }
 
 async function seedForumIfEmpty() {
   return socialRepo.seedForumIfEmpty();
 }
 
+/** Maç sonucu bildirimi (matchLifecycle) */
+async function notifyMatchResult(userId, text) {
+  if (!userId) return;
+  return pushNotification(userId, "⚽", text, "maç");
+}
+
 module.exports = {
-  configure,
+  pushNotification,
+  listNotifications,
+  markRead,
+  unreadCount,
   listForum,
   addForumPost,
   deleteForumPost,
   listMessages,
   sendMessage,
-  listRecipients,
-  listNotifications,
-  pushNotification,
-  markNotificationsRead,
-  unreadCount,
+  listUsernames,
   seedForumIfEmpty,
+  notifyMatchResult,
 };

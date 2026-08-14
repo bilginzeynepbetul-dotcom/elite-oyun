@@ -1,527 +1,368 @@
 // ============================================================
-// transferSystem.js — SUNUCU TARAFLI TRANSFER / AÇIK ARTIRMA
-// ------------------------------------------------------------
-// Bellek içi depo; kalıcılık için save/load kancaları bırakıldı.
-// API katmanı (Express) bu modülü çağırır — bkz. transferRoutes.js
+// transferSystem.js — piyasa, teklif, settle, bot teklifleri
 // ============================================================
 
 const crypto = require("crypto");
+const { query, withTransaction } = require("./db");
+const transferRepo = require("./repos/transferRepo");
+const clubsRepo = require("./repos/clubsRepo");
+const economy = require("./economyBalance");
 
-/** @type {Map<string, object>} listingId → listing */
-const listings = new Map();
+function newId() {
+  return crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
+}
 
-/** Dış bağımlılıklar (server bootstrap'ta inject edilir) */
-let deps = {
-  /** (clubId) => { balance, name, ... } */
-  getClub: null,
-  /** (clubId, amount, label) => boolean — bütçe düş/art, ledger yaz */
-  adjustBalance: null,
-  /** (clubId) => { players, bench, name } */
-  getTeam: null,
-  /** (clubId, team) => void */
-  saveTeam: null,
-  /** (clubId) => userId|null */
-  getUserIdForClub: null,
-  /** optional persistence hooks (async ok, fire-and-forget) */
-  persistListing: null,   // (L) => Promise
-  persistBid: null,       // (listingId, clubId, clubName, amount) => Promise
-  removeListing: null,    // (id, status) => Promise
-  log: console.log,
-};
-
-function _persist(L) {
-  if (typeof deps.persistListing === "function" && L) {
-    Promise.resolve(deps.persistListing(L)).catch((e) =>
-      console.error("[transfer] persistListing", e.message),
-    );
+function playerValue(p) {
+  if (typeof economy.estimatePlayerValueCalibrated === "function") {
+    return economy.estimatePlayerValueCalibrated(p);
   }
+  return 100000;
 }
-function _persistBid(listingId, clubId, clubName, amount) {
-  if (typeof deps.persistBid === "function") {
-    Promise.resolve(deps.persistBid(listingId, clubId, clubName, amount)).catch(
-      (e) => console.error("[transfer] persistBid", e.message),
-    );
+
+async function listMarket() {
+  await settleExpired().catch(() => {});
+  await maybeBotBids().catch(() => {});
+  return transferRepo.loadActiveListings();
+}
+
+async function listPlayer(clubId, playerId, minPrice, hours) {
+  const team = await clubsRepo.getTeam(clubId);
+  if (!team) return { ok: false, error: "Kulüp yok" };
+  const all = [...(team.players || []), ...(team.bench || [])];
+  const player = all.find((p) => p && String(p.id) === String(playerId));
+  if (!player) return { ok: false, error: "Oyuncu bulunamadı" };
+  if ((team.players || []).filter((p) => p && !p.injured).length <= 11 &&
+      (team.players || []).some((p) => p && String(p.id) === String(playerId))) {
+    return { ok: false, error: "İlk 11'den ilan için yeterli kadro yok" };
   }
-}
-function _remove(id, status) {
-  if (typeof deps.removeListing === "function") {
-    Promise.resolve(deps.removeListing(id, status || "expired")).catch((e) =>
-      console.error("[transfer] removeListing", e.message),
-    );
-  }
-}
 
-/** deps async|sync ortak çağrı */
-async function _call(fn, ...args) {
-  if (typeof fn !== "function") return undefined;
-  return await Promise.resolve(fn(...args));
-}
-
-
-
-function configure(next) {
-  deps = Object.assign(deps, next || {});
-}
-
-function uid(prefix) {
-  return (
-    (prefix || "t") +
-    "_" +
-    crypto.randomBytes(6).toString("hex") +
-    "_" +
-    Date.now().toString(36)
+  const club = await clubsRepo.getClub(clubId);
+  const value = playerValue(player);
+  const start = Math.max(
+    Math.floor(value * 0.4),
+    Number(minPrice) || Math.floor(value * 0.5),
   );
-}
+  const durH = Math.max(1, Math.min(72, Number(hours) || 24));
+  const endsAt = Date.now() + durH * 3600 * 1000;
+  const id = newId();
 
-function estimatePlayerValue(p) {
-  const skills = [
-    "pace",
-    "passing",
-    "finishing",
-    "tackle",
-    "vision",
-    "stamina",
-    "strength",
-    "technique",
-    "agility",
-    "positioning",
-    "reflex",
-  ];
-  const avg =
-    skills.reduce((s, k) => s + (Number(p[k]) || 10), 0) / skills.length;
-  const age = p.age || 25;
-  let v = 50000 + avg * 90000;
-  if (age <= 21) v *= 1.35;
-  else if (age <= 24) v *= 1.15;
-  else if (age >= 30) v *= 0.7;
-  else if (age >= 33) v *= 0.45;
-  return Math.round(v / 1000) * 1000;
-}
-
-function generateAiPlayer() {
-  const first = [
-    "Can",
-    "Emre",
-    "Burak",
-    "Arda",
-    "Kerem",
-    "Yusuf",
-    "Mert",
-    "Ozan",
-    "Hakan",
-    "Cenk",
-    "Berkay",
-    "Tolga",
-  ];
-  const last = [
-    "Yılmaz",
-    "Demir",
-    "Kaya",
-    "Çelik",
-    "Şahin",
-    "Aydın",
-    "Öztürk",
-    "Arslan",
-    "Doğan",
-    "Kılıç",
-  ];
-  const positions = [
-    "GK",
-    "DL",
-    "DC",
-    "DR",
-    "DM",
-    "MC",
-    "ML",
-    "MR",
-    "OMC",
-    "FL",
-    "FC",
-    "FR",
-  ];
-  const clubs = [
-    "Anadolu SK",
-    "Ege United",
-    "Karadeniz FC",
-    "Boğaz SK",
-    "Akdenizspor",
-    "İç Anadolu FK",
-    "Trakya FC",
-    "Marmara SK",
-  ];
-  const pos = positions[Math.floor(Math.random() * positions.length)];
-  const skill = () => 8 + Math.floor(Math.random() * 8);
-  const p = {
-    id: uid("pl"),
-    name:
-      first[Math.floor(Math.random() * first.length)] +
-      " " +
-      last[Math.floor(Math.random() * last.length)],
-    pos,
-    naturalPos: pos,
-    age: 18 + Math.floor(Math.random() * 12),
-    number: 1 + Math.floor(Math.random() * 99),
-    pace: skill(),
-    passing: skill(),
-    finishing: skill(),
-    tackle: skill(),
-    vision: skill(),
-    stamina: skill(),
-    strength: skill(),
-    technique: skill(),
-    agility: skill(),
-    positioning: skill(),
-    reflex: skill(),
-    handling: skill(),
-    condition: 85 + Math.floor(Math.random() * 15),
-    form: 0,
-    experience: 2 + Math.floor(Math.random() * 6),
-    happiness: 70 + Math.floor(Math.random() * 25),
-    fromMarket: true,
-    fromAcademy: false,
-  };
-  p.marketValue = estimatePlayerValue(p);
-  return p;
-}
-
-function publicListing(L, viewerClubId) {
-  return {
-    id: L.id,
-    player: L.player,
-    clubName: L.clubName,
-    sellerClubId: L.sellerClubId,
-    listedByUser: !!L.sellerClubId,
-    isMine: !!(viewerClubId && L.sellerClubId === viewerClubId),
-    auctionStart: L.auctionStart,
-    currentBid: L.currentBid,
-    highestBidderClubId: L.highestBidderClubId,
-    highestBidderName: L.highestBidderName,
-    iAmHighest: !!(
-      viewerClubId && L.highestBidderClubId === viewerClubId
-    ),
-    auctionEndsAt: L.auctionEndsAt,
-    bidCount: (L.bidHistory || []).length,
-  };
-}
-
-function seedAiListings(count) {
-  count = count || 8;
-  let added = 0;
-  for (let i = 0; i < count; i++) {
-    const player = generateAiPlayer();
-    const open = player.marketValue;
-    const hours = 24 + Math.floor(Math.random() * 24);
-    const L = {
-      id: uid("lst"),
-      player,
-      clubName: [
-        "Anadolu SK",
-        "Ege United",
-        "Karadeniz FC",
-        "Boğaz SK",
-        "Akdenizspor",
-        "Trakya FC",
-      ][Math.floor(Math.random() * 6)],
-      sellerClubId: null, // AI
-      auctionStart: open,
-      currentBid: open,
-      highestBidderClubId: null,
-      highestBidderName: null,
-      auctionEndsAt: Date.now() + hours * 3600 * 1000,
-      bidHistory: [],
-      createdAt: Date.now(),
-    };
-    listings.set(L.id, L);
-    _persist(L);
-    added++;
-  }
-  return added;
-}
-
-function ensureSeeded() {
-  if (listings.size === 0) seedAiListings(10);
-}
-
-/** GET market */
-async function listMarket(viewerClubId, posFamilyFilter) {
-  ensureSeeded();
-  await settleExpired();
-  const famMap = {
-    GK: ["GK"],
-    DF: ["DL", "DR", "DC", "DC2", "SW"],
-    MF: ["DM", "ML", "MR", "MC", "MC2", "OMC"],
-    FW: ["FL", "FR", "FC"],
-  };
-  let rows = Array.from(listings.values());
-  if (posFamilyFilter && famMap[posFamilyFilter]) {
-    const allow = new Set(famMap[posFamilyFilter]);
-    rows = rows.filter((L) => allow.has(L.player.pos));
-  }
-  rows.sort((a, b) => a.auctionEndsAt - b.auctionEndsAt);
-  return rows.map((L) => publicListing(L, viewerClubId));
-}
-
-/** POST bid */
-async function placeBid(listingId, clubId, clubName, amount) {
-  ensureSeeded();
-  await settleExpired();
-  const L = listings.get(listingId);
-  if (!L) return { ok: false, error: "İhale bulunamadı" };
-  if (Date.now() >= L.auctionEndsAt)
-    return { ok: false, error: "İhale sona erdi" };
-  if (L.sellerClubId && L.sellerClubId === clubId)
-    return { ok: false, error: "Kendi ilanına teklif veremezsin" };
-
-  amount = Math.floor(Number(amount) || 0);
-  const minNext = Math.max(
-    L.currentBid + Math.max(1000, Math.round(L.currentBid * 0.02)),
-    L.auctionStart,
-  );
-  if (amount < minNext) {
-    return {
-      ok: false,
-      error: "Minimum teklif " + minNext.toLocaleString("tr-TR") + " €",
-      minNext,
-    };
-  }
-
-  if (typeof deps.getClub === "function") {
-    const club = await _call(deps.getClub, clubId);
-    if (!club || Number(club.balance || 0) < amount) {
-      return { ok: false, error: "Yetersiz bütçe" };
-    }
-  }
-
-  // Önceki en yüksek teklif sahibinin blokesi bu tasarımda
-  // anlık düşülmez; sonuçlanınca tek seferde tahsil edilir.
-  // (Basit model — ileride escrow eklenebilir.)
-
-  L.bidHistory.push({
-    clubId,
-    clubName,
-    amount,
-    at: Date.now(),
-  });
-  L.currentBid = amount;
-  L.highestBidderClubId = clubId;
-  L.highestBidderName = clubName || "Kulüp";
-
-  // Son 2 dakikada teklif gelirse +2 dk uzat (anti-snipe)
-  const left = L.auctionEndsAt - Date.now();
-  if (left < 2 * 60 * 1000) {
-    L.auctionEndsAt = Date.now() + 2 * 60 * 1000;
-  }
-
-  _persist(L);
-  _persistBid(listingId, clubId, clubName, amount);
-  return { ok: true, listing: publicListing(L, clubId) };
-}
-
-/** Kullanıcı kendi oyuncusunu listeler */
-async function listPlayerForSale(clubId, clubName, player, openPrice, hours) {
-  openPrice = Math.floor(Number(openPrice) || 0);
-  hours = Math.floor(Number(hours) || 0);
-  if (!player || !player.id) return { ok: false, error: "Oyuncu yok" };
-  if (openPrice < 1000) return { ok: false, error: "Min açılış 1.000 €" };
-  if (hours < 24) return { ok: false, error: "Min süre 24 saat" };
-  if (hours > 168) hours = 168; // max 7 gün
-
-  // Zaten listede mi?
-  for (const L of listings.values()) {
-    if (
-      L.sellerClubId === clubId &&
-      String(L.player.id) === String(player.id)
-    ) {
-      return { ok: false, error: "Bu oyuncu zaten listede" };
-    }
-  }
-
-  // Takımdan çıkar
-  if (typeof deps.getTeam === "function" && typeof deps.saveTeam === "function") {
-    const team = await _call(deps.getTeam, clubId);
-    if (!team) return { ok: false, error: "Takım bulunamadı" };
-    const pid = String(player.id);
-    let found = null;
-    const bi = (team.bench || []).findIndex((x) => String(x.id) === pid);
-    if (bi >= 0) {
-      found = team.bench.splice(bi, 1)[0];
-    } else {
-      const pi = (team.players || []).findIndex((x) => String(x.id) === pid);
-      if (pi >= 0) found = team.players.splice(pi, 1)[0];
-    }
-    if (!found) return { ok: false, error: "Oyuncu kadroda değil" };
-    await _call(deps.saveTeam, clubId, team);
-    player = found;
-  }
-
-  const L = {
-    id: uid("lst"),
-    player: Object.assign({}, player),
-    clubName: clubName || "Kulüp",
+  const listing = {
+    id,
+    player: {
+      id: player.id,
+      name: player.name,
+      pos: player.pos,
+      age: player.age,
+      pace: player.pace,
+      passing: player.passing,
+      finishing: player.finishing,
+      tackle: player.tackle,
+      vision: player.vision,
+      stamina: player.stamina,
+      strength: player.strength,
+      technique: player.technique,
+      value,
+    },
     sellerClubId: clubId,
-    auctionStart: openPrice,
-    currentBid: openPrice,
+    clubName: (club && club.name) || "Kulüp",
+    auctionStart: start,
+    currentBid: start,
     highestBidderClubId: null,
     highestBidderName: null,
-    auctionEndsAt: Date.now() + hours * 3600 * 1000,
-    bidHistory: [],
-    createdAt: Date.now(),
+    auctionEndsAt: endsAt,
+    status: "active",
   };
-  listings.set(L.id, L);
-  _persist(L);
-  return { ok: true, listing: publicListing(L, clubId) };
+
+  await transferRepo.upsertListing(listing);
+  // Oyuncuyu satıcı kadrosundan çıkarma — settle'da yapılır (rezervasyon)
+  return { ok: true, listing };
 }
 
-/** Teklif yoksa listeyi iptal et, oyuncuyu yedeğe iade */
-async function cancelListing(listingId, clubId) {
-  const L = listings.get(listingId);
+async function placeBid(clubId, listingId, amount) {
+  const listings = await transferRepo.loadActiveListings();
+  const L = listings.find((x) => String(x.id) === String(listingId));
+  if (!L) return { ok: false, error: "İlan yok veya süresi dolmuş" };
+  if (String(L.sellerClubId) === String(clubId)) {
+    return { ok: false, error: "Kendi ilanına teklif veremezsin" };
+  }
+  const club = await clubsRepo.getClub(clubId);
+  if (!club) return { ok: false, error: "Kulüp yok" };
+
+  // Anti-cheat: tavan / taban / bakiye
+  const v = antiCheat.validateBidAmount(amount, club.balance);
+  if (!v.ok) return v;
+  const bid = v.amount;
+
+  const minNext = Math.floor(L.currentBid * 1.05) || L.auctionStart;
+  if (bid < minNext) {
+    return { ok: false, error: "Minimum teklif " + minNext };
+  }
+
+  // Anti-snipe: son 2 dk → +2 dk
+  let endsAt = L.auctionEndsAt;
+  if (endsAt - Date.now() < 2 * 60 * 1000) {
+    endsAt = Date.now() + 2 * 60 * 1000;
+  }
+
+  await transferRepo.insertBid(
+    listingId,
+    clubId,
+    club.name || "Kulüp",
+    bid,
+  );
+  L.currentBid = bid;
+  L.highestBidderClubId = clubId;
+  L.highestBidderName = club.name;
+  L.auctionEndsAt = endsAt;
+  await transferRepo.upsertListing(L);
+
+  try {
+    const { rows } = await query(`SELECT user_id FROM clubs WHERE id = $1`, [clubId]);
+    const uid = rows[0] && rows[0].user_id;
+    if (uid) {
+      try { await require("./dailyChallengeSystem").onTransferBid(uid); } catch (_) {}
+    }
+  } catch (_) {}
+
+  return { ok: true, listing: L };
+}
+
+async function cancelListing(clubId, listingId) {
+  const listings = await transferRepo.loadActiveListings();
+  const L = listings.find((x) => String(x.id) === String(listingId));
   if (!L) return { ok: false, error: "İlan yok" };
-  if (L.sellerClubId !== clubId)
-    return { ok: false, error: "Bu ilan size ait değil" };
-  if (L.highestBidderClubId)
-    return { ok: false, error: "Teklif varken çekilemez" };
-
-  listings.delete(listingId);
-  _remove(listingId, "cancelled");
-
-  if (typeof deps.getTeam === "function" && typeof deps.saveTeam === "function") {
-    const team = await _call(deps.getTeam, clubId);
-    if (team) {
-      team.bench = team.bench || [];
-      team.bench.push(L.player);
-      await _call(deps.saveTeam, clubId, team);
-    }
+  if (String(L.sellerClubId) !== String(clubId)) {
+    return { ok: false, error: "Bu ilan sana ait değil" };
   }
-  return { ok: true, player: L.player };
+  if (L.highestBidderClubId) {
+    return { ok: false, error: "Teklif varken iptal edilemez" };
+  }
+  await transferRepo.setListingStatus(listingId, "cancelled");
+  return { ok: true };
 }
 
-/** Süresi biten ihaleleri sonuçlandır */
 async function settleExpired() {
-  const now = Date.now();
-  const done = [];
-  for (const [id, L] of listings.entries()) {
-    if (L.auctionEndsAt > now) continue;
-    done.push(id);
-
-    const hasWinner = !!L.highestBidderClubId;
-    const price = L.currentBid;
-
-    if (hasWinner) {
-      let okPay = true;
-      if (typeof deps.adjustBalance === "function") {
-        okPay = await _call(
-          deps.adjustBalance,
-          L.highestBidderClubId,
-          -price,
-          "Transfer: " + (L.player.name || "Oyuncu"),
-        );
-        if (!okPay) {
-          if (L.sellerClubId && typeof deps.getTeam === "function") {
-            const team = await _call(deps.getTeam, L.sellerClubId);
-            if (team) {
-              team.bench = team.bench || [];
-              team.bench.push(L.player);
-              await _call(deps.saveTeam, L.sellerClubId, team);
-            }
-          }
-          listings.delete(id);
-          _remove(id, "expired");
-          continue;
-        }
-      }
-      if (L.sellerClubId && typeof deps.adjustBalance === "function") {
-        await _call(
-          deps.adjustBalance,
-          L.sellerClubId,
-          price,
-          "Transfer satışı: " + (L.player.name || "Oyuncu"),
-        );
-      }
-      if (typeof deps.getTeam === "function" && typeof deps.saveTeam === "function") {
-        const buyerTeam = await _call(deps.getTeam, L.highestBidderClubId);
-        if (buyerTeam) {
-          buyerTeam.bench = buyerTeam.bench || [];
-          const np = Object.assign({}, L.player, {
-            fromMarket: true,
-            listedByUser: false,
-          });
-          buyerTeam.bench.push(np);
-          await _call(deps.saveTeam, L.highestBidderClubId, buyerTeam);
-        }
-      }
-      deps.log &&
-        deps.log(
-          "[transfer] sold",
-          L.player.name,
-          "→",
-          L.highestBidderName,
-          price,
-        );
-    } else if (L.sellerClubId) {
-      if (typeof deps.getTeam === "function" && typeof deps.saveTeam === "function") {
-        const team = await _call(deps.getTeam, L.sellerClubId);
-        if (team) {
-          team.bench = team.bench || [];
-          team.bench.push(L.player);
-          await _call(deps.saveTeam, L.sellerClubId, team);
-        }
-      }
-    }
-    listings.delete(id);
-    _remove(id, hasWinner ? "sold" : "expired");
-  }
-  return done.length;
-}
-
-/** AI piyasasını yenile (kullanıcı ilanları korunur) */
-function refreshAiMarket() {
-  for (const [id, L] of listings.entries()) {
-    if (!L.sellerClubId) {
-      listings.delete(id);
-      _remove(id, "expired");
+  const { rows } = await query(
+    `SELECT id FROM transfer_listings
+     WHERE status = 'active' AND auction_ends_at <= NOW()
+     LIMIT 30`,
+  );
+  for (const row of rows) {
+    try {
+      await settleOne(row.id);
+    } catch (e) {
+      console.warn("[transfer] settle", row.id, e.message);
     }
   }
-  return seedAiListings(8);
 }
 
-/** Periyodik settlement timer */
-let _timer = null;
-function startSettlementTimer(ms) {
-  if (_timer) return;
-  _timer = setInterval(() => {
-    Promise.resolve(settleExpired()).catch((e) => {
-      console.error("[transfer] settle", e);
+async function settleOne(listingId) {
+  return withTransaction(async (client) => {
+    const { rows } = await client.query(
+      `SELECT * FROM transfer_listings WHERE id = $1 FOR UPDATE`,
+      [listingId],
+    );
+    const L = rows[0];
+    if (!L || L.status !== "active") return { ok: false };
+    if (new Date(L.auction_ends_at) > new Date()) return { ok: false };
+
+    const buyerId = L.highest_bidder_club_id;
+    const amount = Number(L.current_bid) || 0;
+    const sellerId = L.seller_club_id;
+    const playerId = L.player_id;
+    const snap = L.player_snapshot || {};
+
+    if (!buyerId || amount <= 0) {
+      await client.query(
+        `UPDATE transfer_listings SET status = 'expired' WHERE id = $1`,
+        [listingId],
+      );
+      return { ok: true, result: "expired" };
+    }
+
+    // Alıcı bot mu?
+    const { rows: buyerRows } = await client.query(
+      `SELECT id, user_id, is_bot, balance, name FROM clubs WHERE id = $1 FOR UPDATE`,
+      [buyerId],
+    );
+    const buyer = buyerRows[0];
+    const isBotBuyer = buyer && (buyer.is_bot || !buyer.user_id);
+
+    if (isBotBuyer) {
+      // Bot kazandı: satıcıya ödeme, oyuncu piyasadan çıkar (bot kadrosuna eklenmez)
+      if (sellerId) {
+        await client.query(
+          `UPDATE clubs SET balance = balance + $2 WHERE id = $1`,
+          [sellerId, amount],
+        );
+        await client.query(
+          `INSERT INTO finance_ledger (club_id, amount, label) VALUES ($1, $2, $3)`,
+          [sellerId, amount, "Transfer satışı (bot alıcı)"],
+        );
+      }
+      if (playerId) {
+        await client.query(
+          `UPDATE players SET club_id = NULL, is_starter = FALSE WHERE id = $1`,
+          [playerId],
+        );
+      }
+      await client.query(
+        `UPDATE transfer_listings SET status = 'sold' WHERE id = $1`,
+        [listingId],
+      );
+      return { ok: true, result: "sold_to_bot" };
+    }
+
+    // İnsan alıcı
+    if (!buyer || Number(buyer.balance) < amount) {
+      await client.query(
+        `UPDATE transfer_listings SET status = 'expired' WHERE id = $1`,
+        [listingId],
+      );
+      return { ok: true, result: "buyer_broke" };
+    }
+
+    await client.query(
+      `UPDATE clubs SET balance = balance - $2 WHERE id = $1`,
+      [buyerId, amount],
+    );
+    await client.query(
+      `INSERT INTO finance_ledger (club_id, amount, label) VALUES ($1, $2, $3)`,
+      [buyerId, -amount, "Transfer alımı: " + (snap.name || "")],
+    );
+    if (sellerId) {
+      await client.query(
+        `UPDATE clubs SET balance = balance + $2 WHERE id = $1`,
+        [sellerId, amount],
+      );
+      await client.query(
+        `INSERT INTO finance_ledger (club_id, amount, label) VALUES ($1, $2, $3)`,
+        [sellerId, amount, "Transfer satışı: " + (snap.name || "")],
+      );
+    }
+    if (playerId) {
+      await client.query(
+        `UPDATE players SET club_id = $2, is_starter = FALSE, bench_order = 99
+         WHERE id = $1`,
+        [playerId, buyerId],
+      );
+    }
+    await client.query(
+      `UPDATE transfer_listings SET status = 'sold' WHERE id = $1`,
+      [listingId],
+    );
+
+    // Achievements outside tx best-effort
+    setImmediate(async () => {
+      try {
+        const ach = require("./achievementsSystem");
+const antiCheat = require("./antiCheat");
+        if (buyerId) {
+          const { rows: br } = await query(
+            `SELECT user_id FROM clubs WHERE id = $1`, [buyerId],
+          );
+          if (br[0] && br[0].user_id) await ach.onTransferBuy(br[0].user_id);
+        }
+        if (sellerId) {
+          const { rows: sr } = await query(
+            `SELECT user_id FROM clubs WHERE id = $1`, [sellerId],
+          );
+          if (sr[0] && sr[0].user_id) await ach.onTransferSell(sr[0].user_id);
+        }
+      } catch (_) {}
     });
-  }, ms || 30 * 1000);
-}
 
-function getListing(id) {
-  return listings.get(id) || null;
-}
-
-function dumpAll() {
-  return Array.from(listings.values());
-}
-
-function loadAll(arr) {
-  listings.clear();
-  (arr || []).forEach((L) => {
-    if (L && L.id) listings.set(L.id, L);
+    return { ok: true, result: "sold" };
   });
+}
+
+/** Bot teklifleri (TRANSFER_BOT.md) */
+async function maybeBotBids() {
+  const listings = await transferRepo.loadActiveListings();
+  if (!listings.length) return;
+
+  const { rows: bots } = await query(
+    `SELECT id, name FROM clubs WHERE COALESCE(is_bot, FALSE) = TRUE LIMIT 40`,
+  );
+  if (!bots.length) return;
+
+  for (const L of listings) {
+    const remaining = L.auctionEndsAt - Date.now();
+    if (remaining <= 0) continue;
+
+    const sellerIsHuman = await isHumanClub(L.sellerClubId);
+    let chance = sellerIsHuman ? 0.35 : 0.18;
+    if (remaining < 5 * 60 * 1000) chance *= 1.8;
+    else if (remaining < 30 * 60 * 1000) chance *= 1.35;
+
+    // Bot zaten liderse seyrek
+    if (L.highestBidderClubId) {
+      const leaderBot = bots.some(
+        (b) => String(b.id) === String(L.highestBidderClubId),
+      );
+      if (leaderBot) chance *= 0.25;
+    }
+
+    if (Math.random() > chance) continue;
+
+    const value = (L.player && L.player.value) || L.auctionStart * 1.5;
+    const cap = Math.floor(value * 1.28);
+    if (L.currentBid >= cap) continue;
+
+    const step = Math.max(
+      1000,
+      Math.floor(L.currentBid * (0.03 + Math.random() * 0.05)),
+    );
+    const bid = Math.min(cap, L.currentBid + step);
+    const bot = bots[Math.floor(Math.random() * bots.length)];
+    if (String(bot.id) === String(L.sellerClubId)) continue;
+    if (String(bot.id) === String(L.highestBidderClubId)) continue;
+
+    try {
+      let endsAt = L.auctionEndsAt;
+      if (endsAt - Date.now() < 2 * 60 * 1000) {
+        endsAt = Date.now() + 2 * 60 * 1000;
+      }
+      await transferRepo.insertBid(L.id, bot.id, bot.name, bid);
+      L.currentBid = bid;
+      L.highestBidderClubId = bot.id;
+      L.highestBidderName = bot.name;
+      L.auctionEndsAt = endsAt;
+      await transferRepo.upsertListing(L);
+    } catch (e) {
+      /* ignore */
+    }
+  }
+}
+
+async function isHumanClub(clubId) {
+  if (!clubId) return false;
+  const { rows } = await query(
+    `SELECT user_id, COALESCE(is_bot, FALSE) AS is_bot FROM clubs WHERE id = $1`,
+    [clubId],
+  );
+  return rows[0] && rows[0].user_id && !rows[0].is_bot;
+}
+
+// Periyodik settle
+let settleTimer = null;
+function startTransferLoop() {
+  if (settleTimer) return;
+  settleTimer = setInterval(() => {
+    settleExpired().catch((e) =>
+      console.warn("[transfer] settle loop", e.message),
+    );
+    maybeBotBids().catch(() => {});
+  }, 30000);
 }
 
 module.exports = {
-  configure,
   listMarket,
+  listPlayer,
   placeBid,
-  listPlayerForSale,
   cancelListing,
   settleExpired,
-  refreshAiMarket,
-  seedAiListings,
-  startSettlementTimer,
-  getListing,
-  dumpAll,
-  loadAll,
-  estimatePlayerValue,
+  maybeBotBids,
+  startTransferLoop,
+  playerValue,
 };

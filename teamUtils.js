@@ -1,202 +1,183 @@
 // ============================================================
-// teamUtils.js — shotSystem.js ve ballSystem.js'in ortak kullandığı
-// pozisyon/istatistik yardımcıları (tek yerden yönetmek için).
+// teamUtils.js — Pozisyon / formasyon / güç yardımcıları
 // ============================================================
 
 function posFamily(pos) {
-  if (!pos) return "MF";
-  if (pos === "GK") return "GK";
-  if (["DL", "DR", "DC", "DC2", "SW"].includes(pos)) return "DF";
-  if (pos === "DM") return "DM";
-  if (["ML", "MR", "MC", "MC2"].includes(pos)) return "MF";
-  if (pos === "OMC") return "AM";
-  if (["FL", "FR", "FC"].includes(pos)) return "FW";
-  return "MF";
+  const p = String(pos || "").toUpperCase();
+  if (p === "GK") return "gk";
+  if (["DL", "DC", "DR", "WBL", "WBR"].includes(p)) return "def";
+  if (["DM", "MC", "ML", "MR", "OMC", "AML", "AMR", "AMC"].includes(p))
+    return "mid";
+  if (["FL", "FR", "FC", "ST", "CF"].includes(p)) return "fwd";
+  return "mid";
 }
-const isGkPos = (pos) => posFamily(pos) === "GK";
-const isFwdPos = (pos) => posFamily(pos) === "FW";
-const isDefPos = (pos) => posFamily(pos) === "DF";
 
-function findStriker(team) {
-  return (
-    team.players.find((p) => isFwdPos(p.pos) && !p.sentOff) ||
-    team.players.find((p) => posFamily(p.pos) === "AM" && !p.sentOff) ||
-    team.players.find((p) => p.pos !== "GK" && !p.sentOff) ||
-    team.players[0]
-  );
+function isGkPos(pos) {
+  return String(pos || "").toUpperCase() === "GK";
+}
+
+function isFwdPos(pos) {
+  return posFamily(pos) === "fwd";
+}
+
+function avg(nums) {
+  const arr = (nums || []).filter((n) => Number.isFinite(Number(n)));
+  if (!arr.length) return 10;
+  return arr.reduce((s, n) => s + Number(n), 0) / arr.length;
+}
+
+function skillOf(p, key, fallback = 10) {
+  if (!p) return fallback;
+  const v = p[key];
+  return Number.isFinite(Number(v)) ? Number(v) : fallback;
+}
+
+function teamStrength(team) {
+  const players = (team && team.players) || [];
+  if (!players.length) return 10;
+  const keys = [
+    "pace",
+    "passing",
+    "finishing",
+    "tackle",
+    "vision",
+    "stamina",
+    "strength",
+    "technique",
+    "agility",
+    "positioning",
+  ];
+  let sum = 0;
+  let n = 0;
+  for (const p of players) {
+    if (!p || p.sentOff || p.injured) continue;
+    for (const k of keys) {
+      sum += skillOf(p, k);
+      n++;
+    }
+  }
+  return n ? sum / n : 10;
+}
+
+function teamAvgExperience(team) {
+  const players = (team && team.players) || [];
+  if (!players.length) return 5;
+  let s = 0;
+  let n = 0;
+  for (const p of players) {
+    if (!p) continue;
+    s += Number(p.experience) || Number(p.age) || 22;
+    n++;
+  }
+  return n ? s / n : 5;
+}
+
+function experienceErrorFactor(team) {
+  const exp = teamAvgExperience(team);
+  // Genç/tecrübesiz → hata ihtimali biraz daha yüksek
+  if (exp < 20) return 1.15;
+  if (exp < 24) return 1.05;
+  if (exp > 30) return 0.92;
+  return 1.0;
 }
 
 function findGoalkeeper(team) {
-  return team.players.find((p) => isGkPos(p.pos)) || team.players[0];
-}
-
-function avg(players, key, fallback = 10) {
-  if (!players.length) return fallback;
-  const sum = players.reduce((acc, p) => acc + (Number(p[key]) || fallback), 0);
-  return sum / players.length;
-}
-
-/** index-30.html'deki calculateTeamStrength() portu (qBoost/leagueStr hariç) */
-function teamStrength(team) {
-  const outfield = team.players.filter((p) => p.pos !== "GK" && !p.sentOff);
-  if (!outfield.length) return 40;
-
-  const base =
-    (avg(outfield, "passing") +
-      avg(outfield, "finishing") +
-      avg(outfield, "pace") +
-      avg(outfield, "technique") +
-      avg(outfield, "positioning") +
-      avg(outfield, "tackle") +
-      avg(outfield, "stamina") +
-      avg(outfield, "strength")) /
-    8;
-
-  const condFactor = (avg(outfield, "condition", 85) / 100) * 1.15;
-
-  const bonuses = team.matchBonuses || { attack: 0, midfield: 0, defense: 0 };
-  const tacticalBoost =
-    (bonuses.attack || 0) * 1.8 +
-    (bonuses.midfield || 0) * 1.2 +
-    (bonuses.defense || 0) * 0.6;
-
-  let styleBoost = 0;
-  if (team.gameStyle === "hücumsel") styleBoost = 2.2;
-  else if (team.gameStyle === "defansif") styleBoost = -1.2;
-
-  const sentOffCount = team.players.filter((p) => p.sentOff).length;
-  const cardPenalty = sentOffCount * 4;
-
-  const raw =
-    (base * 4.5 + tacticalBoost + styleBoost - cardPenalty) *
-    Math.max(0.55, Math.min(1.2, condFactor));
-
-  return Math.max(25, Math.min(120, raw));
-}
-
-// ============================================================
-// FORMASYON KOORDİNATLARI (canvas x/y) — index.html'deki
-// getHomePositions() ile aynı sıra: mockTeam.js POSITIONS =
-// GK,DL,DC,DC2,DR,DM,MC,MC2,OMC,FL,FR
-// ============================================================
-const FORMATION_SLOTS = [
-  { x: 50, y: 200 }, // GK
-  { x: 130, y: 50 }, // DL
-  { x: 125, y: 140 }, // DC
-  { x: 125, y: 260 }, // DC2
-  { x: 130, y: 350 }, // DR
-  { x: 210, y: 200 }, // DM
-  { x: 300, y: 145 }, // MC
-  { x: 300, y: 255 }, // MC2
-  { x: 410, y: 200 }, // OMC
-  { x: 495, y: 55 }, // FL
-  { x: 495, y: 345 }, // FR
-];
-const BENCH_SLOT = { x: 300, y: 200 };
-
-/** Ev sahibi normal, deplasman aynadan (x' = 600 - x) yerleşir. */
-function assignFormationPositions(homeTeam, awayTeam) {
-  function assign(team, mirror) {
-    (team.players || []).forEach((p, i) => {
-      const slot = FORMATION_SLOTS[i] || FORMATION_SLOTS[FORMATION_SLOTS.length - 1];
-      p.x = mirror ? 600 - slot.x : slot.x;
-      p.y = slot.y;
-    });
-    (team.bench || []).forEach((p) => {
-      p.x = mirror ? 600 - BENCH_SLOT.x : BENCH_SLOT.x;
-      p.y = BENCH_SLOT.y;
-    });
-  }
-  assign(homeTeam, false);
-  assign(awayTeam, true);
-}
-
-// ============================================================
-// TECRÜBE (1–10 seviye)
-// ------------------------------------------------------------
-// Eski kayıtlar 0–99 ölçeğinde olabilirdi → otomatik 1–10'a sıkıştırılır.
-// Seviye 1 = acemi, 5 = ortalama, 10 = efsane.
-// ============================================================
-function clampExp(v) {
-  const n = Number(v);
-  if (!isFinite(n)) return 3;
-  return Math.max(1, Math.min(10, n));
-}
-
-/** Ham değeri 1–10 aralığına normalize eder (legacy 0–99 destekli). */
-function normalizeExperience(raw) {
-  let n = Number(raw);
-  if (!isFinite(n) || n <= 0) return 3;
-  // Eski ölçek: 10'dan büyükse 1–10'a map
-  if (n > 10) {
-    // 0–99 → 1–10
-    n = 1 + (Math.min(99, n) / 99) * 9;
-  }
-  return clampExp(n);
-}
-
-/** Tam sayı seviye 1–10 (UI / etiket). */
-function experienceLevel(playerOrValue) {
-  const raw =
-    playerOrValue != null && typeof playerOrValue === "object"
-      ? playerOrValue.experience
-      : playerOrValue;
-  return Math.round(normalizeExperience(raw));
-}
-
-/**
- * Çarpan: seviye 1 → ~0.88, 5 → 1.00, 10 → ~1.14
- * Şut kalitesi, top tutma, kurtarış vb. için.
- */
-function experienceFactor(playerOrValue) {
-  const lvl = normalizeExperience(
-    playerOrValue != null && typeof playerOrValue === "object"
-      ? playerOrValue.experience
-      : playerOrValue,
-  );
-  // (lvl - 5) * 0.028 → ±0.14 civarı
-  return 1 + (lvl - 5) * 0.028;
-}
-
-/** Hata / top kaybı risk çarpanı: yüksek tecrübe → daha az hata (0.82–1.18). */
-function experienceErrorFactor(playerOrValue) {
-  const lvl = normalizeExperience(
-    playerOrValue != null && typeof playerOrValue === "object"
-      ? playerOrValue.experience
-      : playerOrValue,
-  );
-  // seviye 10 → 0.82 (az hata), seviye 1 → 1.18
-  return 1 - (lvl - 5) * 0.04;
-}
-
-/** Takım saha ortalaması tecrübe (1–10). */
-function teamAvgExperience(team) {
   const players = (team && team.players) || [];
-  let sum = 0;
-  let n = 0;
-  for (let i = 0; i < players.length; i++) {
-    const p = players[i];
-    if (!p || p.sentOff || p.pos === "GK") continue;
-    sum += normalizeExperience(p.experience);
-    n++;
+  return players.find((p) => p && isGkPos(p.pos)) || players[0] || null;
+}
+
+function findStriker(team) {
+  const players = (team && team.players) || [];
+  const fwds = players.filter((p) => p && isFwdPos(p.pos) && !p.sentOff);
+  if (fwds.length) return fwds[0];
+  return players.find((p) => p && !isGkPos(p.pos) && !p.sentOff) || null;
+}
+
+/** Basit formasyon slotları (pitch 600x400 varsayımı) */
+const FORMATION_SLOTS = {
+  "4-4-2": [
+    { x: 40, y: 200 },
+    { x: 120, y: 50 },
+    { x: 115, y: 140 },
+    { x: 115, y: 260 },
+    { x: 120, y: 350 },
+    { x: 220, y: 60 },
+    { x: 230, y: 150 },
+    { x: 230, y: 250 },
+    { x: 220, y: 340 },
+    { x: 400, y: 120 },
+    { x: 400, y: 280 },
+  ],
+  "4-3-3": [
+    { x: 40, y: 200 },
+    { x: 120, y: 50 },
+    { x: 115, y: 140 },
+    { x: 115, y: 260 },
+    { x: 120, y: 350 },
+    { x: 240, y: 100 },
+    { x: 250, y: 200 },
+    { x: 240, y: 300 },
+    { x: 420, y: 60 },
+    { x: 450, y: 200 },
+    { x: 420, y: 340 },
+  ],
+  "4-2-3-1": [
+    { x: 40, y: 200 },
+    { x: 120, y: 50 },
+    { x: 115, y: 140 },
+    { x: 115, y: 260 },
+    { x: 120, y: 350 },
+    { x: 210, y: 140 },
+    { x: 210, y: 260 },
+    { x: 320, y: 60 },
+    { x: 330, y: 200 },
+    { x: 320, y: 340 },
+    { x: 460, y: 200 },
+  ],
+  default: [
+    { x: 50, y: 200 },
+    { x: 130, y: 50 },
+    { x: 125, y: 140 },
+    { x: 125, y: 260 },
+    { x: 130, y: 350 },
+    { x: 210, y: 200 },
+    { x: 300, y: 145 },
+    { x: 300, y: 255 },
+    { x: 410, y: 200 },
+    { x: 495, y: 55 },
+    { x: 495, y: 345 },
+  ],
+};
+
+function assignFormationPositions(homeTeam, awayTeam) {
+  function place(team, mirror) {
+    if (!team || !Array.isArray(team.players)) return;
+    const form = (team.formation || "4-4-2").toString();
+    const slots = FORMATION_SLOTS[form] || FORMATION_SLOTS.default;
+    team.players.forEach((p, i) => {
+      if (!p) return;
+      const slot = slots[i] || slots[slots.length - 1];
+      let x = slot.x;
+      let y = slot.y;
+      if (mirror) x = 600 - x;
+      p.x = x;
+      p.y = y;
+    });
   }
-  return n ? sum / n : 5;
+  place(homeTeam, false);
+  place(awayTeam, true);
 }
 
 module.exports = {
   posFamily,
   isGkPos,
   isFwdPos,
-  isDefPos,
-  findStriker,
-  findGoalkeeper,
   avg,
+  skillOf,
   teamStrength,
-  assignFormationPositions,
-  clampExp,
-  normalizeExperience,
-  experienceLevel,
-  experienceFactor,
-  experienceErrorFactor,
   teamAvgExperience,
+  experienceErrorFactor,
+  findGoalkeeper,
+  findStriker,
+  assignFormationPositions,
 };

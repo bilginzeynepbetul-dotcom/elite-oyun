@@ -1,186 +1,97 @@
 // ============================================================
-// stadiumSystem.js — SUNUCU TARAFLI STADYUM (async DB)
+// stadiumSystem.js — kapasite / bilet / isim
 // ============================================================
 
-const DEFAULT_CAPACITY = 24500;
-const DEFAULT_TICKET = 12;
-const SEAT_UPGRADE_AMOUNT = 1000;
-const SEAT_UPGRADE_COST = 45000;
-const MAX_CAPACITY = 120000;
-const MIN_TICKET = 5;
-const MAX_TICKET = 80;
+const stadiumRepo = require("./repos/stadiumRepo");
+const clubsRepo = require("./repos/clubsRepo");
+const economy = require("./economyBalance");
 
-const store = new Map();
-
-let deps = {
-  getClub: null,
-  adjustBalance: null,
-  getStadiumState: null,
-  saveStadiumState: null,
-  getTeamName: null,
-  log: console.log,
-};
-
-function configure(next) {
-  deps = Object.assign(deps, next || {});
-}
-
-async function _call(fn, ...args) {
-  if (typeof fn !== "function") return undefined;
-  return await Promise.resolve(fn(...args));
-}
-
-async function defaultState(clubId) {
-  let name = "Arena";
-  if (typeof deps.getTeamName === "function") {
-    try {
-      const tn = await _call(deps.getTeamName, clubId);
-      if (tn) name = tn + " Arena";
-    } catch (e) {}
-  }
-  return {
-    name,
-    capacity: DEFAULT_CAPACITY,
-    ticketPrice: DEFAULT_TICKET,
-    seatUpgradeCost: SEAT_UPGRADE_COST,
+async function ensureStadium(clubId, clubName) {
+  let state = await stadiumRepo.getStadiumState(clubId);
+  if (state) return state;
+  state = {
+    name: (clubName || "Kulüp") + " Arena",
+    capacity: 24500,
+    ticketPrice: 12,
+    seatUpgradeCost: economy.STADIUM
+      ? economy.STADIUM.baseUpgrade || 45000
+      : 45000,
     totalUpgrades: 0,
   };
-}
-
-async function loadState(clubId) {
-  if (store.has(clubId)) return store.get(clubId);
-  let s = null;
-  if (typeof deps.getStadiumState === "function") {
-    try {
-      s = await _call(deps.getStadiumState, clubId);
-    } catch (e) {}
-  }
-  if (!s) s = await defaultState(clubId);
-  store.set(clubId, s);
-  return s;
-}
-
-async function persist(clubId, s) {
-  store.set(clubId, s);
-  if (typeof deps.saveStadiumState === "function") {
-    try {
-      await _call(deps.saveStadiumState, clubId, s);
-    } catch (e) {}
-  }
-}
-
-function publicState(s) {
-  return {
-    name: s.name,
-    capacity: s.capacity,
-    ticketPrice: s.ticketPrice,
-    seatUpgradeCost: s.seatUpgradeCost || SEAT_UPGRADE_COST,
-    totalUpgrades: s.totalUpgrades || 0,
-    maxCapacity: MAX_CAPACITY,
-    canUpgrade: (s.capacity || 0) + SEAT_UPGRADE_AMOUNT <= MAX_CAPACITY,
-  };
+  await stadiumRepo.saveStadiumState(clubId, state);
+  return state;
 }
 
 async function getState(clubId) {
-  return publicState(await loadState(clubId));
+  const club = await clubsRepo.getClub(clubId);
+  return ensureStadium(clubId, club && club.name);
 }
 
 async function upgradeSeats(clubId) {
-  const s = await loadState(clubId);
-  if ((s.capacity || 0) + SEAT_UPGRADE_AMOUNT > MAX_CAPACITY) {
-    return { ok: false, error: "Maksimum kapasiteye ulaşıldı" };
-  }
-  const cost = s.seatUpgradeCost || SEAT_UPGRADE_COST;
-  if (typeof deps.adjustBalance === "function") {
-    const ok = await _call(
-      deps.adjustBalance,
-      clubId,
-      -cost,
-      "Stadyum koltuk +1000",
-    );
-    if (!ok) return { ok: false, error: "Yetersiz bütçe" };
-  }
-  s.capacity = (s.capacity || DEFAULT_CAPACITY) + SEAT_UPGRADE_AMOUNT;
-  s.totalUpgrades = (s.totalUpgrades || 0) + 1;
-  await persist(clubId, s);
-  deps.log && deps.log("[stadium] upgrade", clubId, s.capacity);
-  return { ok: true, state: publicState(s), cost };
+  const state = await getState(clubId);
+  const cost =
+    typeof economy.stadiumUpgradeCost === "function"
+      ? economy.stadiumUpgradeCost(state.totalUpgrades || 0)
+      : Math.round((state.seatUpgradeCost || 45000) * Math.pow(1.08, state.totalUpgrades || 0));
+
+  const ok = await clubsRepo.adjustBalance(clubId, -cost, "Stadyum kapasite yükseltme");
+  if (!ok) return { ok: false, error: "Yetersiz bakiye", cost };
+
+  const add = 1000;
+  state.capacity = Math.min(120000, (state.capacity || 24500) + add);
+  state.totalUpgrades = (state.totalUpgrades || 0) + 1;
+  state.seatUpgradeCost = Math.round(cost * 1.08);
+  await stadiumRepo.saveStadiumState(clubId, state);
+  return { ok: true, state, cost };
 }
 
 async function setTicketPrice(clubId, price) {
-  price = Math.floor(Number(price) || 0);
-  if (price < MIN_TICKET || price > MAX_TICKET) {
-    return {
-      ok: false,
-      error: "Bilet fiyatı " + MIN_TICKET + "–" + MAX_TICKET + " € olmalı",
-    };
-  }
-  const s = await loadState(clubId);
-  s.ticketPrice = price;
-  await persist(clubId, s);
-  return { ok: true, state: publicState(s) };
+  const state = await getState(clubId);
+  const p = Math.max(5, Math.min(80, Math.round(Number(price) || 12)));
+  state.ticketPrice = p;
+  await stadiumRepo.saveStadiumState(clubId, state);
+  return { ok: true, state };
 }
 
-async function renameStadium(clubId, name) {
-  name = String(name || "").trim().slice(0, 40);
-  if (name.length < 3) return { ok: false, error: "İsim en az 3 karakter" };
-  const s = await loadState(clubId);
-  s.name = name;
-  await persist(clubId, s);
-  return { ok: true, state: publicState(s) };
+async function rename(clubId, name) {
+  const state = await getState(clubId);
+  const n = String(name || "").trim().slice(0, 64);
+  if (!n) return { ok: false, error: "İsim gerekli" };
+  state.name = n;
+  await stadiumRepo.saveStadiumState(clubId, state);
+  return { ok: true, state };
 }
 
-async function applyMatchTicketRevenue(clubId, opts) {
-  opts = opts || {};
-  const s = await loadState(clubId);
-  const isHome = opts.isHome !== false;
-  const comp = opts.comp || "lig";
+/** Maç sonrası bilet geliri (matchLifecycle) */
+async function applyTicketRevenue(clubId, opts) {
+  if (!clubId) return { ok: false };
+  const state = await getState(clubId);
+  const capacity = state.capacity || 24500;
+  const price = state.ticketPrice || 12;
+  const isHome = opts && opts.isHome !== false;
+  if (!isHome) return { ok: true, amount: 0 };
 
-  if (!isHome) {
-    return {
-      tickets: 0,
-      attendance: 0,
-      label: "Deplasman — bilet geliri yok",
-      isHome: false,
-    };
-  }
+  let fill = 0.55;
+  const result = opts && opts.result; // win|draw|loss
+  if (result === "win") fill = 0.78;
+  else if (result === "draw") fill = 0.62;
+  else if (result === "loss") fill = 0.48;
+  const kind = (opts && (opts.kind || opts.comp)) || "league";
+  if (kind === "continental" || kind === "kitasal") fill = Math.min(0.95, fill * 1.25);
+  if (kind === "cup" || kind === "kupa") fill = Math.min(0.92, fill * 1.1);
 
-  const attendance = Math.min(
-    s.capacity,
-    Math.floor(s.capacity * (0.55 + Math.random() * 0.4)),
-  );
-  let gate = attendance * (s.ticketPrice || DEFAULT_TICKET);
-  let label = "Lig bilet geliri";
-  if (comp === "kupa" || comp === "dostluk") {
-    gate = Math.round(gate / 2);
-    label =
-      (comp === "kupa" ? "Kupa" : "Dostluk") + " bilet (eşit paylaşım)";
-  }
-
-  if (typeof deps.adjustBalance === "function") {
-    await _call(
-      deps.adjustBalance,
-      clubId,
-      gate,
-      label + " (" + attendance.toLocaleString("tr-TR") + " seyirci)",
-    );
-  }
-
-  return {
-    tickets: gate,
-    attendance,
-    label,
-    isHome: true,
-  };
+  const attendance = Math.floor(capacity * fill);
+  const amount = attendance * price;
+  await clubsRepo.adjustBalance(clubId, amount, "Maç bilet geliri");
+  return { ok: true, amount, attendance, tickets: amount };
 }
 
 module.exports = {
-  configure,
+  applyMatchTicketRevenue: applyTicketRevenue,
+  ensureStadium,
   getState,
   upgradeSeats,
   setTicketPrice,
-  renameStadium,
-  applyMatchTicketRevenue,
-  SEAT_UPGRADE_COST,
-  SEAT_UPGRADE_AMOUNT,
+  rename,
+  applyTicketRevenue,
 };
