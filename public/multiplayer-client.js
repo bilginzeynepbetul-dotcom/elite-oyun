@@ -102,6 +102,10 @@
   let _emMyClub = null;
   let _emPlayerIdCounter = 1;
 
+  const REFRESH_TOKEN_KEY = "em_jwt_refresh";
+  let _emRefreshPromise = null;
+  let _emRefreshTimer = null;
+
   function getToken() {
     return localStorage.getItem(TOKEN_KEY);
   }
@@ -109,6 +113,94 @@
     if (t) localStorage.setItem(TOKEN_KEY, t);
     else localStorage.removeItem(TOKEN_KEY);
   }
+  function getRefreshToken() {
+    try {
+      return localStorage.getItem(REFRESH_TOKEN_KEY);
+    } catch (e) {
+      return null;
+    }
+  }
+  function setRefreshToken(t) {
+    try {
+      if (t) localStorage.setItem(REFRESH_TOKEN_KEY, t);
+      else localStorage.removeItem(REFRESH_TOKEN_KEY);
+    } catch (e) {}
+  }
+  function applyAuthTokens(data) {
+    if (!data) return;
+    const access = data.accessToken || data.token;
+    if (access) setToken(access);
+    if (data.refreshToken) setRefreshToken(data.refreshToken);
+    scheduleProactiveRefresh(data.expiresIn);
+    // Socket auth güncelle
+    try {
+      if (typeof socket !== "undefined" && socket && socket.auth) {
+        socket.auth.token = getToken();
+      }
+    } catch (e) {}
+  }
+  function scheduleProactiveRefresh(expiresInSec) {
+    try {
+      if (_emRefreshTimer) clearTimeout(_emRefreshTimer);
+      let ms = null;
+      if (expiresInSec && Number(expiresInSec) > 60) {
+        // Süre dolmadan ~90 sn önce yenile
+        ms = (Number(expiresInSec) - 90) * 1000;
+      } else {
+        // Token exp claim
+        const tok = getToken();
+        if (tok) {
+          const parts = tok.split(".");
+          if (parts.length >= 2) {
+            const payload = JSON.parse(
+              atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+            );
+            if (payload && payload.exp) {
+              ms = payload.exp * 1000 - Date.now() - 90 * 1000;
+            }
+          }
+        }
+      }
+      if (ms != null && ms > 5000) {
+        _emRefreshTimer = setTimeout(function () {
+          refreshAccessToken().catch(function () {});
+        }, ms);
+      }
+    } catch (e) {}
+  }
+  async function refreshAccessToken() {
+    if (_emRefreshPromise) return _emRefreshPromise;
+    const rt = getRefreshToken();
+    if (!rt) return null;
+    _emRefreshPromise = (async function () {
+      try {
+        const res = await fetch(API_BASE + "/api/auth/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: rt }),
+        });
+        let data = null;
+        try {
+          data = await res.json();
+        } catch (e) {}
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            setToken(null);
+            setRefreshToken(null);
+          }
+          return null;
+        }
+        applyAuthTokens(data);
+        return data.accessToken || data.token || null;
+      } catch (e) {
+        return null;
+      } finally {
+        _emRefreshPromise = null;
+      }
+    })();
+    return _emRefreshPromise;
+  }
+  window.__emRefreshAccessToken = refreshAccessToken;
 
   async function apiFetch(path, opts) {
     opts = opts || {};
@@ -137,6 +229,19 @@
     try {
       data = await res.json();
     } catch (e) {}
+    // 401 → bir kez refresh dene (login/register/refresh hariç)
+    if (
+      res.status === 401 &&
+      !opts._retried &&
+      path.indexOf("/api/auth/login") < 0 &&
+      path.indexOf("/api/auth/register") < 0 &&
+      path.indexOf("/api/auth/refresh") < 0
+    ) {
+      const newTok = await refreshAccessToken();
+      if (newTok) {
+        return apiFetch(path, Object.assign({}, opts, { _retried: true }));
+      }
+    }
     if (!res.ok) {
       if (res.status === 401 || res.status === 403)
         throw new Error(
@@ -149,6 +254,10 @@
 
   window.apiFetch = apiFetch;
   window.__emApiFetchReal = apiFetch;
+  // Sayfa açılışında access token varsa proaktif yenileme zamanla
+  try {
+    if (getToken() && getRefreshToken()) scheduleProactiveRefresh(null);
+  } catch (eBoot) {}
   try {
     globalThis.apiFetch = apiFetch;
   } catch (eG) {}
@@ -713,16 +822,102 @@
   }
   window.__emSetConnBanner = setConnBanner;
 
+  // --- Maç içi side / watch kalıcılığı (reconnect) ---
+  function persistMatchSide(side, fixtureId) {
+    try {
+      if (side === "home" || side === "away") {
+        _emMySide = side;
+        _emMyMatchSide = side;
+        window.__emMySide = side;
+        window.__emMyMatchSide = side;
+        const fid = fixtureId || window._emWatchingFixtureId;
+        if (fid && typeof sessionStorage !== "undefined") {
+          sessionStorage.setItem("em_match_side_" + fid, side);
+        }
+      }
+    } catch (e) {}
+  }
+  function restoreMatchSide(fixtureId) {
+    try {
+      const fid = fixtureId || window._emWatchingFixtureId;
+      if (!fid) return null;
+      if (_emMySide === "home" || _emMySide === "away") return _emMySide;
+      if (typeof sessionStorage !== "undefined") {
+        const s = sessionStorage.getItem("em_match_side_" + fid);
+        if (s === "home" || s === "away") {
+          _emMySide = s;
+          _emMyMatchSide = s;
+          window.__emMySide = s;
+          window.__emMyMatchSide = s;
+          return s;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+  function clearPersistedMatchSide(fixtureId) {
+    try {
+      const fid = fixtureId || window._emWatchingFixtureId;
+      if (fid && typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem("em_match_side_" + fid);
+      }
+    } catch (e) {}
+  }
+  function rewatchLiveMatch(reason) {
+    try {
+      if (!socket || !socket.connected) return false;
+      const fid = window._emWatchingFixtureId;
+      const mid = window._emWatchingMatchId;
+      if (!fid && !mid) return false;
+      // Side'ı hemen restore et (your-side gelene kadar panel kilitlenmesin)
+      if (fid) restoreMatchSide(fid);
+      const payload = {};
+      if (fid) payload.fixtureId = fid;
+      if (mid) payload.matchId = mid;
+      socket.emit("fixture:watch", payload);
+      if (reason === "reconnect") {
+        setConnBanner(true, "🔄 Maç senkronize ediliyor…");
+        // State gelince banner kapanır (match:state handler); yedek timeout
+        if (window._emSyncBannerTimer) clearTimeout(window._emSyncBannerTimer);
+        window._emSyncBannerTimer = setTimeout(function () {
+          try {
+            if (socket && socket.connected) setConnBanner(false);
+          } catch (e) {}
+        }, 4000);
+        if (typeof addLog === "function") {
+          addLog("🔄 Bağlantı yenilendi — maç odasına yeniden katıldın.", "tactics-log");
+        }
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function connectSocket() {
     if (typeof io === "undefined") {
       console.warn("[em] socket.io client yüklenmedi");
       return;
     }
     if (socket) socket.disconnect();
-    socket = io(API_BASE, { auth: { token: getToken() } });
+    const token = typeof getToken === "function" ? getToken() : null;
+    socket = io(API_BASE, {
+      auth: { token: token },
+      // Maç içi kopma sonrası hızlı ve agresif yeniden bağlanma
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 800,
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.3,
+      timeout: 12000,
+    });
 
     socket.on("connect", () => {
-      setConnBanner(false);
+      // Auth token güncel mi? (uzun maçta JWT expire riski)
+      try {
+        const t = typeof getToken === "function" ? getToken() : null;
+        if (t && socket && socket.auth) socket.auth.token = t;
+      } catch (eTok) {}
       try {
         const b = document.getElementById("emOnlineBadge");
         if (b) {
@@ -734,6 +929,14 @@
       try {
         startEmSyncHeartbeat();
       } catch (e) {}
+      // Maç içi reconnect: izlenen fikstür/matchId varsa odaya hemen abone ol
+      const wasWatching =
+        !!(window._emWatchingFixtureId || window._emWatchingMatchId);
+      if (wasWatching) {
+        rewatchLiveMatch("reconnect");
+      } else {
+        setConnBanner(false);
+      }
     });
     socket.on("disconnect", (reason) => {
       setConnBanner(true, "Bağlantı koptu (" + (reason || "?") + ") — yeniden deneniyor…");
@@ -747,7 +950,16 @@
       } catch (eB) {}
     });
     socket.on("connect_error", (err) => {
-      console.warn("[em] socket bağlantı hatası:", err.message);
+      console.warn("[em] socket bağlantı hatası:", err && err.message);
+      try {
+        const msg = (err && err.message) || "";
+        if (/auth|token|jwt|unauthorized/i.test(msg)) {
+          setConnBanner(
+            true,
+            "Oturum süresi dolmuş olabilir — sayfayı yenile veya tekrar giriş yap.",
+          );
+        }
+      } catch (e) {}
     });
 
     socket.on("fixture:live", (payload) => {
@@ -833,10 +1045,7 @@
     socket.on("match:your-side", (d) => {
       try {
         if (d && (d.side === "home" || d.side === "away")) {
-          _emMyMatchSide = d.side;
-          _emMySide = d.side;
-          window.__emMyMatchSide = d.side;
-          window.__emMySide = d.side;
+          persistMatchSide(d.side, (d && d.fixtureId) || window._emWatchingFixtureId);
           try {
             if (typeof maybeShowInmatchPanel === "function") {
               /* panel dakika kontrolü state ile */
@@ -850,6 +1059,14 @@
       // 2D: Elite veya milli maç; diğerleri metin
       try {
         if (!state) return;
+        // Reconnect senkron banner'ını kapat
+        try {
+          if (window._emSyncBannerTimer) {
+            clearTimeout(window._emSyncBannerTimer);
+            window._emSyncBannerTimer = null;
+          }
+          setConnBanner(false);
+        } catch (eBan) {}
         // Skor globals
         try {
           if (state.score) {
@@ -1044,6 +1261,36 @@
       } catch (e) {}
     });
 
+    socket.on("season:finalized", (payload) => {
+      try {
+        const champ =
+          (payload && payload.champion && payload.champion.name) || "—";
+        const yl = (payload && payload.yearLabel) || "Sezon";
+        if (typeof pushNotification === "function") {
+          pushNotification(
+            "🏆",
+            yl + " tamamlandı · Şampiyon: " + champ,
+            "Lig",
+          );
+        }
+        // Puan durumu / fikstür yenile
+        try {
+          if (typeof window.refreshStandingsFromServer === "function") {
+            window.refreshStandingsFromServer();
+          } else if (typeof renderStandings === "function") {
+            renderStandings();
+          }
+        } catch (e1) {}
+        try {
+          if (typeof window.refreshNextMatchFromServer === "function") {
+            window.refreshNextMatchFromServer();
+          }
+        } catch (e2) {}
+      } catch (e) {
+        console.warn("[em] season:finalized", e);
+      }
+    });
+
     socket.on("match:ended", async (state) => {
       try {
         const hs = (state && state.score && state.score.home) || 0;
@@ -1151,7 +1398,13 @@
           window._majorActionSince = 0;
         } catch (eFl) {}
         window._emServerMatchActive = false;
+        try {
+          clearPersistedMatchSide(window._emWatchingFixtureId);
+        } catch (eClr) {}
         window._emWatchingFixtureId = null;
+        window._emWatchingMatchId = null;
+        _emMySide = null;
+        _emMyMatchSide = null;
         try {
           if (typeof unlockPrematchPanels === "function") unlockPrematchPanels();
         } catch (eU) {}
@@ -1437,6 +1690,13 @@ function renderServerMatchState(state) {
     } catch (eI) {}
     window._emWatchingFixtureId = fixtureId;
     window._emServerMatchActive = true;
+    // Önceki maçtan kalan matchId'yi temizle (lig/kupa izleme)
+    try {
+      if (window._emWatchingMatchId && String(window._emWatchingMatchId).indexOf(String(fixtureId)) < 0) {
+        window._emWatchingMatchId = null;
+      }
+    } catch (eM) {}
+    restoreMatchSide(fixtureId);
     if (!socket) connectSocket();
     try {
       matchStarted = true; // UI: canlı maç
@@ -1488,14 +1748,19 @@ function renderServerMatchState(state) {
     if (startBtn) startBtn.style.display = "none";
     const status = document.getElementById("matchStatus");
     if (status) status.innerText = "⏳ Maç saati bekleniyor...";
-    if (socket) socket.emit("fixture:watch", { fixtureId });
+    if (socket && socket.connected) {
+      rewatchLiveMatch("watch");
+    } else if (socket) {
+      socket.emit("fixture:watch", { fixtureId: fixtureId });
+    }
     window._emWatchingFixtureId = fixtureId;
 
     // Saat gelene kadar yeniden abone + geri sayım (1 sn)
     if (window._emWatchPoll) clearInterval(window._emWatchPoll);
     window._emWatchPoll = setInterval(function () {
-      if (!window._emWatchingFixtureId || !socket) return;
-      socket.emit("fixture:watch", { fixtureId: window._emWatchingFixtureId });
+      if (!socket || !socket.connected) return;
+      if (!window._emWatchingFixtureId && !window._emWatchingMatchId) return;
+      rewatchLiveMatch("poll");
     }, 3000);
     // Geri sayım metni
     if (window._emCountdownTimer) clearInterval(window._emCountdownTimer);
@@ -2210,12 +2475,12 @@ function renderServerMatchState(state) {
     wrap("applyFormationPreset");
   })();
 
-  // loadCareer: sunucu online ise yerel kadro/lig sunucuyu ezmesin
+  // loadCareer: JWT varsa index.html zaten kadro/kasa atlıyor; sunucudan çek
   const _origLoadCareer = window.loadCareer;
   window.loadCareer = function (username) {
     const r = _origLoadCareer ? _origLoadCareer(username) : false;
-    if (getToken() && window.__emServerAuthoritative) {
-      // Yerel cache yüklendi; hemen ardından sunucu verisi üzerine yazılacak
+    if (getToken()) {
+      window.__emServerAuthoritative = true;
       setTimeout(function () {
         syncAllFromServer().catch(function () {});
       }, 0);
@@ -2314,10 +2579,8 @@ function renderServerMatchState(state) {
     try { startEmSyncHeartbeat(); } catch (eH) {}
     // Önce sunucudan çek — yerel kariyer üzerine yazılır (otorite: sunucu)
     await syncAllFromServer();
-    // İlk senkron sonrası kadroyu sunucuya da hizala (eksik alanlar)
-    try {
-      await pushTeamToServer({ allowEmpty: false });
-    } catch (eP) {}
+    // NOT: Girişte pushTeamToServer YOK — eski localStorage kadrosu
+    // sunucudaki gerçek kadroyu ezmesin. Kadro değişince schedulePush çalışır.
   }
 
   async function handleServerLogin() {
@@ -2334,7 +2597,7 @@ function renderServerMatchState(state) {
         method: "POST",
         body: JSON.stringify({ username, password }),
       });
-      setToken(data.token);
+      applyAuthTokens(data);
       localStorage.setItem(CLUB_KEY, JSON.stringify(data.club || null));
       if (errorEl) errorEl.innerText = "";
       await afterServerLogin(data);
@@ -2388,7 +2651,7 @@ function renderServerMatchState(state) {
           securityAnswer,
         }),
       });
-      setToken(data.token);
+      applyAuthTokens(data);
       localStorage.setItem(CLUB_KEY, JSON.stringify(data.club || null));
       // Sunucu üye no'sunu kalıcı tut
       try {
@@ -2483,6 +2746,13 @@ function renderServerMatchState(state) {
   const _origLogout = window.logoutUser;
   window.logoutUser = function () {
     setToken(null);
+    setRefreshToken(null);
+    try {
+      if (_emRefreshTimer) {
+        clearTimeout(_emRefreshTimer);
+        _emRefreshTimer = null;
+      }
+    } catch (e) {}
     localStorage.removeItem(CLUB_KEY);
     if (socket) {
       socket.disconnect();
@@ -3362,12 +3632,19 @@ function renderServerMatchState(state) {
 
     // Antrenör işe al / güncelle
     const _origApplyCoach = window.applyCoachSettings;
-    window.applyCoachSettings = async function () {
-      const skillSel = document.getElementById("coachSkillSelect");
-      const levelSel = document.getElementById("coachLevelSelect");
+    window.applyCoachSettings = async function (opts) {
+      // Personel sayfası select'leri öncelikli (staffCoach*), yoksa antrenman sayfası
+      const skillSel =
+        document.getElementById("staffCoachSkillSelect") ||
+        document.getElementById("coachSkillSelect");
+      const levelSel =
+        document.getElementById("staffCoachLevelSelect") ||
+        document.getElementById("coachLevelSelect");
       const skill = skillSel ? skillSel.value : "stamina";
       const level = levelSel ? parseInt(levelSel.value, 10) || 1 : 1;
-      const note = document.getElementById("trainingResultNote");
+      const note =
+        document.getElementById("staffPageNote") ||
+        document.getElementById("trainingResultNote");
       try {
         const res = await apiFetch("/api/training/coach", {
           method: "POST",
@@ -3378,27 +3655,49 @@ function renderServerMatchState(state) {
             coaches: res.coaches,
             recent: [],
           });
+          if (typeof clubCoaches !== "undefined") clubCoaches = res.coaches;
+          if (typeof clubCoach !== "undefined" && res.coaches[0])
+            clubCoach = res.coaches[0];
         }
+        try {
+          const eco = await apiFetch("/api/economy");
+          if (eco && eco.balance != null && typeof clubBudget !== "undefined") {
+            clubBudget = Number(eco.balance);
+            if (typeof updateBudgetUI === "function") updateBudgetUI();
+          }
+        } catch (eEco) {}
         if (note)
           note.innerText =
-            "Antrenör kaydedildi: " + skill + " Sv." + level;
+            "Antrenör kaydedildi: " +
+            skill +
+            " Sv." +
+            level +
+            (res.cost ? " · İmza " + res.cost + " €" : "");
         try {
           if (typeof renderTrainingSquadList === "function")
             renderTrainingSquadList();
         } catch (e) {}
+        try {
+          if (typeof renderClubStaffPage === "function") renderClubStaffPage();
+        } catch (e) {}
+        return true;
       } catch (e) {
         if (note) note.innerText = e.message || "Antrenör kaydı başarısız";
-        if (_origApplyCoach) {
+        // Online otorite: yerel fallback YOK (sunucuyu ezmesin)
+        if (!getToken() && _origApplyCoach) {
           try {
-            _origApplyCoach();
+            return _origApplyCoach(opts);
           } catch (e2) {}
         }
+        return false;
       }
     };
     window.hireSelectedCoach = window.applyCoachSettings;
 
     window.removeClubCoach = async function (skill) {
-      const note = document.getElementById("trainingResultNote");
+      const note =
+        document.getElementById("staffPageNote") ||
+        document.getElementById("trainingResultNote");
       try {
         const res = await apiFetch("/api/training/coach/remove", {
           method: "POST",
@@ -3409,10 +3708,17 @@ function renderServerMatchState(state) {
             coaches: res.coaches,
             recent: [],
           });
+          if (typeof clubCoaches !== "undefined") clubCoaches = res.coaches;
+          if (typeof clubCoach !== "undefined")
+            clubCoach = res.coaches[0] || null;
         }
         if (note) note.innerText = "Antrenör çıkarıldı: " + skill;
+        try {
+          if (typeof renderClubStaffPage === "function") renderClubStaffPage();
+        } catch (e) {}
       } catch (e) {
         if (note) note.innerText = e.message || "Çıkarma başarısız";
+        alert(e.message || "Çıkarma başarısız");
       }
     };
   }
@@ -6890,6 +7196,32 @@ function renderServerMatchState(state) {
       }
       return res;
     } catch (e) {
+      return null;
+    }
+  };
+
+  /** Sunucuda ikinci takım yoksa oluştur (Elite) */
+  window.__emEnsureSecondTeamServer = async function (name) {
+    try {
+      const res = await apiFetch("/api/premium/second-team/ensure", {
+        method: "POST",
+        body: JSON.stringify(name ? { name: name } : {}),
+      });
+      if (res && res.secondTeam) {
+        try {
+          if (typeof secondTeamState !== "undefined") secondTeamState = res.secondTeam;
+          window.secondTeamState = res.secondTeam;
+        } catch (e) {
+          window.secondTeamState = res.secondTeam;
+        }
+        try {
+          if (typeof persistSecondTeam === "function") persistSecondTeam();
+        } catch (e2) {}
+        return res.secondTeam;
+      }
+      return null;
+    } catch (e) {
+      console.warn("[em] ensure second team", e);
       return null;
     }
   };

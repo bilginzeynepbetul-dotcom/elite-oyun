@@ -6583,6 +6583,8 @@
 
     <!-- ===== SAYFA 4: LİGLER ===== -->
     <div id="page-leagues" class="page">
+      <div id="seasonStatusBanner" style="display:none;font-size:12px;text-align:center;padding:8px 12px;margin:8px 12px;border-radius:10px;background:#0f172a;border:1px solid #334155;color:#94a3b8;"></div>
+
       <div class="report-container">
         <div class="tactics-title" id="leaguePageTitle">Lig — 1. Lig</div>
         <div
@@ -7657,12 +7659,14 @@
         return map[level] || 3000;
       }
       function doctorRecoveryBonus() {
-        // Toplam iyileşme kısaltması (maç cinsinden)
+        if (window.__emDoctorRecoveryBonus != null)
+          return Number(window.__emDoctorRecoveryBonus) || 0;
         let b = 0;
         (clubDoctors || []).forEach(function (d) {
-          b += Math.min(5, Math.max(1, Number(d.level) || 1));
+          const lv = Math.max(1, Math.min(5, Number(d.level) || 1));
+          b += Math.min(2, Math.floor(lv / 2));
         });
-        return Math.min(8, b); // üst sınır
+        return Math.min(2, b);
       }
       window.doctorRecoveryBonus = doctorRecoveryBonus;
 
@@ -8861,6 +8865,30 @@
           if (!raw) return false;
           const data = JSON.parse(raw);
           if (!data || (data.version !== 1 && data.version !== 2)) return false;
+          // Online (JWT): kadro/kasa/lig/personel/stadyum SUNUCU otoritesinde —
+          // localStorage sadece kozmetik tercihler için (eski kayıt sunucuyu ezmesin)
+          let onlineAuth = false;
+          try {
+            onlineAuth = !!(
+              localStorage.getItem("em_jwt_token") ||
+              localStorage.getItem("em_token") ||
+              window.__emServerAuthoritative
+            );
+          } catch (eOn) {}
+          if (onlineAuth) {
+            try {
+              if (data.worldSeed != null) window.__emWorldSeed = data.worldSeed;
+              if (Array.isArray(data.followedPlayers)) {
+                followedPlayers = data.followedPlayers.slice(0, 50);
+              }
+              if (data.trainingPlan) window.__emTrainingPlan = data.trainingPlan;
+              // Tema / dil localStorage ayrı anahtarlardan gelir; burada kadro YOK
+            } catch (ePref) {}
+            console.info(
+              "[loadCareer] online — yerel kadro/kasa/lig atlandı (sunucu otorite)",
+            );
+            return true;
+          }
           if (data.worldSeed != null) window.__emWorldSeed = data.worldSeed;
           if (typeof data.clubBudget === "number") clubBudget = data.clubBudget;
           if (Array.isArray(data.financeLedger)) {
@@ -9008,9 +9036,21 @@
             if (typeof repairCareerIfEmpty === "function")
               repairCareerIfEmpty();
           } catch (e) {}
-          // Devam eden maçı gerçek saate göre geri yükle
+          // Devam eden maçı gerçek saate göre geri yükle (sadece offline)
           try {
-            if (data.matchLive && typeof restoreMatchLiveState === "function")
+            let onlineNow = false;
+            try {
+              onlineNow = !!(
+                localStorage.getItem("em_jwt_token") ||
+                localStorage.getItem("em_token") ||
+                window.__emServerAuthoritative
+              );
+            } catch (eO2) {}
+            if (
+              !onlineNow &&
+              data.matchLive &&
+              typeof restoreMatchLiveState === "function"
+            )
               restoreMatchLiveState(data.matchLive);
           } catch (eML) {
             console.warn("restoreMatchLiveState", eML);
@@ -12504,6 +12544,11 @@
           typeof isEliteMember === "function" ? isEliteMember() : false;
         try {
           window._emWatchingFixtureId = r.fixtureId;
+          if (r.matchId) window._emWatchingMatchId = r.matchId;
+          // Side cache (bot maçında home varsayımı istemci tarafında yok; sunucu your-side yollar)
+          try {
+            if (typeof restoreMatchSide === "function") restoreMatchSide(r.fixtureId);
+          } catch (eR) {}
           if (typeof socket !== "undefined" && socket && socket.emit) {
             socket.emit("fixture:watch", {
               fixtureId: r.fixtureId,
@@ -13287,6 +13332,26 @@
             }
           } catch (e) {
             console.warn("[em] league standings refresh", e);
+          }
+          try {
+            if (typeof window.refreshSeasonStatus === "function") {
+              await window.refreshSeasonStatus();
+            } else if (typeof apiFetch === "function") {
+              const st = await apiFetch(
+                "/api/league/season-status?country=" +
+                  encodeURIComponent(USER_COUNTRY || "Türkiye") +
+                  "&division=" +
+                  encodeURIComponent(USER_DIVISION || 1),
+              );
+              const el = document.getElementById("seasonStatusBanner");
+              if (el && st) {
+                el.style.display = "block";
+                el.innerText = st.message || "";
+                el.style.color = st.complete ? "#4ade80" : "#94a3b8";
+              }
+            }
+          } catch (eSs) {
+            console.warn("[em] season-status", eSs);
           }
           try {
             renderStandings();
@@ -14618,9 +14683,25 @@
             const groups = (data && data.groups) || {};
             const keys = Object.keys(groups).sort();
             if (!edition && !keys.length) {
+              const errHint =
+                (data && (data.ensureError || data.hint)) ||
+                "Aktif Kıtalar Ligi yok.";
               box.innerHTML =
-                '<div style="padding:10px;text-align:center;">Aktif Kıtalar Ligi yok. Admin veya <b>Oluştur</b> ile başlatılabilir.</div>' +
+                '<div style="padding:10px;text-align:center;color:#94a3b8;">' +
+                errHint +
+                "</div>" +
                 '<button type="button" class="sub-btn" style="width:auto;margin:8px auto;display:block;" onclick="window.__emGenerateCl && window.__emGenerateCl()">CL Oluştur</button>';
+              // Bir kez otomatik dene (ensure başarısız olduysa generate)
+              if (!window.__emClAutoTried) {
+                window.__emClAutoTried = true;
+                setTimeout(function () {
+                  if (typeof window.__emGenerateCl === "function") {
+                    window.__emGenerateCl().then(function () {
+                      fillRealClGroups(0);
+                    }).catch(function () {});
+                  }
+                }, 400);
+              }
               return;
             }
             let h = "";
@@ -18659,6 +18740,90 @@ function addForumPost() {
               "</div>";
           }
           }
+
+          // Sunucudan kendi profili ile zenginleştir (G-B-M, form, lig sırası)
+          try {
+            const fetchFn =
+              (typeof window.getEmApiFetch === "function" &&
+                window.getEmApiFetch()) ||
+              window.apiFetch ||
+              window.emApiFetch;
+            if (typeof fetchFn === "function" && u) {
+              const data = await fetchFn(
+                "/api/managers/" + encodeURIComponent(u),
+              );
+              const profile = data && data.profile;
+              if (profile) {
+                window._viewingManagerProfile = profile;
+                if (profile.teamName)
+                  set("mgrProfileTeam", profile.teamName);
+                if (profile.country != null) {
+                  set(
+                    "mgrProfileNat",
+                    profile.country +
+                      " · " +
+                      (profile.division != null
+                        ? profile.division + ". Lig"
+                        : "Lig"),
+                  );
+                }
+                if (profile.matches != null)
+                  set("mgrProfileMatches2", profile.matches);
+                if (profile.wins != null) set("mgrProfileWins", profile.wins);
+                if (profile.draws != null) set("mgrProfileDraws", profile.draws);
+                if (profile.losses != null)
+                  set("mgrProfileLosses", profile.losses);
+                if (profile.winRate != null)
+                  set("mgrProfileWinRate", profile.winRate + "%");
+                if (profile.leagueRank)
+                  set("mgrProfileLeagueRank", profile.leagueRank);
+                if (profile.leaguePts != null)
+                  set("mgrProfileRank", String(profile.leaguePts));
+                if (profile.careerDays != null)
+                  set("mgrProfileCareerDays", profile.careerDays + " gün");
+                if (profile.secondTeam)
+                  set("mgrProfileSecondTeam", profile.secondTeam);
+                if (profile.userNo != null) {
+                  set(
+                    "mgrProfileUserNo",
+                    typeof formatUserNo === "function"
+                      ? formatUserNo(profile.userNo)
+                      : "U" + profile.userNo,
+                  );
+                }
+                if (eliteBadge)
+                  eliteBadge.style.display = profile.elite ? "inline" : "none";
+                const formElS = document.getElementById("mgrProfileForm");
+                if (formElS && profile.form && profile.form.length) {
+                  formElS.innerHTML = profile.form
+                    .map(function (f) {
+                      const col =
+                        f.result === "G"
+                          ? "#4ade80"
+                          : f.result === "B"
+                            ? "#facc15"
+                            : "#f87171";
+                      return (
+                        '<span title="' +
+                        (f.score || "") +
+                        " vs " +
+                        (f.opp || "") +
+                        '" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin:2px;border-radius:8px;font-weight:900;font-size:12px;color:' +
+                        col +
+                        ";background:rgba(15,23,42,0.9);border:1px solid " +
+                        col +
+                        ';">' +
+                        f.result +
+                        "</span>"
+                      );
+                    })
+                    .join("");
+                }
+              }
+            }
+          } catch (eSelfProf) {
+            console.warn("[mgrProfile self]", eSelfProf);
+          }
           return;
         }
 
@@ -18677,7 +18842,13 @@ function addForumPost() {
 
         let profile = null;
         try {
-          const data = await apiFetch(
+          const fetchFn =
+            (typeof window.getEmApiFetch === "function" &&
+              window.getEmApiFetch()) ||
+            window.apiFetch ||
+            window.emApiFetch;
+          if (typeof fetchFn !== "function") throw new Error("apiFetch yok");
+          const data = await fetchFn(
             "/api/managers/" + encodeURIComponent(_viewingManagerUser),
           );
           profile = data && data.profile ? data.profile : null;
@@ -19168,12 +19339,16 @@ function addForumPost() {
         openUserTeamProfile("home");
       }
 
-      function goToClubStaff() {
+      async function goToClubStaff() {
         hideMainMenuAndShowBack();
         switchPage("page-staff");
+        try {
+          if (typeof loadStaffFromServer === "function") await loadStaffFromServer();
+        } catch (e) {}
         renderClubStaffPage();
       }
       window.goToClubStaff = goToClubStaff;
+      window.goToStaff = goToClubStaff;
 
       function renderClubStaffPage() {
         try {
@@ -19285,7 +19460,7 @@ function addForumPost() {
       }
       window.renderClubStaffPage = renderClubStaffPage;
 
-      function hireStaffCoach() {
+      async function hireStaffCoach() {
         try {
           if (typeof renderClubStaffPage === "function") renderClubStaffPage();
         } catch (e) {}
@@ -19295,11 +19470,9 @@ function addForumPost() {
           alert("Antrenör formu bulunamadı. Çalışanlar sayfasını yeniden aç.");
           return;
         }
-        // Select boşsa doldur
         if (!skillSel.options || skillSel.options.length === 0) {
           try {
-            if (typeof renderClubStaffPage === "function")
-              renderClubStaffPage();
+            if (typeof renderClubStaffPage === "function") renderClubStaffPage();
           } catch (e) {}
         }
         if (!skillSel.value && skillSel.options && skillSel.options.length)
@@ -19308,7 +19481,6 @@ function addForumPost() {
           alert("Uzmanlık skill seçilemedi. Sayfayı yenileyip tekrar dene.");
           return;
         }
-        // Aynı skill zaten varsa otomatik başka skill dene
         const owned = new Set(
           (clubCoaches || []).map(function (c) {
             return c.skill;
@@ -19331,70 +19503,84 @@ function addForumPost() {
           }
         }
         if (!lvSel || !lvSel.value) {
-          // seviye yoksa 1
           if (lvSel) lvSel.value = "1";
         }
-        const ok =
-          typeof applyCoachSettings === "function"
-            ? applyCoachSettings({ allowUpdate: false })
-            : false;
-        try {
-          renderClubStaffPage();
-        } catch (e) {}
         const note = document.getElementById("staffPageNote");
-        if (note && ok) note.innerText = "Antrenör alındı.";
-        else if (note && !ok)
-          note.innerText =
-            "Antrenör alınamadı — bütçe, limit veya aynı uzmanlık kontrol et.";
+        if (note) note.innerText = "Antrenör kiralanıyor…";
+        try {
+          // Online: multiplayer applyCoachSettings → /api/training/coach
+          // Offline: orijinal local applyCoachSettings
+          let ok = false;
+          if (typeof applyCoachSettings === "function") {
+            const ret = applyCoachSettings({ allowUpdate: false });
+            ok = ret && typeof ret.then === "function" ? await ret : !!ret;
+          }
+          try {
+            if (typeof loadStaffFromServer === "function")
+              await loadStaffFromServer();
+          } catch (eL) {}
+          try {
+            renderClubStaffPage();
+          } catch (e) {}
+          if (note) {
+            if (ok !== false)
+              note.innerText =
+                note.innerText && note.innerText.indexOf("Antrenör") >= 0
+                  ? note.innerText
+                  : "Antrenör alındı.";
+            else
+              note.innerText =
+                "Antrenör alınamadı — bütçe, limit veya aynı uzmanlık kontrol et.";
+          }
+        } catch (e) {
+          if (note) note.innerText = e.message || "Antrenör alınamadı";
+          alert(e.message || "Antrenör alınamadı");
+        }
       }
       window.hireStaffCoach = hireStaffCoach;
 
-      function hireStaffDoctor() {
-        const specSel = document.getElementById("staffDoctorSpecSelect");
+      async function hireStaffDoctor() {
         const lvSel = document.getElementById("staffDoctorLevelSelect");
-        const spec = "genel";
         const level = Math.min(5, Math.max(1, parseInt((lvSel && lvSel.value) || "1", 10)));
         if ((clubDoctors || []).length >= 1) {
           alert("Sadece 1 kulüp doktoru alınabilir. Önce mevcut doktorun sözleşmesini feshet.");
           return;
         }
-        if (specSel) specSel.value = "genel";
-        const salary = doctorSalaryForLevel(level);
-        const signing = salary * 2;
-        if (typeof clubBudget === "number" && clubBudget < signing) {
-          alert("Yetersiz bütçe. İmza bedeli: " + signing + " €");
-          return;
-        }
-        if (typeof clubBudget === "number") {
-          clubBudget -= signing;
-          try {
-            if (typeof addFinanceEntry === "function")
-              addFinanceEntry("gider", "Doktor imza · " + (DOCTOR_SPEC_LABELS[spec] || spec), -signing);
-          } catch (e) {}
-        }
-        clubDoctors.push({
-          id: "doc_" + spec + "_" + level + "_" + Date.now(),
-          name: DOCTOR_NAMES[spec] || "Dr. Uzman",
-          spec: spec,
-          specLabel: DOCTOR_SPEC_LABELS[spec] || spec,
-          level: level,
-          salary: salary,
-        });
-        try {
-          if (typeof updateBudgetUI === "function") updateBudgetUI();
-          if (typeof saveCareer === "function") saveCareer(false);
-        } catch (e) {}
-        renderClubStaffPage();
         const note = document.getElementById("staffPageNote");
-        if (note)
-          note.innerText =
-            "Doktor alındı · Sv." + level + " · Maaş " + salary + " €/hf";
-        if (typeof pushNotification === "function")
-          pushNotification("🩺", "Doktor kadroda · Sv." + level, "Çalışanlar");
+        if (note) note.innerText = "Doktor kiralanıyor…";
+        try {
+          const fetchFn =
+            (typeof window.getEmApiFetch === "function" && window.getEmApiFetch()) ||
+            window.apiFetch ||
+            window.emApiFetch;
+          if (typeof fetchFn !== "function") throw new Error("Sunucu bağlantısı yok");
+          const res = await fetchFn("/api/staff/doctor", {
+            method: "POST",
+            body: JSON.stringify({ level: level }),
+          });
+          if (res && res.doctor) clubDoctors = [res.doctor];
+          else if (res && res.state && res.state.doctors) clubDoctors = res.state.doctors;
+          try {
+            const eco = await fetchFn("/api/economy");
+            if (eco && eco.balance != null) clubBudget = Number(eco.balance);
+            if (typeof updateBudgetUI === "function") updateBudgetUI();
+          } catch (eEco) {}
+          renderClubStaffPage();
+          if (note)
+            note.innerText =
+              "Doktor alındı · Sv." +
+              level +
+              (res && res.cost ? " · İmza " + res.cost + " €" : "");
+          if (typeof pushNotification === "function")
+            pushNotification("🩺", "Doktor kadroda · Sv." + level, "Çalışanlar");
+        } catch (e) {
+          if (note) note.innerText = e.message || "Doktor alınamadı";
+          alert(e.message || "Doktor alınamadı");
+        }
       }
       window.hireStaffDoctor = hireStaffDoctor;
 
-      function fireStaffDoctor(idx) {
+      async function fireStaffDoctor(idx) {
         const d = (clubDoctors || [])[idx];
         if (!d) return;
         if (
@@ -19405,15 +19591,53 @@ function addForumPost() {
           )
         )
           return;
-        clubDoctors.splice(idx, 1);
-        renderClubStaffPage();
         try {
-          if (typeof saveCareer === "function") saveCareer(false);
-        } catch (e) {}
-        if (typeof pushNotification === "function")
-          pushNotification("📄", (d.name || "Doktor") + " sözleşmesi feshedildi", "Çalışanlar");
+          const fetchFn =
+            (typeof window.getEmApiFetch === "function" && window.getEmApiFetch()) ||
+            window.apiFetch ||
+            window.emApiFetch;
+          if (typeof fetchFn === "function") {
+            await fetchFn("/api/staff/doctor/fire", {
+              method: "POST",
+              body: JSON.stringify({}),
+            });
+          }
+          clubDoctors = [];
+          renderClubStaffPage();
+          if (typeof pushNotification === "function")
+            pushNotification(
+              "📄",
+              (d.name || "Doktor") + " sözleşmesi feshedildi",
+              "Çalışanlar",
+            );
+        } catch (e) {
+          alert(e.message || "Fesih başarısız");
+        }
       }
       window.fireStaffDoctor = fireStaffDoctor;
+
+      async function loadStaffFromServer() {
+        try {
+          const fetchFn =
+            (typeof window.getEmApiFetch === "function" && window.getEmApiFetch()) ||
+            window.apiFetch ||
+            window.emApiFetch;
+          if (typeof fetchFn !== "function") return;
+          const data = await fetchFn("/api/staff");
+          if (data && Array.isArray(data.doctors)) clubDoctors = data.doctors;
+          else if (data && data.doctor) clubDoctors = [data.doctor];
+          else clubDoctors = [];
+          if (data && Array.isArray(data.coaches) && data.coaches.length) {
+            clubCoaches = data.coaches;
+            clubCoach = data.coaches[0] || clubCoach;
+          }
+          window.__emDoctorRecoveryBonus =
+            data && data.recoveryBonus != null ? Number(data.recoveryBonus) : 0;
+        } catch (e) {
+          console.warn("[em] loadStaff", e);
+        }
+      }
+
 
 
       function goToTraining() {
@@ -20581,9 +20805,35 @@ function addForumPost() {
             if (secondTeamState && secondTeamState.name) return;
           }
         } catch (e) {}
-        // Yeni ikinci kulüp iskeleti
         const baseName =
           ((teamConfig.home && teamConfig.home.name) || "Kulüp") + " B";
+        // Önce sunucu otoritesi (Elite + kadro üretimi)
+        if (typeof window.__emEnsureSecondTeamServer === "function") {
+          window.__emEnsureSecondTeamServer(baseName).then(function (st) {
+            if (st && st.name) {
+              secondTeamState = st;
+              persistSecondTeam();
+              try {
+                registerSecondTeamInLeague();
+              } catch (eR) {}
+              pushNotification(
+                "🏟️",
+                "İkinci takım açıldı: " + st.name + " · " + (st.division || 2) + ". Lig",
+                "Elite",
+              );
+              try {
+                if (typeof refreshManagerProfile === "function")
+                  refreshManagerProfile();
+              } catch (eP) {}
+            } else {
+              unlockSecondTeamSlotLocal(baseName);
+            }
+          });
+          return;
+        }
+        unlockSecondTeamSlotLocal(baseName);
+      }
+      function unlockSecondTeamSlotLocal(baseName) {
         secondTeamState = {
           name: baseName,
           budget: 1500000,
@@ -20594,7 +20844,6 @@ function addForumPost() {
           bench: [],
           createdAt: Date.now(),
         };
-        // Basit kadro üret
         try {
           if (typeof generateMarketPlayer === "function") {
             for (let i = 0; i < 18; i++) {
@@ -34225,6 +34474,6 @@ function renderTransferPage() {
     </script>
   <!-- defer: HTML parse bittikten sonra yükle — ilk boyamayı engellemez -->
   <script src="/socket.io/socket.io.js" defer></script>
-  <script src="/multiplayer-client.js?v=20260814d" defer></script>
+  <script src="/multiplayer-client.js?v=20260814i" defer></script>
 </body>
 </html>
