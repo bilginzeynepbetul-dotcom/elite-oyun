@@ -52,6 +52,13 @@ function authRateLimit(req, res, action, max, windowMs) {
 }
 
 
+/** JWT'ye gömülen oturum sürümü — users.token_version ile eşleşmezse token iptal */
+function tokenVersionOf(user) {
+  const v = user && (user.token_version ?? user.tokenVersion);
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function signAccessToken(user, clubId) {
   return jwt.sign(
     {
@@ -59,9 +66,10 @@ function signAccessToken(user, clubId) {
       username: user.username,
       clubId: clubId || null,
       typ: "access",
+      tv: tokenVersionOf(user),
     },
     JWT_SECRET,
-    { expiresIn: ACCESS_EXPIRES },
+    { expiresIn: ACCESS_EXPIRES, algorithm: "HS256" },
   );
 }
 
@@ -72,10 +80,56 @@ function signRefreshToken(user, clubId) {
       username: user.username,
       clubId: clubId || null,
       typ: "refresh",
+      tv: tokenVersionOf(user),
     },
     JWT_SECRET,
-    { expiresIn: REFRESH_EXPIRES },
+    { expiresIn: REFRESH_EXPIRES, algorithm: "HS256" },
   );
+}
+
+/** Tüm oturumları düşür (şifre değişimi / ban / logout-all) */
+async function bumpTokenVersion(userId) {
+  const { rows } = await db.query(
+    `UPDATE users SET token_version = COALESCE(token_version, 0) + 1
+     WHERE id = $1
+     RETURNING token_version`,
+    [userId],
+  );
+  return rows[0] ? Number(rows[0].token_version) : null;
+}
+
+// Şifre sıfırlama brute-force koruması (process belleği; tek instance)
+const _resetFails = new Map(); // key → { count, lockedUntil }
+function resetFailKey(username, ip) {
+  return String(username || "").toLowerCase() + "|" + String(ip || "");
+}
+function checkResetLock(username, ip) {
+  const k = resetFailKey(username, ip);
+  const e = _resetFails.get(k);
+  if (!e) return { ok: true };
+  if (e.lockedUntil && Date.now() < e.lockedUntil) {
+    return {
+      ok: false,
+      retryAfterMs: e.lockedUntil - Date.now(),
+    };
+  }
+  if (e.lockedUntil && Date.now() >= e.lockedUntil) {
+    _resetFails.delete(k);
+  }
+  return { ok: true };
+}
+function recordResetFail(username, ip) {
+  const k = resetFailKey(username, ip);
+  const e = _resetFails.get(k) || { count: 0, lockedUntil: 0 };
+  e.count += 1;
+  if (e.count >= 5) {
+    e.lockedUntil = Date.now() + 15 * 60 * 1000; // 15 dk
+    e.count = 0;
+  }
+  _resetFails.set(k, e);
+}
+function clearResetFails(username, ip) {
+  _resetFails.delete(resetFailKey(username, ip));
 }
 
 function signToken(user, clubId) {
@@ -311,7 +365,8 @@ function createAuthRouter() {
       }
 
       const { rows } = await db.query(
-        `SELECT id, username, email, password_hash, is_banned, banned_until, ban_reason
+        `SELECT id, username, email, password_hash, is_banned, banned_until, ban_reason,
+                COALESCE(token_version, 0) AS token_version
          FROM users WHERE LOWER(username) = LOWER($1)`,
         [username],
       );
@@ -370,7 +425,7 @@ function createAuthRouter() {
 
       let decoded;
       try {
-        decoded = jwt.verify(refreshToken, JWT_SECRET);
+        decoded = jwt.verify(refreshToken, JWT_SECRET, { algorithms: ["HS256"] });
       } catch (e) {
         return res.status(401).json({ error: "Geçersiz veya süresi dolmuş refresh token" });
       }
@@ -383,13 +438,22 @@ function createAuthRouter() {
 
       const userId = decoded.sub;
       const { rows } = await db.query(
-        `SELECT id, username, email, is_banned, banned_until, ban_reason
+        `SELECT id, username, email, is_banned, banned_until, ban_reason,
+                COALESCE(token_version, 0) AS token_version
          FROM users WHERE id = $1`,
         [userId],
       );
       const user = rows[0];
       if (!user) {
         return res.status(401).json({ error: "Kullanıcı bulunamadı" });
+      }
+      // Refresh token iptal kontrolü
+      const tv = tokenVersionOf(user);
+      if (decoded.tv == null || Number(decoded.tv) !== tv) {
+        return res.status(401).json({
+          error: "Oturum iptal edilmiş, tekrar giriş yapın",
+          code: "TOKEN_REVOKED",
+        });
       }
       if (user.is_banned) {
         const until = user.banned_until ? new Date(user.banned_until) : null;
@@ -439,43 +503,110 @@ function createAuthRouter() {
 
   // POST /api/auth/reset-password  { username, answer, newPassword }
   router.post("/reset-password", async (req, res) => {
+    const started = Date.now();
+    const pad = async () => {
+      // timing yakınlaştırması (kullanıcı var/yok sızıntısını azalt)
+      const elapsed = Date.now() - started;
+      if (elapsed < 400) {
+        await new Promise((r) => setTimeout(r, 400 - elapsed));
+      }
+    };
     try {
       if (!authRateLimit(req, res, "reset-password", 5, 900000)) return;
       const username = String((req.body && req.body.username) || "").trim();
       const answer = String((req.body && req.body.answer) || "").trim();
       const newPassword = String((req.body && req.body.newPassword) || "");
+      const ip =
+        (req.headers["x-forwarded-for"] &&
+          String(req.headers["x-forwarded-for"]).split(",")[0].trim()) ||
+        req.ip ||
+        "unknown";
+
       if (!username || !answer || !newPassword || newPassword.length < 8) {
+        await pad();
         return res.status(400).json({
           error: "username, answer ve newPassword (min 8) gerekli",
         });
       }
       if (newPassword.length > 128) {
+        await pad();
         return res.status(400).json({ error: "Şifre çok uzun" });
       }
+
+      const lock = checkResetLock(username, ip);
+      if (!lock.ok) {
+        await pad();
+        res.setHeader(
+          "Retry-After",
+          String(Math.ceil((lock.retryAfterMs || 1000) / 1000)),
+        );
+        return res.status(429).json({
+          error: "Çok fazla hatalı deneme. 15 dakika sonra tekrar deneyin.",
+          code: "RESET_LOCKED",
+          retryAfterMs: lock.retryAfterMs,
+        });
+      }
+
       const { rows } = await db.query(
         `SELECT id, security_answer_hash FROM users WHERE LOWER(username) = LOWER($1)`,
         [username],
       );
       const user = rows[0];
+      // Kullanıcı yok / cevap yok — aynı mesaj (enumeration azalt)
       if (!user || !user.security_answer_hash) {
-        return res.status(404).json({ error: "Kullanıcı veya güvenlik cevabı yok" });
+        recordResetFail(username, ip);
+        await pad();
+        return res.status(403).json({ error: "Güvenlik cevabı hatalı veya kullanıcı yok" });
       }
       const ok = await bcrypt.compare(
         answer.toLowerCase().trim(),
         user.security_answer_hash,
       );
       if (!ok) {
-        return res.status(403).json({ error: "Güvenlik cevabı hatalı" });
+        recordResetFail(username, ip);
+        await pad();
+        return res.status(403).json({ error: "Güvenlik cevabı hatalı veya kullanıcı yok" });
       }
       const hash = await bcrypt.hash(newPassword, 10);
       await db.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [
         hash,
         user.id,
       ]);
-      res.json({ ok: true, message: "Şifre sıfırlandı" });
+      // Eski access/refresh tokenları düşür
+      await bumpTokenVersion(user.id);
+      clearResetFails(username, ip);
+      await pad();
+      res.json({ ok: true, message: "Şifre sıfırlandı. Tekrar giriş yapın." });
     } catch (e) {
       console.error("[auth/reset-password]", e);
       res.status(500).json({ error: "Sıfırlama başarısız" });
+    }
+  });
+
+  // POST /api/auth/logout-all — mevcut token ile tüm oturumları iptal
+  router.post("/logout-all", async (req, res) => {
+    try {
+      const hdr = req.headers.authorization || "";
+      const token = hdr.startsWith("Bearer ") ? hdr.slice(7) : null;
+      if (!token) {
+        return res.status(401).json({ error: "Token gerekli" });
+      }
+      let decoded;
+      try {
+        decoded = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
+      } catch (_) {
+        return res.status(401).json({ error: "Geçersiz token" });
+      }
+      if (decoded.typ === "refresh") {
+        return res.status(401).json({ error: "Access token gerekli" });
+      }
+      const userId = decoded.sub;
+      if (!userId) return res.status(401).json({ error: "Geçersiz token" });
+      await bumpTokenVersion(userId);
+      res.json({ ok: true, message: "Tüm oturumlar sonlandırıldı" });
+    } catch (e) {
+      console.error("[auth/logout-all]", e);
+      res.status(500).json({ error: "İşlem başarısız" });
     }
   });
 
@@ -493,4 +624,6 @@ module.exports = {
   tokenPair,
   clubPublic,
   userPublic,
+  bumpTokenVersion,
+  tokenVersionOf,
 };
