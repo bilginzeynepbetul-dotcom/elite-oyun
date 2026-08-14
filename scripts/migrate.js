@@ -130,55 +130,40 @@ async function run() {
     }
     const sql = fs.readFileSync(full, "utf8");
     const client = await pool.connect();
+    let appliedOk = false;
+    let idempotent = false;
+    let errMsg = "";
     try {
       // Bazı migration'lar kendi BEGIN/COMMIT'ini içeriyor; yine de güvenli çalıştır.
       await client.query(sql);
-      await client.query(
-        `INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING`,
-        [file],
-      );
-      console.log("[migrate] ✓ uygulandı:", file);
+      appliedOk = true;
     } catch (e) {
       // Bir komut hata verince Postgres o transaction'ı "aborted" durumuna
-      // sokar; ROLLBACK atmadan aynı client üzerinde başka komut çalıştırmak
-      // "current transaction is aborted, commands ignored until end of
-      // transaction block" hatasını verir. Devam etmeden önce mutlaka
-      // ROLLBACK ile temizliyoruz.
+      // sokar. ROLLBACK atıp client'ı bırakıyoruz; işaretlemeyi pool üzerinden
+      // (temiz bağlantı) yapacağız — aksi halde pool'a bozuk bağlantı döner
+      // ve sonraki alreadyApplied / query'ler 25P02 verir.
       try {
         await client.query("ROLLBACK");
       } catch (_) {}
 
-      // Idempotent ALTER / IF NOT EXISTS hatalarını yutmaya çalış
-      const msg = String(e.message || e);
+      errMsg = String(e.message || e);
       if (
-        /already exists|duplicate|IF NOT EXISTS/i.test(msg) ||
+        /already exists|duplicate|IF NOT EXISTS/i.test(errMsg) ||
         e.code === "42P07" ||
         e.code === "42710"
       ) {
-        console.warn("[migrate] ⚠ uyarı (devam):", file, "—", msg.slice(0, 120));
-        try {
-          // Yeni, temiz bir transaction içinde işaretle (ROLLBACK sonrası
-          // client tekrar kullanılabilir durumda, ama garanti olsun diye
-          // basit bir tekil INSERT yeterli — implicit transaction açar).
-          await client.query(
-            `INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING`,
-            [file],
-          );
-          console.log("[migrate] ✓ işaretlendi (zaten mevcuttu):", file);
-        } catch (e2) {
-          console.error(
-            "[migrate] ✗ işaretlenemedi:",
-            file,
-            "—",
-            String(e2.message || e2),
-          );
-          client.release();
-          await pool.end();
-          process.exit(1);
-        }
+        idempotent = true;
+        console.warn(
+          "[migrate] ⚠ uyarı (devam):",
+          file,
+          "—",
+          errMsg.slice(0, 120),
+        );
       } else {
-        console.error("[migrate] ✗ hata:", file, msg);
-        client.release();
+        console.error("[migrate] ✗ hata:", file, errMsg);
+        try {
+          client.release();
+        } catch (_) {}
         await pool.end();
         process.exit(1);
       }
@@ -186,6 +171,29 @@ async function run() {
       try {
         client.release();
       } catch (_) {}
+    }
+
+    // İşaretleme her zaman pool.query ile (temiz bağlantı) yapılır.
+    // Aynı client üzerinde bırakılan aborted state pool'u kirletmesin.
+    try {
+      await query(
+        `INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING`,
+        [file],
+      );
+      if (appliedOk) {
+        console.log("[migrate] ✓ uygulandı:", file);
+      } else if (idempotent) {
+        console.log("[migrate] ✓ işaretlendi (zaten mevcuttu):", file);
+      }
+    } catch (e2) {
+      console.error(
+        "[migrate] ✗ işaretlenemedi:",
+        file,
+        "—",
+        String(e2.message || e2),
+      );
+      await pool.end();
+      process.exit(1);
     }
   }
 
