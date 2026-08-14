@@ -91,6 +91,7 @@ async function ensureNationalSchema() {
           "007_national_manager_applications.sql",
           "009_national_tactics.sql",
           "011_national_u21.sql",
+          "028_national_schema_ensure.sql",
         ]) {
           await query(
             `INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING`,
