@@ -129,7 +129,13 @@ CREATE TABLE league_standings (
 
 CREATE INDEX idx_standings_season_pts ON league_standings (season_id, pts DESC, gf DESC);
 
-CREATE TYPE fixture_status AS ENUM ('scheduled', 'live', 'finished', 'cancelled');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fixture_status') THEN
+    CREATE TYPE fixture_status AS ENUM ('scheduled', 'live', 'finished', 'cancelled');
+  END IF;
+END
+$$;
 
 CREATE TABLE fixtures (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -178,7 +184,13 @@ CREATE INDEX idx_match_logs_match ON match_logs (match_id);
 -- ------------------------------------------------------------
 -- 6. Transfer market
 -- ------------------------------------------------------------
-CREATE TYPE listing_status AS ENUM ('active', 'sold', 'expired', 'cancelled');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'listing_status') THEN
+    CREATE TYPE listing_status AS ENUM ('active', 'sold', 'expired', 'cancelled');
+  END IF;
+END
+$$;
 
 CREATE TABLE transfer_listings (
   id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),

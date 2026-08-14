@@ -55,13 +55,14 @@ Ayrıntılar: `env.elite.example`
 
 ## Canlıya alma kontrol listesi
 
-1. **JWT_SECRET** — `openssl rand -hex 32` ile üretip `.env`'e (veya Render'da "Generate Value" ile) yazın. Örnek/varsayılan değeri asla production'da kullanmayın.
-2. **DATABASE_URL** — gerçek Postgres bağlantısı (Render/Supabase/Docker). `PGSSL` yalnızca yerel değilse otomatik `require` moduna geçer, elle ayar gerekmez.
-3. **ADMIN_USERNAME** — yönetici olacak hesabın kullanıcı adını buraya yazın; o kullanıcı adıyla normal kayıt olduğunuzda admin yetkisi kazanır (ayrı şifre yok).
-4. **CORS_ORIGIN** — production'da mutlaka gerçek domain(ler)inizi yazın (virgülle ayırarak). Boş bırakılırsa tüm originlere izin verilir — sadece geliştirmede güvenlidir.
-5. **ELITE_ALLOW_MOCK=0** — production'da kapalı olmalı; sadece test/geliştirmede `1` yapılır (mock ödeme).
-6. **npm run migrate** — deploy sırasında `npm start` zaten migration'ları otomatik çalıştırır (`001`'den `026`'ya kadar hepsi sırayla ve idempotent).
-7. **Health check** — `/healthz` endpoint'i DB bağlantısını da test eder; Render/Docker/uptime monitörü buraya bağlanabilir.
-8. **Loglar** — `ERROR_LOG_FILE` verirseniz klasör otomatik oluşturulur; vermezseniz sadece konsola/webhook'a (varsa `ERROR_WEBHOOK_URL`) yazar.
-9. **Donation alanları** (`DONATION_IBAN` vb.) — gerçek IBAN/Papara bilgilerinizle doldurun, boş bırakılırsa Elite sayfasında bağış bölümü eksik görünür.
-10. Deploy sonrası `npm run test:all` ile smoke + entegrasyon + reconnect testlerini canlı ortama karşı (ya da staging'e karşı) çalıştırıp doğrulayın.
+1. **JWT_SECRET** — `openssl rand -hex 32` ile üretip `.env`'e yazın (≥16 karakter; production için 32+ byte hex). Hardcoded fallback yok.
+2. **DATABASE_URL** — gerçek Postgres. `PGSSL=require` (varsayılan barındırılan), `verify` (CA doğrulama) veya `disable` (local).
+3. **ADMIN_USERNAME** — yönetici kullanıcı adı (case-insensitive). O kullanıcı adıyla kayıt = admin.
+4. **CORS_ORIGIN** — production'da **zorunlu** (`NODE_ENV=production` + boş CORS → boot fail). Virgülle çoklu domain.
+5. **ELITE_ALLOW_MOCK=0** — production'da `1` yasak (boot fail).
+6. **npm run migrate** — `001`…`027` (token_version dahil). `npm start` otomatik migrate eder.
+7. **Health check** — `/healthz` (DB) ve `/api/health` (errorTracker stats).
+8. **Loglar** — `ERROR_LOG_FILE`, `ERROR_WEBHOOK_URL`, `ERROR_ADMIN_TOKEN`.
+9. **Donation alanları** — gerçek IBAN/Papara.
+10. Deploy sonrası `npm run test:all`.
+11. **Güvenlik (özet)** — graceful shutdown (SIGTERM); JWT `tv` ile iptal (şifre sıfırlama / ban / `POST /api/auth/logout-all`); şifre min 8; reset brute-force kilidi; trust proxy; güvenlik başlıkları; HS256 sabiti.

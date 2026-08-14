@@ -23,9 +23,14 @@ function stripSslMode(url) {
 }
 
 function resolveSsl() {
-  const mode = process.env.PGSSL;
+  const mode = String(process.env.PGSSL || "").toLowerCase();
+  // verify = CA doğrulamalı (sıkı); require = TLS var, self-signed kabul
+  // disable = SSL yok; boş = local değilse require (Supabase uyumu)
+  if (mode === "disable" || mode === "false" || mode === "0") return false;
+  if (mode === "verify" || mode === "verify-full") {
+    return { rejectUnauthorized: true };
+  }
   if (mode === "require") return { rejectUnauthorized: false };
-  if (mode === "disable") return false;
   const url = process.env.DATABASE_URL || "";
   const isLocal = /localhost|127\.0\.0\.1|@db:/.test(url);
   return isLocal ? false : { rejectUnauthorized: false };

@@ -78,12 +78,26 @@ if (!process.env.DATABASE_URL) {
     "[boot] DATABASE_URL yok — DB bağlantısı başarısız olabilir.",
   );
 }
+const isProd =
+  String(process.env.NODE_ENV || "").toLowerCase() === "production";
 if (!process.env.CORS_ORIGIN || !String(process.env.CORS_ORIGIN).trim()) {
+  if (isProd) {
+    console.error(
+      "[boot] Production'da CORS_ORIGIN zorunlu. Domain yazın (virgülle birden fazla).",
+    );
+    process.exit(1);
+  }
   console.warn(
     "[boot] CORS_ORIGIN boş — tüm origin'lere izin veriliyor. Production'da domain yazın.",
   );
 }
 if (process.env.ELITE_ALLOW_MOCK === "1") {
+  if (isProd) {
+    console.error(
+      "[boot] Production'da ELITE_ALLOW_MOCK=1 yasak. Kapatın.",
+    );
+    process.exit(1);
+  }
   console.warn(
     "[boot] ELITE_ALLOW_MOCK=1 — mock ödeme AÇIK. Production'da kapatın.",
   );
@@ -132,6 +146,22 @@ app.use(
 );
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// Temel güvenlik başlıkları (helmet bağımlılığı olmadan)
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-XSS-Protection", "0");
+  res.setHeader(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=()",
+  );
+  if (req.path && String(req.path).startsWith("/api")) {
+    res.setHeader("Cache-Control", "no-store");
+  }
+  next();
+});
 
 // Request id + yavaş/5xx log (errorTracker)
 try {
@@ -815,9 +845,34 @@ io.use(async (socket, next) => {
       socket.user = null;
       return next();
     }
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
     if (decoded.typ === "refresh") {
       return next(new Error("Access token gerekli"));
+    }
+    if (!decoded.sub) {
+      return next(new Error("Geçersiz token"));
+    }
+    // token_version + ban kontrolü
+    try {
+      const { rows } = await require("./db").query(
+        `SELECT COALESCE(token_version, 0) AS token_version, is_banned, banned_until
+         FROM users WHERE id = $1`,
+        [decoded.sub],
+      );
+      const u = rows[0];
+      if (!u) return next(new Error("Geçersiz token"));
+      const tv = Number(u.token_version) || 0;
+      if (decoded.tv == null || Number(decoded.tv) !== tv) {
+        return next(new Error("Oturum iptal edilmiş"));
+      }
+      if (u.is_banned) {
+        const until = u.banned_until ? new Date(u.banned_until) : null;
+        if (!until || until > new Date()) {
+          return next(new Error("Hesap engellenmiş"));
+        }
+      }
+    } catch (_) {
+      return next(new Error("Auth kontrolü başarısız"));
     }
     let clubId = decoded.clubId || null;
     if (!clubId && decoded.sub) {

@@ -5,7 +5,13 @@
 
 BEGIN;
 
-CREATE TYPE cup_fixture_status AS ENUM ('scheduled', 'live', 'finished', 'bye');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'cup_fixture_status') THEN
+    CREATE TYPE cup_fixture_status AS ENUM ('scheduled', 'live', 'finished', 'bye');
+  END IF;
+END
+$$;
 
 -- Ülke başına bir "kupa sezonu". Şampiyon belirlenince is_current=FALSE
 -- olur, yeni edition açılabilir (POST /api/cup/generate).

@@ -78,9 +78,11 @@ router.post('/ban', isAdmin, async (req, res) => {
     const targetUser = userResult.rows[0];
     const bannedUntil = new Date(Date.now() + hours * 60 * 60 * 1000);
     
-    // Ban ekle
+    // Ban ekle + tüm JWT oturumlarını düşür
     await db.query(
-      'UPDATE users SET is_banned = TRUE, banned_until = $1, ban_reason = $2 WHERE id = $3',
+      `UPDATE users SET is_banned = TRUE, banned_until = $1, ban_reason = $2,
+          token_version = COALESCE(token_version, 0) + 1
+       WHERE id = $3`,
       [bannedUntil, reason || 'Kural ihlali', targetUser.id]
     );
     

@@ -52,7 +52,7 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ error: 'Token gerekli' });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
     if (decoded.typ === 'refresh') {
       return res.status(401).json({
         error: 'Access token gerekli',
@@ -65,9 +65,11 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ error: 'Geçersiz token' });
     }
 
-    // Kullanıcıyı kontrol et
+    // Kullanıcıyı kontrol et (+ token_version)
     const userResult = await db.query(
-      'SELECT id, username, email, is_banned, banned_until, ban_reason FROM users WHERE id = $1',
+      `SELECT id, username, email, is_banned, banned_until, ban_reason,
+              COALESCE(token_version, 0) AS token_version
+       FROM users WHERE id = $1`,
       [userId]
     );
 
@@ -76,6 +78,15 @@ const authMiddleware = async (req, res, next) => {
     }
 
     const user = userResult.rows[0];
+
+    // Oturum iptali: şifre sıfırlama / logout-all / ban sonrası eski JWT düşer
+    const tv = Number(user.token_version) || 0;
+    if (decoded.tv == null || Number(decoded.tv) !== tv) {
+      return res.status(401).json({
+        error: 'Oturum iptal edilmiş, tekrar giriş yapın',
+        code: 'TOKEN_REVOKED',
+      });
+    }
 
     // Ban kontrolü
     const banStatus = await checkBanStatus(user.id);
@@ -93,6 +104,7 @@ const authMiddleware = async (req, res, next) => {
       username: user.username,
       email: user.email,
       clubId: decoded.clubId || null,
+      tokenVersion: tv,
     };
     next();
   } catch (error) {

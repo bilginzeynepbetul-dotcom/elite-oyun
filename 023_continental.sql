@@ -40,7 +40,13 @@ CREATE TABLE IF NOT EXISTS continental_entries (
 CREATE INDEX IF NOT EXISTS idx_cl_entries_edition_grp
   ON continental_entries (edition_id, grp, pts DESC);
 
-CREATE TYPE cl_fixture_status AS ENUM ('scheduled', 'live', 'finished', 'cancelled');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'cl_fixture_status') THEN
+    CREATE TYPE cl_fixture_status AS ENUM ('scheduled', 'live', 'finished', 'cancelled');
+  END IF;
+END
+$$;
 
 CREATE TABLE IF NOT EXISTS continental_fixtures (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
