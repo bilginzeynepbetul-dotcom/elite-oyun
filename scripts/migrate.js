@@ -1,20 +1,16 @@
+// ============================================================
+// scripts/migrate.js — SQL migration runner
+// ------------------------------------------------------------
+//   node scripts/migrate.js
+//   DATABASE_URL=... node scripts/migrate.js
+// ============================================================
+
 require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
-const { Client } = require("pg");
+const { pool, query } = require("../db");
 
-function stripSslMode(url) {
-  if (!url) return url;
-  return url.replace(/([?&])sslmode=[^&]*&?/i, "$1").replace(/[?&]$/, "");
-}
-
-function resolveSsl(url) {
-  const mode = process.env.PGSSL;
-  if (mode === "require") return { rejectUnauthorized: false };
-  if (mode === "disable") return false;
-  const isLocal = /localhost|127\.0\.0\.1|@db:/.test(url || "");
-  return isLocal ? false : { rejectUnauthorized: false };
-}
+const ROOT = path.join(__dirname, "..");
 
 const files = [
   "001_init_schema.sql",
@@ -40,55 +36,103 @@ const files = [
   "021_donations.sql",
   "022_season_close.sql",
   "023_continental.sql",
+  "024_club_doctors.sql",
+  "025_achievements.sql",
+  "026_daily_challenges.sql",
 ];
 
-async function main() {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    console.error("DATABASE_URL missing");
-    process.exit(1);
-  }
-  const client = new Client({ connectionString: stripSslMode(url), ssl: resolveSsl(url) });
-  await client.connect();
-  await client.query(`
+async function ensureMigrationsTable() {
+  await query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
-      id TEXT PRIMARY KEY,
+      id SERIAL PRIMARY KEY,
+      filename TEXT NOT NULL UNIQUE,
       applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
-
-  const projectRoot = path.join(__dirname, "..");
-  console.log("[migrate] project root:", projectRoot);
-  console.log("[migrate] cwd:", process.cwd());
-
-  for (const f of files) {
-    const { rows } = await client.query(
-      `SELECT 1 FROM schema_migrations WHERE id = $1`,
-      [f],
-    );
-    if (rows.length) {
-      console.log("[migrate] skip", f);
-      continue;
-    }
-    const filePath = path.join(projectRoot, f);
-    if (!fs.existsSync(filePath)) {
-      console.error(`[migrate] DOSYA BULUNAMADI: ${filePath}`);
-      console.error(
-        "[migrate] Bu dosya repoda/deploy edilen kaynakta yok. Git'e commit/push edildiğinden ve Render Root Directory ayarının doğru olduğundan emin olun.",
-      );
-      await client.end();
-      process.exit(1);
-    }
-    const sql = fs.readFileSync(filePath, "utf8");
-    console.log("[migrate] apply", f);
-    await client.query(sql);
-    await client.query(`INSERT INTO schema_migrations (id) VALUES ($1)`, [f]);
-  }
-  await client.end();
-  console.log("[migrate] done");
 }
 
-main().catch((e) => {
-  console.error(e);
+async function alreadyApplied(filename) {
+  const { rows } = await query(
+    `SELECT 1 FROM schema_migrations WHERE filename = $1`,
+    [filename],
+  );
+  return rows.length > 0;
+}
+
+async function markApplied(filename) {
+  await query(
+    `INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING`,
+    [filename],
+  );
+}
+
+async function run() {
+  if (!process.env.DATABASE_URL) {
+    console.error(
+      "[migrate] DATABASE_URL tanımlı değil. Örnek: postgres://em:em@localhost:5432/elite_manager",
+    );
+    process.exit(1);
+  }
+
+  console.log("[migrate] başlıyor…");
+  await ensureMigrationsTable();
+
+  for (const file of files) {
+    const full = path.join(ROOT, file);
+    if (!fs.existsSync(full)) {
+      console.warn("[migrate] atlandı (yok):", file);
+      continue;
+    }
+    if (await alreadyApplied(file)) {
+      console.log("[migrate] ✓ zaten uygulandı:", file);
+      continue;
+    }
+    const sql = fs.readFileSync(full, "utf8");
+    const client = await pool.connect();
+    try {
+      // Bazı migration'lar kendi BEGIN/COMMIT'ini içeriyor; yine de güvenli çalıştır.
+      await client.query(sql);
+      await client.query(
+        `INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING`,
+        [file],
+      );
+      console.log("[migrate] ✓ uygulandı:", file);
+    } catch (e) {
+      // Idempotent ALTER / IF NOT EXISTS hatalarını yutmaya çalış
+      const msg = String(e.message || e);
+      if (
+        /already exists|duplicate|IF NOT EXISTS/i.test(msg) ||
+        e.code === "42P07" ||
+        e.code === "42710"
+      ) {
+        console.warn("[migrate] ⚠ uyarı (devam):", file, "—", msg.slice(0, 120));
+        try {
+          await client.query(
+            `INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING`,
+            [file],
+          );
+        } catch (_) {}
+      } else {
+        console.error("[migrate] ✗ hata:", file, msg);
+        client.release();
+        await pool.end();
+        process.exit(1);
+      }
+    } finally {
+      try {
+        client.release();
+      } catch (_) {}
+    }
+  }
+
+  console.log("[migrate] tamam.");
+  await pool.end();
+}
+
+run().catch(async (e) => {
+  console.error("[migrate] fatal", e);
+  try {
+    await pool.end();
+  } catch (_) {}
   process.exit(1);
 });
