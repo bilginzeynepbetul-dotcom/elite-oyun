@@ -53,6 +53,12 @@ const authMiddleware = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.typ === 'refresh') {
+      return res.status(401).json({
+        error: 'Access token gerekli',
+        code: 'ACCESS_REQUIRED',
+      });
+    }
     // JWT standardı: kullanıcı id'si "sub" alanında
     const userId = decoded.sub || decoded.id;
     if (!userId) {
@@ -105,7 +111,13 @@ const isAdmin = async (req, res, next) => {
       return res.status(403).json({ error: 'Admin yetkisi gerekli' });
     }
 
-    if (!req.user || req.user.username !== adminUsername) {
+    // nationalSystem.isAdmin ile aynı politika: case-insensitive
+    if (
+      !req.user ||
+      !req.user.username ||
+      String(req.user.username).toLowerCase() !==
+        String(adminUsername).toLowerCase()
+    ) {
       return res.status(403).json({ error: 'Admin yetkisi gerekli' });
     }
 

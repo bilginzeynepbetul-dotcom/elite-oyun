@@ -260,6 +260,63 @@ function createLeagueRouter() {
     }
   });
 
+  // GET /api/league/season-status?country=&division=
+  // UI: kalan maç, sezon tamam mı, şampiyon (varsa)
+  router.get("/league/season-status", async (req, res) => {
+    try {
+      const leagueRepo = require("./repos/leagueRepo");
+      const seasonLifecycle = require("./seasonLifecycle");
+      const country = (req.query && req.query.country) || "Türkiye";
+      const division = req.query && req.query.division
+        ? parseInt(req.query.division, 10)
+        : 1;
+      const season = await leagueRepo.getCurrentSeason(country, division);
+      if (!season) {
+        return res.json({
+          season: null,
+          complete: false,
+          counts: null,
+          message: "Aktif sezon yok",
+        });
+      }
+      const counts = await seasonLifecycle.countFixturesByStatus(season.id);
+      const complete = await seasonLifecycle.isSeasonComplete(season.id);
+      let seasonMeta = null;
+      try {
+        seasonMeta = await seasonLifecycle.readSeasonRow(season.id);
+      } catch (_) {
+        seasonMeta = {
+          id: season.id,
+          yearLabel: season.year_label || season.yearLabel,
+          status: "active",
+        };
+      }
+      const open = (counts.scheduled || 0) + (counts.live || 0);
+      res.json({
+        season: {
+          id: season.id,
+          country,
+          division,
+          yearLabel:
+            (seasonMeta && seasonMeta.yearLabel) ||
+            season.year_label ||
+            season.yearLabel,
+          status: (seasonMeta && seasonMeta.status) || "active",
+          championName: (seasonMeta && seasonMeta.championName) || null,
+        },
+        counts,
+        open,
+        complete,
+        message: complete
+          ? "Sezon tamamlandı — kapanış bekleniyor veya işlendi"
+          : open + " maç kaldı (" + (counts.finished || 0) + " bitti / " + (counts.total || 0) + " toplam)",
+      });
+    } catch (e) {
+      console.error("[league/season-status]", e);
+      res.status(500).json({ error: "Sezon durumu alınamadı" });
+    }
+  });
+
   // POST /api/league/finalize-season  { seasonId?, country?, division?, force? }
   router.post("/league/finalize-season", async (req, res) => {
     try {

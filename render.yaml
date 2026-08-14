@@ -9,6 +9,7 @@ services:
     name: elite-manager
     runtime: docker
     plan: free
+    healthCheckPath: /healthz
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -22,3 +23,7 @@ services:
         value: murat
       - key: NODE_ENV
         value: production
+      - key: CORS_ORIGIN
+        sync: false
+      - key: ELITE_ALLOW_MOCK
+        value: "0"

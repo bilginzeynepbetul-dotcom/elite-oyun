@@ -26,6 +26,7 @@ const { COUNTRY } = require("./nationalRoutes");
 
 let timer = null;
 let running = false;
+let seasonAutoCounter = 0;
 
 async function tickLeague({ io, liveMatches }) {
   const due = await leagueRepo.listDueFixtures(20);
@@ -181,6 +182,38 @@ async function tick(ctx) {
     await tickContinental(ctx);
     await tickFriendly(ctx);
     await tickNational(ctx);
+
+    // Maç bildirimleri: her tick (hafif sorgu)
+    try {
+      const { runMatchNotify } = require("./matchNotify");
+      const mn = await runMatchNotify();
+      if (mn && mn.notified) {
+        console.log("[scheduler] matchNotify", mn.notified);
+      }
+    } catch (eMn) {
+      console.warn("[scheduler] matchNotify", eMn.message);
+    }
+
+    // Sezon otomasyonu: her 4 tick'te bir (~60sn @15s interval)
+    seasonAutoCounter++;
+    if (seasonAutoCounter >= 4) {
+      seasonAutoCounter = 0;
+      try {
+        const { runSeasonAutomation } = require("./seasonAutomation");
+        const auto = await runSeasonAutomation(ctx);
+        if (
+          auto &&
+          ((auto.stuckLive && auto.stuckLive.processed) ||
+            (auto.overdue && auto.overdue.forfeited) ||
+            (auto.pendingFinalize && auto.pendingFinalize.finalized) ||
+            (auto.monthly && auto.monthly.ok && !auto.monthly.skipped && !auto.monthly.empty))
+        ) {
+          console.log("[scheduler] seasonAutomation", JSON.stringify(auto));
+        }
+      } catch (eAuto) {
+        console.warn("[scheduler] seasonAutomation", eAuto.message);
+      }
+    }
   } catch (e) {
     console.error("[scheduler] tick error", e);
   } finally {

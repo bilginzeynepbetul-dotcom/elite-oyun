@@ -40,10 +40,6 @@ const PLANS = {
 
 const TRIAL_DAYS = 14;
 
-function stripeEnabled() {
-  return !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith("sk_"));
-}
-
 function publicStatus(row) {
   if (!row) return { active: false, plan: null, until: null, trial: false };
   const until = row.elite_until ? new Date(row.elite_until).getTime() : null;
@@ -137,6 +133,10 @@ async function activatePlan(userId, planId, opts) {
       [opts.paymentId, userId],
     );
   }
+  try {
+    const achievementsSystem = require("./achievementsSystem");
+    await achievementsSystem.onEliteActivated(userId);
+  } catch (_) {}
   return { ok: true, status: await getStatus(userId) };
 }
 
@@ -159,87 +159,6 @@ async function createPaymentRecord(userId, planId, provider, providerRef) {
   return { ok: true, paymentId: rows[0].id, plan };
 }
 
-/** Stripe Checkout Session (opsiyonel) */
-async function createStripeCheckout(userId, username, planId, successUrl, cancelUrl) {
-  if (!stripeEnabled()) {
-    return { ok: false, error: "Stripe yapılandırılmamış", mock: true };
-  }
-  const plan = PLANS[planId];
-  if (!plan || planId === "trial") return { ok: false, error: "Geçersiz plan" };
-
-  const Stripe = require("stripe");
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-  const pay = await createPaymentRecord(userId, planId, "stripe", null);
-  if (!pay.ok) return pay;
-
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    customer_email: undefined,
-    client_reference_id: String(userId),
-    metadata: {
-      userId: String(userId),
-      username: String(username || ""),
-      plan: planId,
-      paymentId: String(pay.paymentId),
-    },
-    line_items: [
-      {
-        quantity: 1,
-        price_data: {
-          currency: plan.currency,
-          unit_amount: plan.amountCents,
-          product_data: {
-            name: "Elite Manager — " + plan.title,
-            description: plan.days + " gün Elite üyelik",
-          },
-        },
-      },
-    ],
-    success_url:
-      (successUrl || process.env.PUBLIC_URL || "http://localhost:3000") +
-      "?elite=success&plan=" +
-      planId,
-    cancel_url:
-      (cancelUrl || process.env.PUBLIC_URL || "http://localhost:3000") +
-      "?elite=cancel",
-  });
-
-  await query(
-    `UPDATE elite_payments SET provider_ref = $2 WHERE id = $1`,
-    [pay.paymentId, session.id],
-  );
-
-  return {
-    ok: true,
-    checkoutUrl: session.url,
-    sessionId: session.id,
-    paymentId: pay.paymentId,
-    mock: false,
-  };
-}
-
-/** Stripe webhook: checkout.session.completed */
-async function handleStripeWebhookEvent(event) {
-  if (!event || event.type !== "checkout.session.completed") {
-    return { ok: true, ignored: true };
-  }
-  const session = event.data && event.data.object;
-  if (!session) return { ok: false, error: "session yok" };
-  const meta = session.metadata || {};
-  const userId = parseInt(meta.userId || session.client_reference_id, 10);
-  const planId = meta.plan;
-  const paymentId = meta.paymentId ? parseInt(meta.paymentId, 10) : null;
-  if (!userId || !planId || !PLANS[planId]) {
-    return { ok: false, error: "metadata eksik" };
-  }
-  return activatePlan(userId, planId, {
-    provider: "stripe",
-    providerRef: session.id,
-    paymentId: paymentId || undefined,
-  });
-}
-
 /** Mock / test ödeme onayı — SADECE açıkça ELITE_ALLOW_MOCK=1 iken.
  *  GÜVENLİK: Stripe yok diye otomatik açmak production'da ücretsiz Elite
  *  sömürüsüne yol açıyordu; artık varsayılan kapalı. */
@@ -248,7 +167,7 @@ async function confirmMockPayment(userId, planId) {
     process.env.ELITE_ALLOW_MOCK === "1" ||
     process.env.ELITE_ALLOW_MOCK === "true";
   if (!allowMock) {
-    return { ok: false, error: "Mock ödeme kapalı. Stripe kullanın veya ELITE_ALLOW_MOCK=1 ayarlayın." };
+    return { ok: false, error: "Mock ödeme kapalı. ELITE_ALLOW_MOCK=1 veya Destek Ol (manuel onay) kullanın." };
   }
   const pay = await createPaymentRecord(userId, planId, "mock", "mock_" + Date.now());
   if (!pay.ok) return pay;
@@ -305,7 +224,7 @@ function eliteMiddleware(req, res, next) {
 }
 
 /** Günlük ödül: herkes aynı sabit tutar, seri yok, Elite çarpanı yok */
-const DAILY_AMOUNT = 50000;
+const DAILY_AMOUNT = (require("./economyBalance").DAILY_REWARD || 30000);
 
 function startOfLocalDay(d) {
   const x = d ? new Date(d) : new Date();
@@ -543,12 +462,9 @@ async function reviewDonation(donationId, adminUserId, accept, adminNote) {
 
 module.exports = {
   PLANS,
-  stripeEnabled,
   getStatus,
   ensureTrial,
   activatePlan,
-  createStripeCheckout,
-  handleStripeWebhookEvent,
   confirmMockPayment,
   listPlansPublic,
   getDonationMethodsPublic,

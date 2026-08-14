@@ -10,8 +10,11 @@
     "check-db": "node scripts/check-db.js",
     "test": "node scripts/smoke.js",
     "test:integration": "node scripts/integration-test.js",
-    "test:all": "node scripts/smoke.js && node scripts/integration-test.js",
-    "test:stress": "node scripts/stress-instant.js"
+    "test:reconnect": "node scripts/smoke-reconnect.js",
+    "test:all": "node scripts/smoke.js && node scripts/integration-test.js && node scripts/smoke-reconnect.js",
+    "test:stress": "node scripts/stress-instant.js",
+    "test:stress-load": "node scripts/stress-load.js",
+    "test:stress-all": "node scripts/stress-instant.js && node scripts/stress-load.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -20,10 +23,11 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.3",
-    "stripe": "^14.25.0",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "socket.io-client": "^4.7.5"
   }
 }
+

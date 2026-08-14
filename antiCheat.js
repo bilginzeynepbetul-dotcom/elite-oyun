@@ -55,9 +55,24 @@ const LIMITS = {
 
 // ---------- Rate limit (bellek) ----------
 const _rateBuckets = new Map(); // key → { count, resetAt }
+let _lastSweep = 0;
+
+/** Süresi dolmuş bucket'ları temizle (bellek sızıntısını önler) */
+function sweepRateBuckets(now) {
+  if (now - _lastSweep < 60_000) return; // en fazla 1 dk'da bir
+  _lastSweep = now;
+  for (const [k, b] of _rateBuckets) {
+    if (!b || now >= b.resetAt) _rateBuckets.delete(k);
+  }
+  // Aşırı büyümeyi engelle
+  if (_rateBuckets.size > 50_000) {
+    _rateBuckets.clear();
+  }
+}
 
 function rateLimit(key, max, windowMs) {
   const now = Date.now();
+  sweepRateBuckets(now);
   let b = _rateBuckets.get(key);
   if (!b || now >= b.resetAt) {
     b = { count: 0, resetAt: now + windowMs };
@@ -93,16 +108,23 @@ function rateLimitMiddleware(opts) {
 }
 
 // ---------- Audit ----------
+// Şema (018_anti_cheat.sql): user_id, action, reason, admin_id, details
 async function logSuspicious(userId, clubId, action, detail) {
   try {
+    const details =
+      typeof detail === "object" && detail !== null
+        ? { ...detail, clubId: clubId || detail.clubId || null }
+        : { raw: detail, clubId: clubId || null };
     await query(
-      `INSERT INTO anti_cheat_log (user_id, club_id, action, detail)
-       VALUES ($1, $2, $3, $4::jsonb)`,
+      `INSERT INTO anti_cheat_log (user_id, action, reason, admin_id, details)
+       VALUES ($1, $2, $3, NULL, $4::jsonb)`,
       [
         userId || null,
-        clubId || null,
         String(action || "unknown").slice(0, 64),
-        JSON.stringify(detail || {}),
+        typeof detail === "string"
+          ? String(detail).slice(0, 500)
+          : String(action || "suspicious").slice(0, 500),
+        JSON.stringify(details),
       ],
     );
   } catch (e) {

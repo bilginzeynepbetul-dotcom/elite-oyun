@@ -1,23 +1,20 @@
 // ============================================================
-// seasonConfig.js — sezon başlangıcı + lig maç slotları
-// 3 saat kuralı yok; scheduleMode = calendar_slots
+// seasonConfig.js — game_settings key/value
 // ============================================================
 
 const { query } = require("./db");
 
-const DEFAULT_START = "2026-08-11T15:00:00+03:00";
-
-async function getSetting(key, fallback) {
+async function getSetting(key, defaultValue = null) {
   try {
     const { rows } = await query(
       `SELECT value FROM game_settings WHERE key = $1`,
-      [key],
+      [String(key)],
     );
-    if (rows[0] && rows[0].value != null && rows[0].value !== "") {
-      return rows[0].value;
-    }
-  } catch (_) {}
-  return fallback;
+    if (!rows[0]) return defaultValue;
+    return rows[0].value;
+  } catch (_) {
+    return defaultValue;
+  }
 }
 
 async function setSetting(key, value) {
@@ -25,88 +22,23 @@ async function setSetting(key, value) {
     `INSERT INTO game_settings (key, value, updated_at)
      VALUES ($1, $2, NOW())
      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-    [key, String(value)],
+    [String(key), value == null ? "" : String(value)],
   );
+  return true;
 }
 
-async function getSeasonStartAt() {
-  const raw =
-    (await getSetting("season_start_at", null)) ||
-    process.env.SEASON_START_AT ||
-    DEFAULT_START;
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return new Date(DEFAULT_START);
-  return d;
-}
-
-async function getLeagueMatchSlots() {
-  const raw = await getSetting("league_match_slots", null);
+async function getJson(key, fallback) {
+  const raw = await getSetting(key, null);
+  if (raw == null) return fallback;
   try {
-    const cal = require("./calendarSchedule");
-    return cal.parseSlots(raw);
+    return JSON.parse(raw);
   } catch (_) {
-    try {
-      const cal = require("./calendarSchedule");
-      return cal.DEFAULT_SLOTS.slice();
-    } catch (__) {
-      return [
-        { dow: 0, hour: 14, minute: 0 },
-        { dow: 2, hour: 14, minute: 0 },
-      ];
-    }
+    return fallback;
   }
 }
 
-async function setLeagueMatchSlots(slots) {
-  await setSetting("league_match_slots", JSON.stringify(slots));
-  return { ok: true, slots };
+async function setJson(key, obj) {
+  return setSetting(key, JSON.stringify(obj));
 }
 
-async function getConfig() {
-  const startAt = await getSeasonStartAt();
-  const slots = await getLeagueMatchSlots();
-  return {
-    seasonStartAt: startAt.toISOString(),
-    seasonStartAtLocal: startAt.toLocaleString("tr-TR", {
-      timeZone: "Europe/Istanbul",
-    }),
-    leagueMatchSlots: slots,
-    scheduleMode: "calendar_slots",
-    note: "3 saat kuralı yok — sadece slot gün/saatleri",
-  };
-}
-
-async function setSeasonStartAt(isoOrDate) {
-  let d;
-  if (isoOrDate instanceof Date) d = isoOrDate;
-  else {
-    const s = String(isoOrDate).trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-      d = new Date(s + "T15:00:00+03:00");
-    } else {
-      d = new Date(s);
-    }
-  }
-  if (Number.isNaN(d.getTime())) return { ok: false, error: "Geçersiz tarih" };
-  await setSetting("season_start_at", d.toISOString());
-  return { ok: true, seasonStartAt: d.toISOString() };
-}
-
-// Geriye dönük stub (artık kullanılmıyor)
-async function getFixtureIntervalHours() {
-  return 0;
-}
-async function setFixtureIntervalHours() {
-  return { ok: true, intervalHours: 0, deprecated: true };
-}
-
-module.exports = {
-  getSeasonStartAt,
-  getFixtureIntervalHours,
-  getLeagueMatchSlots,
-  setLeagueMatchSlots,
-  getConfig,
-  setSeasonStartAt,
-  setFixtureIntervalHours,
-  DEFAULT_START,
-};
+module.exports = { getSetting, setSetting, getJson, setJson };

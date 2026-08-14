@@ -21,6 +21,8 @@ let matchArchive = null;
 try { matchArchive = require("./matchArchive"); } catch (_) {}
 let statsSystem = null;
 try { statsSystem = require("./statsSystem"); } catch (_) {}
+let matchRewards = null;
+try { matchRewards = require("./matchRewards"); } catch (_) {}
 
 async function onCupMatchEnd(state, matchInstance) {
   if (!state) return;
@@ -44,11 +46,27 @@ async function onCupMatchEnd(state, matchInstance) {
   try {
     if (fixtureId && stadiumSystem && stadiumSystem.applyMatchTicketRevenue) {
       const fixture = await cupRepo.getFixtureById(fixtureId);
+      let homeRes = "draw";
+      if (homeGoals > awayGoals) homeRes = "win";
+      else if (awayGoals > homeGoals) homeRes = "loss";
       if (fixture && fixture.homeClubId) {
         await stadiumSystem.applyMatchTicketRevenue(fixture.homeClubId, {
           isHome: true,
           comp: "kupa",
+          result: homeRes,
         });
+      }
+      try {
+        const { applyMatchPrizeMoney } = require("./economyBalance");
+        await applyMatchPrizeMoney({
+          kind: "cup",
+          homeGoals,
+          awayGoals,
+          homeClubId: fixture && fixture.homeClubId,
+          awayClubId: fixture && fixture.awayClubId,
+        });
+      } catch (eP) {
+        console.error("[cupLifecycle] prizes", eP);
       }
     }
   } catch (e) {
@@ -62,6 +80,51 @@ async function onCupMatchEnd(state, matchInstance) {
     }
   } catch (e) {
     console.error("[cupLifecycle] stats", e);
+  }
+
+  // Tecrübe + maç antrenmanı (REWARD_TABLE.cup)
+  try {
+    if (matchRewards && typeof matchRewards.applyMatchRewards === "function") {
+      const r = await matchRewards.applyMatchRewards({
+        kind: "cup",
+        state,
+        matchInstance: matchInstance || null,
+      });
+      console.log(
+        "[cupLifecycle] rewards",
+        r && r.applied,
+        r && r.skipped ? r.reason : "",
+      );
+    }
+  } catch (e) {
+    console.error("[cupLifecycle] rewards", e);
+  }
+
+  // Form / kondisyon + başarılar
+  try {
+    let fx = null;
+    if (fixtureId) {
+      try {
+        fx = await cupRepo.getFixtureById(fixtureId);
+      } catch (_) {}
+    }
+    const playerFormSystem = require("./playerFormSystem");
+    await playerFormSystem.applyPostMatchForm(state, matchInstance, {
+      homeClubId: fx && fx.homeClubId,
+      awayClubId: fx && fx.awayClubId,
+    });
+    try {
+      const achievementsSystem = require("./achievementsSystem");
+      await achievementsSystem.onMatchResult({
+        homeClubId: fx && fx.homeClubId,
+        awayClubId: fx && fx.awayClubId,
+        homeGoals,
+        awayGoals,
+        competition: "cup",
+      });
+    } catch (_) {}
+  } catch (eForm) {
+    console.warn("[cupLifecycle] form", eForm.message);
   }
 
   // Not: Maç sonucu bildirimi kasıtlı olarak gönderilmiyor

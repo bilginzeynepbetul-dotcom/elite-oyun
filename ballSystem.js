@@ -164,6 +164,25 @@ function turnoverProbability(match, possSide) {
     prob += (theirExp - 5) * 0.006;
   } catch (_) {}
 
+  // Yorgunluk + moral (matchDepth)
+  try {
+    const {
+      teamConditionMultiplier,
+      moraleMultiplier,
+    } = require("./matchDepth");
+    const condMul = teamConditionMultiplier(team);
+    // Düşük condition → daha fazla top kaybı
+    prob += (1 - condMul) * 0.08;
+    const mor = moraleMultiplier(match, possSide);
+    // Düşük moral → biraz daha fazla hata
+    prob += (1 - mor) * 0.05;
+  } catch (_) {}
+
+  // Geç dakika genel yorgunluk
+  const minute = Number(match.minute) || 0;
+  if (minute >= 80) prob += 0.02;
+  else if (minute >= 70) prob += 0.01;
+
   return Math.max(0.035, Math.min(0.48, prob));
 }
 

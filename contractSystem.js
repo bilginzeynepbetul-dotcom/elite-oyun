@@ -13,37 +13,15 @@ const WAGE_INTERVAL_MS = process.env.WAGE_INTERVAL_MS
   ? Number(process.env.WAGE_INTERVAL_MS)
   : 7 * 24 * 60 * 60 * 1000;
 
-const MIN_WAGE = 500;
-const MAX_WAGE = 120000;
+const {
+  MIN_WAGE,
+  MAX_WAGE,
+  estimateWageCalibrated,
+} = require("./economyBalance");
 const DEFAULT_CONTRACT_YEARS = 2;
 
 function estimateWage(p) {
-  if (!p) return MIN_WAGE;
-  if (p.wage && Number(p.wage) > 0) return Math.floor(Number(p.wage));
-
-  const skills = [
-    "pace", "passing", "finishing", "tackle", "vision",
-    "stamina", "strength", "technique", "agility", "positioning",
-  ];
-  const avg =
-    skills.reduce((s, k) => s + (Number(p[k]) || 10), 0) / skills.length;
-  const age = Number(p.age) || 24;
-  const q = Number(p.baseQuality) || Math.round(avg / 2);
-  const pot = Number(p.basePotential) || q;
-
-  let w = 1200 + avg * 900 + q * 800 + pot * 350;
-  if (age <= 21) w *= 0.85;
-  else if (age <= 24) w *= 1.0;
-  else if (age <= 28) w *= 1.15;
-  else if (age <= 32) w *= 1.05;
-  else w *= 0.7;
-
-  // Kaleci / forvet hafif prim
-  const pos = (p.pos || p.naturalPos || "").toUpperCase();
-  if (pos === "GK") w *= 1.05;
-  if (["FC", "FL", "FR"].includes(pos)) w *= 1.08;
-
-  return Math.max(MIN_WAGE, Math.min(MAX_WAGE, Math.round(w / 100) * 100));
+  return estimateWageCalibrated(p);
 }
 
 function estimateDemand(p) {

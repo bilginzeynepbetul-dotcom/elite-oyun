@@ -48,6 +48,11 @@ const REWARD_TABLE = {
     training: 0, // antrenman yok
     label: "Kıtasal",
   },
+  instant: {
+    experience: 0.25,
+    training: 0.15,
+    label: "Anlık",
+  },
 };
 
 const SKILL_KEYS = [

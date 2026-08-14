@@ -85,20 +85,42 @@ async function onMatchEnd(state, matchInstance) {
     console.error("[matchLifecycle] archive", e);
   }
 
-  // Bilet geliri — ev sahibi
+  // Bilet geliri — ev sahibi + maç primi (her iki taraf)
   try {
-    if (fixtureId && stadiumSystem && stadiumSystem.applyMatchTicketRevenue) {
+    if (fixtureId) {
       const fixture = await leagueRepo.getFixtureById(fixtureId);
-      if (fixture && fixture.homeClubId) {
-        const eco = await stadiumSystem.applyMatchTicketRevenue(fixture.homeClubId, {
-          isHome: true,
-          comp: "lig",
-        });
+      let homeRes = "draw";
+      if (homeGoals > awayGoals) homeRes = "win";
+      else if (awayGoals > homeGoals) homeRes = "loss";
+      if (
+        fixture &&
+        fixture.homeClubId &&
+        stadiumSystem &&
+        stadiumSystem.applyMatchTicketRevenue
+      ) {
+        const eco = await stadiumSystem.applyMatchTicketRevenue(
+          fixture.homeClubId,
+          { isHome: true, comp: "lig", result: homeRes },
+        );
         console.log(
           "[matchLifecycle] tickets",
           fixture.homeClubId,
           eco && eco.tickets,
         );
+      }
+      try {
+        const { applyMatchPrizeMoney } = require("./economyBalance");
+        const prizes = await applyMatchPrizeMoney({
+          kind: "league",
+          homeGoals,
+          awayGoals,
+          homeClubId: fixture && fixture.homeClubId,
+          awayClubId: fixture && fixture.awayClubId,
+          division: fixture && fixture.division,
+        });
+        console.log("[matchLifecycle] prizes", prizes);
+      } catch (ePrize) {
+        console.error("[matchLifecycle] prizes", ePrize);
       }
     }
   } catch (e) {
@@ -129,6 +151,55 @@ async function onMatchEnd(state, matchInstance) {
     console.error("[matchLifecycle] rewards", e);
   }
 
+  // Sakatlıkları kalıcılaştır + doktor ile iyileşme adımı
+  try {
+    const staffSystem = require("./staffSystem");
+    const homeClubId =
+      (matchInstance &&
+        matchInstance.players &&
+        matchInstance.players.home &&
+        matchInstance.players.home.clubId) ||
+      null;
+    const awayClubId =
+      (matchInstance &&
+        matchInstance.players &&
+        matchInstance.players.away &&
+        matchInstance.players.away.clubId) ||
+      null;
+    const homePlayers =
+      (state.players &&
+        state.players.home &&
+        state.players.home.team &&
+        state.players.home.team.players) ||
+      (matchInstance &&
+        matchInstance.players &&
+        matchInstance.players.home &&
+        matchInstance.players.home.team &&
+        matchInstance.players.home.team.players) ||
+      [];
+    const awayPlayers =
+      (state.players &&
+        state.players.away &&
+        state.players.away.team &&
+        state.players.away.team.players) ||
+      (matchInstance &&
+        matchInstance.players &&
+        matchInstance.players.away &&
+        matchInstance.players.away.team &&
+        matchInstance.players.away.team.players) ||
+      [];
+    if (homeClubId) {
+      await staffSystem.persistMatchInjuries(homeClubId, homePlayers);
+      await staffSystem.processRecovery(homeClubId);
+    }
+    if (awayClubId) {
+      await staffSystem.persistMatchInjuries(awayClubId, awayPlayers);
+      await staffSystem.processRecovery(awayClubId);
+    }
+  } catch (eInj) {
+    console.warn("[matchLifecycle] injury/doctor", eInj.message);
+  }
+
   // Sezon kapanışı: tüm lig maçları bittiyse şampiyon + ödül + yeni sezon
   try {
     if (fixtureId) {
@@ -142,6 +213,49 @@ async function onMatchEnd(state, matchInstance) {
           "champion=",
           fin.champion && fin.champion.name,
         );
+        // Canlı istemcilere bildir — UI standings/history yenilesin
+        try {
+          const io = matchInstance && matchInstance.io;
+          const payload = {
+            country: fin.country,
+            division: fin.division,
+            yearLabel: fin.yearLabel,
+            champion: fin.champion || null,
+            seasonId: fin.seasonId,
+            nextSeason: fin.nextSeason
+              ? { id: fin.nextSeason.id, yearLabel: fin.nextSeason.year_label || fin.nextSeason.yearLabel }
+              : null,
+          };
+          if (io && typeof io.emit === "function") {
+            io.emit("season:finalized", payload);
+          }
+        } catch (eEmit) {
+          console.warn("[matchLifecycle] season emit", eEmit.message);
+        }
+        // Ligdeki insan menajerlere bildirim
+        try {
+          if (socialSystem && typeof socialSystem.pushNotification === "function" && fin.standings) {
+            const clubsRepo = require("./repos/clubsRepo");
+            for (const row of fin.standings) {
+              if (!row.clubId) continue;
+              try {
+                const club = await clubsRepo.getClub(row.clubId);
+                if (club && club.user_id && !club.is_bot) {
+                  await socialSystem.pushNotification(
+                    club.user_id,
+                    "🏆",
+                    (fin.yearLabel || "Sezon") +
+                      " bitti · Şampiyon: " +
+                      ((fin.champion && fin.champion.name) || "—"),
+                    "Lig",
+                  );
+                }
+              } catch (_) {}
+            }
+          }
+        } catch (eNotif) {
+          console.warn("[matchLifecycle] season notif", eNotif.message);
+        }
       }
     }
   } catch (e) {
@@ -150,6 +264,60 @@ async function onMatchEnd(state, matchInstance) {
 
   // Not: Maç sonucu bildirimi kasıtlı olarak gönderilmiyor
   // (kullanıcı isteğiyle kaldırıldı — bildirimlere maç skoru gelmesin).
+
+  // Günlük görevler
+  try {
+    const dailyChallengeSystem = require("./dailyChallengeSystem");
+    const hg =
+      (state && state.score && state.score.home) != null
+        ? Number(state.score.home)
+        : 0;
+    const ag =
+      (state && state.score && state.score.away) != null
+        ? Number(state.score.away)
+        : 0;
+    for (const side of [
+      { clubId: homeClubId, gf: hg, ga: ag },
+      { clubId: awayClubId, gf: ag, ga: hg },
+    ]) {
+      if (!side.clubId) continue;
+      const uid = await dailyChallengeSystem.userIdForClub(side.clubId);
+      if (!uid) continue;
+      await dailyChallengeSystem.onMatchPlayed(uid, {
+        won: side.gf > side.ga,
+        goals: side.gf,
+      });
+    }
+  } catch (eCh) {
+    console.warn("[matchLifecycle] challenges", eCh.message);
+  }
+
+  // Form / kondisyon kalıcılığı
+  try {
+    const playerFormSystem = require("./playerFormSystem");
+    await playerFormSystem.applyPostMatchForm(state, matchInstance, {
+      homeClubId,
+      awayClubId,
+    });
+  } catch (eForm) {
+    console.warn("[matchLifecycle] form", eForm.message);
+  }
+
+  // Başarılar
+  try {
+    const achievementsSystem = require("./achievementsSystem");
+    const hg = (state && state.score && state.score.home) || 0;
+    const ag = (state && state.score && state.score.away) || 0;
+    await achievementsSystem.onMatchResult({
+      homeClubId: homeClubId,
+      awayClubId: awayClubId,
+      homeGoals: hg,
+      awayGoals: ag,
+      competition: "league",
+    });
+  } catch (eAch) {
+    console.warn("[matchLifecycle] achievements", eAch.message);
+  }
 }
 
 /**
@@ -229,6 +397,11 @@ async function startFixtureMatch(opts) {
   if (io) {
     io.to("fixture:" + fixtureId).emit("fixture:live", { fixtureId });
   }
+  // Maç başladı bildirimi (insan menajerler)
+  try {
+    const { notifyMatchStarted } = require("./matchNotify");
+    notifyMatchStarted({ fixtureId }).catch(function () {});
+  } catch (_) {}
   return match;
 }
 

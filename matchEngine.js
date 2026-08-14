@@ -13,6 +13,13 @@ const {
 const { checkCardEvents } = require("./cardSystem");
 const { checkInjuryEvents } = require("./injurySystem");
 const {
+  initMatchDepth,
+  applyFatigueTick,
+  recomputeMorale,
+  maybeSetPiece,
+  onGoalScored,
+} = require("./matchDepth");
+const {
   MATCH_MINUTES,
   TICK_MS: DEFAULT_TICK_MS,
   CIRCULATION_MS: DEFAULT_CIRCULATION_MS,
@@ -66,6 +73,18 @@ class Match {
     this.subsUsed = { home: 0, away: 0 };
     this.subsMax = 5;
     initBallState(this);
+    try {
+      initMatchDepth(this);
+    } catch (eDepth) {
+      console.warn("[matchEngine] initMatchDepth", eDepth && eDepth.message);
+    }
+    // Genişletilmiş maç istatistikleri
+    this.stats.home.corners = 0;
+    this.stats.home.freeKicks = 0;
+    this.stats.home.penalties = 0;
+    this.stats.away.corners = 0;
+    this.stats.away.freeKicks = 0;
+    this.stats.away.penalties = 0;
   }
 
   room() {
@@ -143,6 +162,21 @@ class Match {
     this.minute++;
     this._stateSeq++;
 
+    // Yorgunluk + moral (her dakika)
+    try {
+      applyFatigueTick(this);
+    } catch (_) {}
+    try {
+      if (this.minute % 3 === 0 || this.minute === 1) recomputeMorale(this);
+    } catch (_) {}
+
+    // Devre arası log
+    if (this.minute === 46) {
+      try {
+        this.addLog(mt("half_time", this.lang));
+      } catch (_) {}
+    }
+
     // Kart/sakatlık — seyrek örnekleme (her tick pahalı rastgele + tarama)
     if ((this.minute & 1) === 0) {
       checkCardEvents(this);
@@ -152,13 +186,30 @@ class Match {
 
     let needFullState = false;
 
+    // Set-piece (korner / serbest / penaltı) — şuttan önce
+    if (!this.inMajorAction) {
+      try {
+        const sp = maybeSetPiece(this);
+        if (sp) {
+          needFullState = true;
+          if (sp.scored) {
+            try {
+              onGoalScored(this, sp.side);
+            } catch (_) {}
+          }
+        }
+      } catch (eSp) {
+        console.error("[matchEngine] setPiece", eSp);
+      }
+    }
+
     if (!this.inMajorAction && Math.random() < SHOT_CHANCE_PER_TICK) {
       this.inMajorAction = true;
       const lock = Math.min(
         MAJOR_ACTION_LOCK_MS,
         Math.floor(this.tickMs * (400 / 900)),
       );
-      setTimeout(() => {
+      const runShot = () => {
         if (this.status !== "live") {
           this.inMajorAction = false;
           return;
@@ -168,6 +219,9 @@ class Match {
           const event = attemptShot(this, side);
 
           if (event && event.scored) {
+            try {
+              onGoalScored(this, side);
+            } catch (_) {}
             const receivingSide = side === "home" ? "away" : "home";
             this.ball.x = 300;
             this.ball.y = 200;
@@ -194,7 +248,10 @@ class Match {
           this.inMajorAction = false;
         }
         this.broadcast("match:state", this.getPublicState(true));
-      }, lock);
+      };
+      // Çok kısa tick (test/hızlı sim) → senkron; canlı maçta kilit süresi kadar gecikme
+      if (lock <= 20) runShot();
+      else setTimeout(runShot, lock);
       needFullState = true;
     }
 
@@ -377,6 +434,8 @@ class Match {
       },
       subsUsed: this.subsUsed,
       subsMax: this.subsMax,
+      morale: this.morale || { home: 50, away: 50 },
+      depthStats: this.depthStats || null,
       ball: this.ball
         ? { x: this.ball.x, y: this.ball.y, holderSide: this.ball.holderSide }
         : null,
@@ -418,8 +477,11 @@ function ensureTeamShape(team, fallbackName) {
     p.name = p.name || `Oyuncu ${i + 1}`;
     p.pos = p.pos || "MC";
     p.condition = p.condition != null ? p.condition : 90;
+    p.form = p.form != null ? p.form : 0;
+    p.matchMorale = p.matchMorale != null ? p.matchMorale : 50;
     p.sentOff = !!p.sentOff;
     p.cards = p.cards || 0;
+    p.injured = !!p.injured;
     // Maç içi sayaç — kariyer DB değeriyle karışmasın
     p.goals = 0;
     p.assists = 0;

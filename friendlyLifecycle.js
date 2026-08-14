@@ -21,6 +21,10 @@ let statsSystem = null;
 try {
   statsSystem = require("./statsSystem");
 } catch (_) {}
+let matchRewards = null;
+try {
+  matchRewards = require("./matchRewards");
+} catch (_) {}
 
 async function onFriendlyMatchEnd(state, matchInstance) {
   if (!state) return;
@@ -34,6 +38,24 @@ async function onFriendlyMatchEnd(state, matchInstance) {
     }
   } catch (e) {
     console.error("[friendlyLifecycle] finish", e);
+  }
+
+  // Küçük dostluk primi
+  try {
+    const fixture =
+      fixtureId && friendlySystem.getById
+        ? await friendlySystem.getById(fixtureId)
+        : null;
+    const { applyMatchPrizeMoney } = require("./economyBalance");
+    await applyMatchPrizeMoney({
+      kind: "friendly",
+      homeGoals,
+      awayGoals,
+      homeClubId: fixture && fixture.homeClubId,
+      awayClubId: fixture && fixture.awayClubId,
+    });
+  } catch (eP) {
+    console.error("[friendlyLifecycle] prizes", eP);
   }
 
   try {
@@ -57,6 +79,24 @@ async function onFriendlyMatchEnd(state, matchInstance) {
     }
   } catch (e) {
     console.error("[friendlyLifecycle] stats", e);
+  }
+
+  // Tecrübe + maç antrenmanı (REWARD_TABLE.friendly)
+  try {
+    if (matchRewards && typeof matchRewards.applyMatchRewards === "function") {
+      const r = await matchRewards.applyMatchRewards({
+        kind: "friendly",
+        state,
+        matchInstance: matchInstance || null,
+      });
+      console.log(
+        "[friendlyLifecycle] rewards",
+        r && r.applied,
+        r && r.skipped ? r.reason : "",
+      );
+    }
+  } catch (e) {
+    console.error("[friendlyLifecycle] rewards", e);
   }
 
   // Hazırlık maçında bilet geliri yok (kasıtlı) — sadece tecrübe/moral amaçlı.

@@ -49,13 +49,85 @@ function createInstantMatchRouter(deps) {
       fixtureId,
       tickMs: tickMs,
       circulationMs: circulationMs,
-      onEnd: async () => {
+      onEnd: async (state, matchInstance) => {
         try {
-          liveMatches.delete(fixtureId);
-        } catch (e) {}
+          // Ekonomi + ödüller (anlık maç)
+          const hg = (state && state.score && state.score.home) || 0;
+          const ag = (state && state.score && state.score.away) || 0;
+          try {
+            const { applyMatchPrizeMoney } = require("./economyBalance");
+            await applyMatchPrizeMoney({
+              kind: "instant",
+              homeGoals: hg,
+              awayGoals: ag,
+              homeClubId: homePlayer.clubId,
+              awayClubId: awayPlayer.clubId,
+            });
+          } catch (eEco) {
+            console.warn("[instant onEnd] prize", eEco.message);
+          }
+          try {
+            const matchRewards = require("./matchRewards");
+            if (matchRewards.applyMatchRewards) {
+              await matchRewards.applyMatchRewards({
+                kind: "instant",
+                state,
+                matchInstance: matchInstance || null,
+              });
+            }
+          } catch (eRw) {
+            console.warn("[instant onEnd] rewards", eRw.message);
+          }
+          try {
+            const achievementsSystem = require("./achievementsSystem");
+            await achievementsSystem.onMatchResult({
+              homeClubId: homePlayer.clubId,
+              awayClubId: awayPlayer.clubId,
+              homeGoals: hg,
+              awayGoals: ag,
+              competition: "instant",
+            });
+          } catch (eAch) {
+            console.warn("[instant onEnd] achievements", eAch.message);
+          }
+          try {
+            const daily = require("./dailyChallengeSystem");
+            for (const side of [
+              { clubId: homePlayer.clubId, goals: hg, won: hg > ag },
+              { clubId: awayPlayer.clubId, goals: ag, won: ag > hg },
+            ]) {
+              if (!side.clubId) continue;
+              const uid = await daily.userIdForClub(side.clubId);
+              if (uid) {
+                await daily.onMatchPlayed(uid, {
+                  won: side.won,
+                  goals: side.goals,
+                });
+              }
+            }
+          } catch (eDc) {
+            console.warn("[instant onEnd] daily", eDc.message);
+          }
+          try {
+            const playerFormSystem = require("./playerFormSystem");
+            if (playerFormSystem.applyPostMatchForm) {
+              await playerFormSystem.applyPostMatchForm(state, matchInstance, {
+                competition: "instant",
+              });
+            }
+          } catch (_) {}
+        } catch (e) {
+          console.error("[instant onEnd]", e);
+        } finally {
+          try {
+            liveMatches.delete(fixtureId);
+            liveMatches.delete(matchId);
+          } catch (e) {}
+        }
       },
     });
     liveMatches.set(fixtureId, match);
+    liveMatches.set(matchId, match); // matchId ile de bulunabilsin
     instant.registerInstantMeta(fixtureId, meta);
     match.start();
     if (io) {

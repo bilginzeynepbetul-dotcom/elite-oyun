@@ -70,11 +70,27 @@ async function onContinentalMatchEnd(state, matchInstance) {
   try {
     if (fixtureId && stadiumSystem && stadiumSystem.applyMatchTicketRevenue) {
       const fixture = await continentalRepo.getFixtureById(fixtureId);
+      let homeRes = "draw";
+      if (homeGoals > awayGoals) homeRes = "win";
+      else if (awayGoals > homeGoals) homeRes = "loss";
       if (fixture && fixture.homeClubId) {
         await stadiumSystem.applyMatchTicketRevenue(fixture.homeClubId, {
           isHome: true,
-          comp: "kita",
+          comp: "continental",
+          result: homeRes,
         });
+      }
+      try {
+        const { applyMatchPrizeMoney } = require("./economyBalance");
+        await applyMatchPrizeMoney({
+          kind: "continental",
+          homeGoals,
+          awayGoals,
+          homeClubId: fixture && fixture.homeClubId,
+          awayClubId: fixture && fixture.awayClubId,
+        });
+      } catch (eP) {
+        console.error("[clLifecycle] prizes", eP);
       }
     }
   } catch (e) {

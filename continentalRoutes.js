@@ -15,11 +15,18 @@ function createContinentalRouter() {
   router.get("/continental", async (req, res) => {
     try {
       let edition = await continentalRepo.getCurrentEdition();
+      let ensureError = null;
       if (!edition && req.query.ensure === "1") {
-        const r = await continentalRepo.ensureEditionExists(
-          "CL-" + new Date().getFullYear(),
-        );
-        edition = r.edition;
+        try {
+          const r = await continentalRepo.ensureEditionExists(
+            "CL-" + new Date().getFullYear(),
+          );
+          edition = r.edition;
+          if (!edition && r.error) ensureError = r.error;
+        } catch (eEns) {
+          ensureError = eEns.message || "CL oluşturulamadı";
+          console.warn("[continental ensure]", ensureError);
+        }
       }
       if (!edition) {
         return res.json({
@@ -27,6 +34,10 @@ function createContinentalRouter() {
           groups: {},
           fixtures: [],
           pot: [],
+          ensureError,
+          hint: ensureError
+            ? ensureError
+            : "Aktif Kıtalar Ligi yok. CL Oluştur ile başlatılabilir.",
         });
       }
       const [groups, fixtures] = await Promise.all([

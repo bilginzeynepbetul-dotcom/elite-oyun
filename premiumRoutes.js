@@ -17,8 +17,7 @@ function createPremiumRouter() {
       res.json({
         status,
         plans: premiumSystem.listPlansPublic(),
-        // Stripe kaldırıldı — Destek Ol (manuel onay)
-        stripeEnabled: false,
+                stripeEnabled: false, // kullanılmıyor — Destek Ol modeli
         supportMode: true,
         mockAllowed:
           process.env.ELITE_ALLOW_MOCK === "1" ||
@@ -30,7 +29,7 @@ function createPremiumRouter() {
     }
   });
 
-  // POST /api/premium/checkout  — Stripe kapalı; destek modeli
+  // POST /api/premium/checkout — destek modeli
   router.post("/checkout", async (req, res) => {
     try {
       const userId = req.user && req.user.id;
@@ -40,7 +39,6 @@ function createPremiumRouter() {
         return res.status(400).json({ error: "Geçersiz plan" });
       }
 
-      // Stripe bilerek kullanılmıyor
       const mockAllowed =
         process.env.ELITE_ALLOW_MOCK === "1" ||
         process.env.ELITE_ALLOW_MOCK === "true";
@@ -58,7 +56,7 @@ function createPremiumRouter() {
         supportMode: true,
         plan,
         error:
-          "Stripe kapalı. Elite için Destek Ol ile ödeme yapıp Bize Ulaşın üzerinden bildirin; yönetici aktif eder.",
+          "Elite için Destek Ol ile ödeme yapıp Bize Ulaşın üzerinden bildirin; yönetici aktif eder.",
       });
     } catch (e) {
       console.error("[premium/checkout]", e);
@@ -140,66 +138,85 @@ function createPremiumRouter() {
   // GET /api/premium/second-team
   router.get("/second-team", async (req, res) => {
     try {
-      const clubsRepo = require("./repos/clubsRepo");
+      const secondTeamSystem = require("./secondTeamSystem");
       const { enrichClubId } = require("./routes/authRoutes");
       const clubId = await enrichClubId(req);
       if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
-      const status = await premiumSystem.getStatus(req.user.id);
-      const secondTeam = status.active
-        ? await clubsRepo.getSecondTeam(clubId)
-        : null;
-      res.json({
-        secondTeam,
-        canUse: !!(status && status.active),
-        elite: status,
-      });
+      const r = await secondTeamSystem.getSecondTeam(req.user.id, clubId);
+      res.json(r);
     } catch (e) {
       console.error("[premium/second-team GET]", e);
       res.status(500).json({ error: "İkinci takım alınamadı" });
     }
   });
 
+  // POST /api/premium/second-team/ensure  { name? } — yoksa oluştur
+  router.post("/second-team/ensure", async (req, res) => {
+    try {
+      const secondTeamSystem = require("./secondTeamSystem");
+      const { enrichClubId } = require("./routes/authRoutes");
+      const clubId = await enrichClubId(req);
+      if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
+      const name = req.body && req.body.name;
+      const r = await secondTeamSystem.ensureSecondTeam(req.user.id, clubId, {
+        name,
+      });
+      if (!r.ok) return res.status(r.error && r.code === "ELITE_REQUIRED" ? 403 : 400).json(r);
+      res.json(r);
+    } catch (e) {
+      console.error("[premium/second-team/ensure]", e);
+      res.status(500).json({ error: "İkinci takım açılamadı" });
+    }
+  });
+
+  // POST /api/premium/second-team/rename  { name }
+  router.post("/second-team/rename", async (req, res) => {
+    try {
+      const secondTeamSystem = require("./secondTeamSystem");
+      const { enrichClubId } = require("./routes/authRoutes");
+      const clubId = await enrichClubId(req);
+      if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
+      const name = req.body && req.body.name;
+      const r = await secondTeamSystem.renameSecondTeam(
+        req.user.id,
+        clubId,
+        name,
+      );
+      if (!r.ok) return res.status(400).json(r);
+      res.json(r);
+    } catch (e) {
+      console.error("[premium/second-team/rename]", e);
+      res.status(500).json({ error: "İsim güncellenemedi" });
+    }
+  });
+
   // POST /api/premium/second-team  { secondTeam } — Elite zorunlu
-  // Kadro verisi antiCheat ile sanitize edilir (aşırı skill / sahte bütçe yok).
+  // Kadro verisi secondTeamSystem + antiCheat ile sanitize edilir.
   router.post("/second-team", async (req, res) => {
     try {
-      const elite = await premiumSystem.requireElite(req.user.id);
-      if (!elite.ok) return res.status(403).json(elite);
-      const clubsRepo = require("./repos/clubsRepo");
-      const antiCheat = require("./antiCheat");
+      const secondTeamSystem = require("./secondTeamSystem");
       const { enrichClubId } = require("./routes/authRoutes");
       const clubId = await enrichClubId(req);
       if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
       let data = (req.body && req.body.secondTeam) || req.body;
-      if (!data || typeof data !== "object") {
-        return res.status(400).json({ error: "secondTeam gerekli" });
+      // action: ensure kısayolu
+      if (data && data.action === "ensure") {
+        const r = await secondTeamSystem.ensureSecondTeam(req.user.id, clubId, {
+          name: data.name,
+        });
+        if (!r.ok) return res.status(403).json(r);
+        return res.json(r);
       }
-      const raw = JSON.stringify(data);
-      if (raw.length > 800000) {
-        return res.status(400).json({ error: "Veri çok büyük" });
+      const r = await secondTeamSystem.saveSecondTeam(
+        req.user.id,
+        clubId,
+        data,
+      );
+      if (!r.ok) {
+        const code = r.code === "ELITE_REQUIRED" ? 403 : 400;
+        return res.status(code).json(r);
       }
-      // players/bench içeriyorsa ana takım ile aynı sanitizasyon
-      if (data.players || data.bench || data.team) {
-        const teamLike = data.team || data;
-        const existing = await clubsRepo.getSecondTeam(clubId);
-        const sanitized = antiCheat.sanitizeTeamPayload(
-          teamLike,
-          existing && (existing.team || existing),
-        );
-        if (!sanitized.ok) {
-          await antiCheat.logSuspicious(
-            req.user && req.user.id,
-            clubId,
-            "second_team_reject",
-            sanitized,
-          );
-          return res.status(400).json(sanitized);
-        }
-        if (data.team) data = { ...data, team: sanitized.team };
-        else data = sanitized.team;
-      }
-      await clubsRepo.saveSecondTeam(clubId, data);
-      res.json({ ok: true, secondTeam: data, elite: elite.status });
+      res.json(r);
     } catch (e) {
       console.error("[premium/second-team POST]", e);
       res.status(500).json({ error: "İkinci takım kaydedilemedi" });
@@ -358,30 +375,5 @@ function createPremiumRouter() {
   return router;
 }
 
-/** Stripe webhook — raw body gerekir; server.js ayrı mount eder */
+module.exports = { createPremiumRouter };
 
-async function stripeWebhookHandler(req, res) {
-  try {
-    const secret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!secret || !premiumSystem.stripeEnabled()) {
-      return res.status(400).json({ error: "Webhook yapılandırılmamış" });
-    }
-    const Stripe = require("stripe");
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const sig = req.headers["stripe-signature"];
-    let event;
-    try {
-      event = stripe.webhooks.constructEvent(req.body, sig, secret);
-    } catch (err) {
-      console.warn("[stripe webhook] signature", err.message);
-      return res.status(400).send("Webhook Error: " + err.message);
-    }
-    const result = await premiumSystem.handleStripeWebhookEvent(event);
-    res.json({ received: true, result });
-  } catch (e) {
-    console.error("[stripe webhook]", e);
-    res.status(500).json({ error: "Webhook işlenemedi" });
-  }
-}
-
-module.exports = { createPremiumRouter, stripeWebhookHandler };

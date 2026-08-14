@@ -15,6 +15,10 @@ let statsSystem = null;
 try {
   statsSystem = require("./statsSystem");
 } catch (_) {}
+let matchRewards = null;
+try {
+  matchRewards = require("./matchRewards");
+} catch (_) {}
 
 const OPP_FIRST = [
   "Marco", "Luca", "Hans", "Jan", "Pierre", "Antoine", "Erik", "Lukas",
@@ -176,16 +180,37 @@ async function onNationalMatchEnd(state, fixture, matchInstance) {
     console.error("[nationalLifecycle] stats", e);
   }
 
+  // Milli maç ödülleri: A vs U21 ayrı (REWARD_TABLE.national_a / national_u21)
+  let cat = "A";
+  try {
+    const nt = await nationalRepo.getTeamById(fixture.nationalTeamId);
+    if (nt && nt.category) cat = nt.category;
+  } catch (_) {}
+  try {
+    if (matchRewards && typeof matchRewards.applyMatchRewards === "function") {
+      const kind =
+        String(cat).toUpperCase() === "U21" ? "national_u21" : "national_a";
+      const r = await matchRewards.applyMatchRewards({
+        kind,
+        state,
+        matchInstance: matchInstance || null,
+      });
+      console.log(
+        "[nationalLifecycle] rewards",
+        kind,
+        r && r.applied,
+        r && r.skipped ? r.reason : "",
+      );
+    }
+  } catch (e) {
+    console.error("[nationalLifecycle] rewards", e);
+  }
+
   // Not: Maç sonucu bildirimi kasıtlı olarak gönderilmiyor
   // (kullanıcı isteğiyle kaldırıldı — bildirimlere maç skoru gelmesin).
 
   try {
     // Maç bitince hem A hem U21 dostluk zincirini yenile
-    let cat = "A";
-    try {
-      const nt = await nationalRepo.getTeamById(fixture.nationalTeamId);
-      if (nt && nt.category) cat = nt.category;
-    } catch (_) {}
     await nationalSystem.scheduleNextFixtureIfNeeded(COUNTRY, cat);
     await nationalSystem.ensureAllNationalFixtures(COUNTRY);
   } catch (e) {

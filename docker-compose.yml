@@ -31,6 +31,12 @@ services:
         condition: service_healthy
     command: >
       sh -c "node scripts/migrate.js && node server.js"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
 volumes:
   em_pg:
