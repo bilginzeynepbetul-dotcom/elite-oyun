@@ -185,8 +185,11 @@
         } catch (e) {}
         if (!res.ok) {
           if (res.status === 401 || res.status === 403) {
-            setToken(null);
-            setRefreshToken(null);
+            // TOKEN_REVOKED / ban / expire → tam çıkış
+            forceClientLogout(
+              (data && data.code) || "SESSION_END",
+              (data && data.error) || null,
+            );
           }
           return null;
         }
@@ -201,6 +204,44 @@
     return _emRefreshPromise;
   }
   window.__emRefreshAccessToken = refreshAccessToken;
+
+  /** Şifre sıfırlama / ban / logout-all sonrası istemci oturumunu temizle */
+  function forceClientLogout(code, message) {
+    try {
+      setToken(null);
+      setRefreshToken(null);
+      if (_emRefreshTimer) clearTimeout(_emRefreshTimer);
+      _emRefreshTimer = null;
+    } catch (e) {}
+    try {
+      if (typeof socket !== "undefined" && socket) {
+        if (socket.auth) socket.auth.token = null;
+        // Yeniden bağlanınca misafir olur
+      }
+    } catch (e2) {}
+    try {
+      if (code === "TOKEN_REVOKED" || code === "BANNED") {
+        const msg =
+          message ||
+          (code === "BANNED"
+            ? "Hesabınız engellenmiş."
+            : "Oturumunuz sonlandırıldı. Tekrar giriş yapın.");
+        if (typeof window.__emOnSessionEnd === "function") {
+          window.__emOnSessionEnd({ code: code, message: msg });
+        } else if (typeof alert === "function") {
+          // Sessiz tekrarları azalt
+          if (!window.__emSessionEndAlerted) {
+            window.__emSessionEndAlerted = true;
+            alert(msg);
+            setTimeout(function () {
+              window.__emSessionEndAlerted = false;
+            }, 5000);
+          }
+        }
+      }
+    } catch (e3) {}
+  }
+  window.__emForceClientLogout = forceClientLogout;
 
   async function apiFetch(path, opts) {
     opts = opts || {};
@@ -229,18 +270,29 @@
     try {
       data = await res.json();
     } catch (e) {}
+    // İptal edilmiş oturum — refresh deneme
+    if (
+      res.status === 401 &&
+      data &&
+      (data.code === "TOKEN_REVOKED" || data.code === "BANNED")
+    ) {
+      forceClientLogout(data.code, data.error);
+      throw new Error(data.error || "Oturum sonlandı");
+    }
     // 401 → bir kez refresh dene (login/register/refresh hariç)
     if (
       res.status === 401 &&
       !opts._retried &&
       path.indexOf("/api/auth/login") < 0 &&
       path.indexOf("/api/auth/register") < 0 &&
-      path.indexOf("/api/auth/refresh") < 0
+      path.indexOf("/api/auth/refresh") < 0 &&
+      path.indexOf("/api/auth/logout-all") < 0
     ) {
       const newTok = await refreshAccessToken();
       if (newTok) {
         return apiFetch(path, Object.assign({}, opts, { _retried: true }));
       }
+      forceClientLogout("SESSION_END", (data && data.error) || null);
     }
     if (!res.ok) {
       if (res.status === 401 || res.status === 403)
@@ -2623,8 +2675,8 @@ function renderServerMatchState(state) {
       if (errorEl) errorEl.innerText = "Kullanıcı adı en az 3 karakter olmalı.";
       return;
     }
-    if (!password || password.length < 6) {
-      if (errorEl) errorEl.innerText = "Şifre en az 6 karakter olmalı.";
+    if (!password || password.length < 8) {
+      if (errorEl) errorEl.innerText = "Şifre en az 8 karakter olmalı.";
       return;
     }
     if (!securityQuestion || securityQuestion.length < 5) {
@@ -2699,7 +2751,7 @@ function renderServerMatchState(state) {
     const errorEl = document.getElementById("forgotError");
     if (!username || !answer || !newPassword || newPassword.length < 6) {
       if (errorEl)
-        errorEl.innerText = "Tüm alanları doldur (yeni şifre en az 6 karakter).";
+        errorEl.innerText = "Tüm alanları doldur (yeni şifre en az 8 karakter).";
       return;
     }
     if (errorEl) errorEl.innerText = "Sıfırlanıyor...";
