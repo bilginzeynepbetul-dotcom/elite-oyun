@@ -28,11 +28,23 @@ function normCategory(cat) {
 
 async function getTeamByCountry(country, category) {
   const cat = normCategory(category);
-  const { rows } = await query(
-    `SELECT * FROM national_teams WHERE country = $1 AND category = $2`,
-    [country, cat],
-  );
-  return rowToTeam(rows[0]);
+  try {
+    const { rows } = await query(
+      `SELECT * FROM national_teams WHERE country = $1 AND category = $2`,
+      [country, cat],
+    );
+    return rowToTeam(rows[0]);
+  } catch (e) {
+    // category kolonu yoksa (011 öncesi şema)
+    if (e && (e.code === "42703" || /column .*category/i.test(String(e.message || e)))) {
+      const { rows } = await query(
+        `SELECT * FROM national_teams WHERE country = $1`,
+        [country],
+      );
+      return rowToTeam(rows[0]);
+    }
+    throw e;
+  }
 }
 
 /** Ülke için A / U21 satırı yoksa oluşturur */
@@ -51,14 +63,24 @@ async function ensureTeamRow(country, category) {
     );
     if (rows[0]) return rowToTeam(rows[0]);
   } catch (e) {
-    // unique yoksa veya eski şema
+    // unique yoksa veya eski şema (category kolonu yok)
     try {
       const { rows } = await query(
-        `INSERT INTO national_teams (country, category) VALUES ($1, $2) RETURNING *`,
-        [c, cat],
+        `INSERT INTO national_teams (country) VALUES ($1)
+         ON CONFLICT DO NOTHING
+         RETURNING *`,
+        [c],
       );
       if (rows[0]) return rowToTeam(rows[0]);
-    } catch (e2) {}
+    } catch (e2) {
+      try {
+        const { rows } = await query(
+          `INSERT INTO national_teams (country, category) VALUES ($1, $2) RETURNING *`,
+          [c, cat],
+        );
+        if (rows[0]) return rowToTeam(rows[0]);
+      } catch (e3) {}
+    }
   }
   return getTeamByCountry(c, cat);
 }
@@ -125,13 +147,25 @@ async function withdrawApplication(nationalTeamId, userId) {
 }
 
 async function getMyApplication(nationalTeamId, userId) {
-  const { rows } = await query(
-    `SELECT id, status, created_at FROM national_manager_applications
-     WHERE national_team_id = $1 AND user_id = $2 AND status = 'pending'
-     ORDER BY created_at DESC LIMIT 1`,
-    [nationalTeamId, userId],
-  );
-  return rows[0] ? { id: rows[0].id, status: rows[0].status, createdAt: rows[0].created_at } : null;
+  if (!userId) return null;
+  try {
+    const { rows } = await query(
+      `SELECT id, status, created_at FROM national_manager_applications
+       WHERE national_team_id = $1 AND user_id = $2 AND status = 'pending'
+       ORDER BY created_at DESC LIMIT 1`,
+      [nationalTeamId, userId],
+    );
+    return rows[0]
+      ? { id: rows[0].id, status: rows[0].status, createdAt: rows[0].created_at }
+      : null;
+  } catch (e) {
+    // Tablo yoksa (007 migrate edilmemiş) state'i tamamen düşürme
+    if (e && (e.code === "42P01" || /does not exist/i.test(String(e.message || e)))) {
+      console.warn("[nationalRepo.getMyApplication] tablo yok — null dönülüyor:", e.message);
+      return null;
+    }
+    throw e;
+  }
 }
 
 async function listApplications(nationalTeamId, status = "pending") {
