@@ -170,8 +170,23 @@ try {
   }
 } catch (_) {}
 
-// Statik frontend
-app.use(express.static(path.join(__dirname, "public")));
+// Statik frontend — HTML/JS önbelleğe alınmasın (deploy sonrası eski UI kalmasın)
+app.use(
+  express.static(path.join(__dirname, "public"), {
+    etag: false,
+    lastModified: false,
+    setHeaders(res, filePath) {
+      if (/\.(html?|js|css)$/i.test(filePath)) {
+        res.setHeader(
+          "Cache-Control",
+          "no-store, no-cache, must-revalidate, proxy-revalidate",
+        );
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      }
+    },
+  }),
+);
 
 // Health check (Render / uptime monitörleri / Docker healthcheck için)
 app.get(["/healthz", "/api/healthz"], async (req, res) => {
@@ -811,6 +826,12 @@ app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api") || req.path.startsWith("/socket.io")) {
     return next();
   }
+  res.setHeader(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, proxy-revalidate",
+  );
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   res.sendFile(path.join(__dirname, "public", "index.html"), (err) => {
     if (err) next();
   });
