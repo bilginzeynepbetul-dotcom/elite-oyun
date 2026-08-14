@@ -771,6 +771,7 @@ api.use(createLeagueRouter());
 api.use("/national", createNationalRouter({
   getClubId: (req) => req.user && req.user.clubId,
   getUserId: (req) => req.user && req.user.id,
+  getUsername: (req) => req.user && req.user.username,
 }));
 api.use("/premium", createPremiumRouter());
 // Route path'leri zaten /instant/* — ek prefix YOK
