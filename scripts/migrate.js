@@ -39,6 +39,7 @@ const files = [
   "024_club_doctors.sql",
   "025_achievements.sql",
   "026_daily_challenges.sql",
+  "027_token_version.sql",
 ];
 
 async function ensureMigrationsTable() {
@@ -49,6 +50,46 @@ async function ensureMigrationsTable() {
       applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+
+  // Bazı ortamlarda schema_migrations tablosu daha önce farklı (bozuk) bir
+  // yapıyla oluşturulmuş olabilir — örn. "filename" sütunu INTEGER tipinde.
+  // CREATE TABLE IF NOT EXISTS bu durumda hiçbir şey yapmaz, eski/bozuk
+  // tablo öylece kalır ve INSERT INTO ... (filename) VALUES ('001_x.sql')
+  // "invalid input syntax for type integer" hatası verir.
+  // Burada sütun tipini kontrol edip gerekirse otomatik düzeltiyoruz.
+  const { rows } = await query(
+    `SELECT data_type FROM information_schema.columns
+     WHERE table_name = 'schema_migrations' AND column_name = 'filename'`,
+  );
+
+  const dataType = rows[0]?.data_type;
+  const textLike = ["text", "character varying", "character"];
+
+  if (dataType && !textLike.includes(dataType)) {
+    console.warn(
+      `[migrate] ⚠ schema_migrations.filename beklenmeyen tipte (${dataType}) — TEXT'e çevriliyor…`,
+    );
+    try {
+      await query(
+        `ALTER TABLE schema_migrations ALTER COLUMN filename TYPE TEXT USING filename::text`,
+      );
+      console.log("[migrate] ✓ schema_migrations.filename TEXT'e çevrildi.");
+    } catch (e) {
+      console.warn(
+        "[migrate] ⚠ ALTER başarısız, tablo sıfırdan oluşturuluyor:",
+        String(e.message || e),
+      );
+      await query(`DROP TABLE schema_migrations`);
+      await query(`
+        CREATE TABLE schema_migrations (
+          id SERIAL PRIMARY KEY,
+          filename TEXT NOT NULL UNIQUE,
+          applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
+      console.log("[migrate] ✓ schema_migrations yeniden oluşturuldu.");
+    }
+  }
 }
 
 async function alreadyApplied(filename) {
@@ -98,6 +139,15 @@ async function run() {
       );
       console.log("[migrate] ✓ uygulandı:", file);
     } catch (e) {
+      // Bir komut hata verince Postgres o transaction'ı "aborted" durumuna
+      // sokar; ROLLBACK atmadan aynı client üzerinde başka komut çalıştırmak
+      // "current transaction is aborted, commands ignored until end of
+      // transaction block" hatasını verir. Devam etmeden önce mutlaka
+      // ROLLBACK ile temizliyoruz.
+      try {
+        await client.query("ROLLBACK");
+      } catch (_) {}
+
       // Idempotent ALTER / IF NOT EXISTS hatalarını yutmaya çalış
       const msg = String(e.message || e);
       if (
@@ -107,11 +157,25 @@ async function run() {
       ) {
         console.warn("[migrate] ⚠ uyarı (devam):", file, "—", msg.slice(0, 120));
         try {
+          // Yeni, temiz bir transaction içinde işaretle (ROLLBACK sonrası
+          // client tekrar kullanılabilir durumda, ama garanti olsun diye
+          // basit bir tekil INSERT yeterli — implicit transaction açar).
           await client.query(
             `INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING`,
             [file],
           );
-        } catch (_) {}
+          console.log("[migrate] ✓ işaretlendi (zaten mevcuttu):", file);
+        } catch (e2) {
+          console.error(
+            "[migrate] ✗ işaretlenemedi:",
+            file,
+            "—",
+            String(e2.message || e2),
+          );
+          client.release();
+          await pool.end();
+          process.exit(1);
+        }
       } else {
         console.error("[migrate] ✗ hata:", file, msg);
         client.release();
