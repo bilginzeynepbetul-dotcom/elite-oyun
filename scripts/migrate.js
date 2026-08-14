@@ -40,6 +40,7 @@ const files = [
   "025_achievements.sql",
   "026_daily_challenges.sql",
   "027_token_version.sql",
+  "028_national_schema_ensure.sql",
 ];
 
 async function ensureMigrationsTable() {
