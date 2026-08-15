@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>E-posta doğrulama — Elite Manager</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, sans-serif;
+      background: #0b1220;
+      color: #e2e8f0;
+      padding: 20px;
+    }
+    .box {
+      max-width: 420px;
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      padding: 28px 22px;
+      text-align: center;
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 10px; }
+    p { color: #94a3b8; font-size: 14px; line-height: 1.55; }
+    .ok { color: #4ade80; }
+    .err { color: #f87171; }
+    a {
+      display: inline-block;
+      margin-top: 16px;
+      color: #38bdf8;
+      text-decoration: none;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>E-posta doğrulama</h1>
+    <p id="status">Doğrulanıyor…</p>
+    <a href="/">Oyuna dön</a>
+  </div>
+  <script>
+    (async function () {
+      const el = document.getElementById("status");
+      const params = new URLSearchParams(location.search);
+      const token = params.get("token") || "";
+      if (!token) {
+        el.className = "err";
+        el.textContent = "Doğrulama kodu eksik.";
+        return;
+      }
+      try {
+        const res = await fetch("/api/auth/verify-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const data = await res.json().catch(function () {
+          return {};
+        });
+        if (!res.ok) {
+          el.className = "err";
+          el.textContent = data.error || "Doğrulama başarısız.";
+          return;
+        }
+        el.className = "ok";
+        el.textContent = data.message || "E-posta doğrulandı. Giriş yapabilirsin.";
+      } catch (e) {
+        el.className = "err";
+        el.textContent = "Sunucuya ulaşılamadı.";
+      }
+    })();
+  </script>
+</body>
+</html>

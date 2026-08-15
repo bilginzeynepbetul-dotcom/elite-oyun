@@ -2644,6 +2644,36 @@
         opacity: 0;
         pointer-events: none;
       }
+
+      .maintenance-banner {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 99999;
+        background: linear-gradient(90deg, #7c2d12, #b45309);
+        color: #fff7ed;
+        text-align: center;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+        line-height: 1.4;
+      }
+      .maintenance-banner.visible {
+        display: block;
+      }
+      .maintenance-banner .mb-sub {
+        font-weight: 400;
+        font-size: 12px;
+        opacity: 0.9;
+        margin-top: 2px;
+      }
+      body.maintenance-on .login-box {
+        border-color: #b45309 !important;
+      }
+
       .login-box {
         position: relative;
         background: linear-gradient(
@@ -3768,6 +3798,10 @@
     </style>
 
     <!-- ===== GİRİŞ EKRANI ===== -->
+    <div class="maintenance-banner" id="maintenanceBanner" role="alert">
+      <div>🛠️ Bakım çalışması sürüyor</div>
+      <div class="mb-sub" id="maintenanceBannerMsg">Kısa süre sonra tekrar dene.</div>
+    </div>
     <div class="login-overlay" id="loginOverlay">
       <div class="login-box">
         <div class="login-form" id="loginForm">
@@ -3853,6 +3887,18 @@
           <div class="login-footer-hint">
             Demo: admin / 123456 · Kayıt yüklenir · Yeni Kariyer sıfırlar
           </div>
+          <div class="legal-links" style="margin-top:12px;text-align:center;font-size:11px;color:#64748b;line-height:1.6;">
+            <a href="/privacy.html" target="_blank" rel="noopener" style="color:#94a3b8;">Gizlilik / KVKK</a>
+            ·
+            <a href="/terms.html" target="_blank" rel="noopener" style="color:#94a3b8;">Kullanım Koşulları</a>
+            ·
+            <a href="/cookies.html" target="_blank" rel="noopener" style="color:#94a3b8;">Çerezler</a>
+          </div>
+          <div style="margin-top:10px;text-align:center;font-size:11px;">
+            <button type="button" id="resendVerifyPublicBtn" onclick="resendVerifyPublicFromLogin()" style="background:none;border:none;color:#38bdf8;cursor:pointer;font-size:11px;text-decoration:underline;padding:0;">
+              Doğrulama maili gelmedi mi? Tekrar gönder
+            </button>
+          </div>
         </div>
         <div class="register-form" id="registerForm">
           <div class="login-badge">✨</div>
@@ -3912,9 +3958,17 @@
           <input
             type="password"
             id="regPassword"
-            placeholder="En az 6 karakter"
-            value="123456"
+            placeholder="En az 8 karakter"
+            value=""
+            autocomplete="new-password"
+            oninput="if(typeof updateRegPasswordStrength==='function')updateRegPasswordStrength()"
           />
+          <div id="regPasswordStrength" style="margin:6px 0 10px;font-size:11px;color:#94a3b8;min-height:28px;">
+            <div style="height:6px;background:#1e293b;border-radius:999px;overflow:hidden;margin-bottom:4px;">
+              <div id="regPasswordStrengthBar" style="height:100%;width:0%;background:#64748b;transition:width .2s,background .2s;"></div>
+            </div>
+            <span id="regPasswordStrengthText">Şifre gücü: —</span>
+          </div>
           <label class="field-label" for="regSecurityQuestion">
             Güvenlik sorusu (zorunlu · şifre kurtarma)
           </label>
@@ -3936,6 +3990,20 @@
           <p style="font-size:11px;color:#64748b;margin:0 0 10px;line-height:1.4;">
             Hesap sunucuda saklanır. Aynı kullanıcı adı/e-posta ile tekrar kayıt olunamaz. Üye no (U…) otomatik verilir.
           </p>
+          <label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 10px;font-size:11px;color:#94a3b8;line-height:1.45;cursor:pointer;">
+            <input type="checkbox" id="regLegalAccept" style="margin-top:3px;flex-shrink:0;" />
+            <span>
+              <a href="/privacy.html" target="_blank" rel="noopener" style="color:#38bdf8;">Gizlilik Politikası / KVKK Aydınlatma Metni</a>
+              ve
+              <a href="/terms.html" target="_blank" rel="noopener" style="color:#38bdf8;">Kullanım Koşulları</a>’nı okudum, kabul ediyorum.
+            </span>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 12px;font-size:11px;color:#94a3b8;line-height:1.45;cursor:pointer;">
+            <input type="checkbox" id="regAgeAccept" style="margin-top:3px;flex-shrink:0;" />
+            <span>
+              16 yaşından büyüğüm (veya yasal temsilci onayım var). Çocuklara ait hesap açılmamalıdır.
+            </span>
+          </label>
           <button class="login-btn" id="registerBtn">Kayıt Ol</button>
           <div class="error-msg" id="registerError"></div>
           <div class="register-link">
@@ -4272,13 +4340,69 @@
             </div>
             <button type="button" class="sub-btn" id="settingsThemeBtn" style="width:auto;padding:8px 14px;" onclick="toggleTheme()">Koyu</button>
           </div>
-          <div id="adminDeleteAccountPanel" style="display:none;padding:14px;background:#0f172a;border:1px solid #7f1d1d;border-radius:12px;">
-            <div style="font-weight:700;color:#fecaca;">Hesabı sil (yalnızca admin)</div>
-            <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;">
-              Sunucu kaydı ve ilişkili veriler kalıcı silinir. Boş bırakırsan kendi oturum hesabın silinir.
+          
+          
+          
+          <div id="emailVerifyPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
+            <div style="font-weight:700;color:#e2e8f0;">E-posta doğrulama</div>
+            <div id="emailVerifyStatus" style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
+              Durum kontrol ediliyor…
             </div>
-            <input id="adminDeleteTargetUser" type="text" placeholder="Silinecek kullanıcı adı (opsiyonel)" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
-            <button type="button" class="sub-btn" style="width:100%;background:#7f1d1d;font-weight:800;" onclick="deleteUserAccount()">🗑️ Hesabı kalıcı sil</button>
+            <button type="button" class="sub-btn" style="width:100%;background:#1e3a5f;font-weight:700;" onclick="resendEmailVerification()">✉️ Doğrulama bağlantısı gönder</button>
+          </div>
+<div id="changePasswordPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
+            <div style="font-weight:700;color:#e2e8f0;">Şifre değiştir</div>
+            <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
+              Yeni şifre en az 8 karakter. Değişiklikten sonra tüm cihazlarda tekrar giriş gerekir.
+            </div>
+            <input id="chgPwCurrent" type="password" placeholder="Mevcut şifre" autocomplete="current-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+            <input id="chgPwNew" type="password" placeholder="Yeni şifre" autocomplete="new-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+            <input id="chgPwNew2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+            <button type="button" class="sub-btn" style="width:100%;background:#1e3a5f;font-weight:700;" onclick="changeOwnPassword()">🔐 Şifreyi güncelle</button>
+          </div>
+          <div id="logoutAllPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
+            <div style="font-weight:700;color:#e2e8f0;">Oturumlar</div>
+            <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
+              Tüm cihazlardaki oturumları sonlandır. Bu cihaz dahil her yerde tekrar giriş gerekir.
+            </div>
+            <div id="lastLoginInfo" style="font-size:12px;color:#64748b;margin-bottom:8px;min-height:14px;"></div>
+            <button type="button" class="sub-btn" style="width:100%;background:#4c1d95;font-weight:700;" onclick="logoutAllSessions()">🚪 Tüm cihazlardan çıkış</button>
+          </div>
+<div id="legalInfoPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
+            <div style="font-weight:700;color:#e2e8f0;">Gizlilik ve yasal</div>
+            <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
+              KVKK aydınlatma metni, kullanım koşulları ve çerez politikası.
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <a href="/privacy.html" target="_blank" rel="noopener" class="sub-btn" style="width:auto;padding:8px 12px;text-decoration:none;display:inline-block;">Gizlilik / KVKK</a>
+              <a href="/terms.html" target="_blank" rel="noopener" class="sub-btn" style="width:auto;padding:8px 12px;text-decoration:none;display:inline-block;">Kullanım Koşulları</a>
+              <a href="/cookies.html" target="_blank" rel="noopener" class="sub-btn" style="width:auto;padding:8px 12px;text-decoration:none;display:inline-block;">Çerezler</a>
+            </div>
+          </div>
+<div id="selfExportDataPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
+            <div style="font-weight:700;color:#e2e8f0;">Verilerimi indir</div>
+            <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
+              KVKK kapsamında hesabına ait kişisel verilerin JSON özetini indirebilirsin
+              (kullanıcı, kulüp, oyuncular, bağış/ödeme kayıtları, başarımlar).
+            </div>
+            <button type="button" class="sub-btn" style="width:100%;background:#1e3a5f;font-weight:700;" onclick="exportOwnData()">⬇️ Verilerimi indir (JSON)</button>
+          </div>
+          <div id="selfDeleteAccountPanel" style="padding:14px;background:#0f172a;border:1px solid #7f1d1d;border-radius:12px;">
+            <div style="font-weight:700;color:#fecaca;">Hesabımı kapat</div>
+            <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
+              KVKK kapsamında hesabını kapatabilirsin. Kullanıcı adı, e-posta ve güvenlik bilgilerin anonimleştirilir;
+              maç/lig geçmişi sistem bütünlüğü için saklanır ancak sana bağlanamaz. Bu işlem geri alınamaz.
+            </div>
+            <input id="selfDeletePassword" type="password" placeholder="Onay için şifren" autocomplete="current-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+            <button type="button" class="sub-btn" style="width:100%;background:#7f1d1d;font-weight:800;" onclick="closeOwnAccount()">🗑️ Hesabımı kapat</button>
+          </div>
+          <div id="adminDeleteAccountPanel" style="display:none;padding:14px;background:#0f172a;border:1px solid #7f1d1d;border-radius:12px;">
+            <div style="font-weight:700;color:#fecaca;">Hesabı kapat (yalnızca admin)</div>
+            <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;">
+              Soft-delete: PII anonimleştirilir, lig geçmişi korunur. Boş bırakırsan kendi oturum hesabın kapatılır.
+            </div>
+            <input id="adminDeleteTargetUser" type="text" placeholder="Kapatılacak kullanıcı adı (opsiyonel)" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+            <button type="button" class="sub-btn" style="width:100%;background:#7f1d1d;font-weight:800;" onclick="deleteUserAccount()">🗑️ Hesabı kapat</button>
           </div>
           <div id="staffRolesPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:none;">
             <div style="font-weight:700;color:#e2e8f0;margin-bottom:6px;">👤 Personel / Görevlendirme</div>
@@ -4317,10 +4441,61 @@
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#059669,#10b981);" onclick="adminAcUnban()">Unban</button>
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#334155;" onclick="adminAcLookup()">Sorgula</button>
             </div>
+            <div style="font-weight:700;color:#e2e8f0;font-size:13px;margin:12px 0 6px;">🔐 Giriş kilidi</div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;line-height:1.4;">
+              Brute-force sonrası <code style="color:#38bdf8;">locked_until</code> ile kilitlenen hesapları açın. Ban ile karıştırmayın.
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#0d9488,#14b8a6);font-weight:700;" onclick="adminAcUnlockLogin()">Kilit aç</button>
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#334155;" onclick="adminAcLoadLocked()">Kilitli listesi</button>
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#0f766e;" onclick="adminAcOnlineUsers()">Çevrimiçi</button>
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#7c3aed,#a78bfa);font-weight:700;" onclick="adminAcRevokeSessions()">Oturumları düşür</button>
+            </div>
+            <div style="font-weight:700;color:#e2e8f0;font-size:13px;margin:14px 0 6px;">🛠️ Bakım modu (runtime)</div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;line-height:1.4;">
+              API’yi geçici kapatır (health açık). Env <code style="color:#38bdf8;">MAINTENANCE_MODE=1</code> zorlar; o zaman buradan kapatılamaz.
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
+              <input id="adminMaintMsg" type="text" placeholder="Bakım mesajı (opsiyonel)" style="flex:1;min-width:180px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#b45309,#f59e0b);font-weight:700;" onclick="adminMaintSet(true)">Bakımı aç</button>
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#059669,#10b981);font-weight:700;" onclick="adminMaintSet(false)">Bakımı kapat</button>
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#334155;" onclick="adminMaintRefresh()">Durum</button>
+            </div>
+            <div id="adminMaintStatus" style="font-size:12px;color:#94a3b8;margin-bottom:10px;min-height:16px;"></div>
+            <div style="font-weight:700;color:#e2e8f0;font-size:13px;margin:14px 0 6px;">📢 Anlık duyuru</div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;line-height:1.4;">
+              Tüm bağlı oyunculara socket ile anında mesaj (bakımdan bağımsız).
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
+              <input id="adminAnnounceMsg" type="text" placeholder="Duyuru metni…" maxlength="400" style="flex:1;min-width:180px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+              <select id="adminAnnounceLevel" style="padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;">
+                <option value="info">Bilgi</option>
+                <option value="warn">Uyarı</option>
+                <option value="urgent">Acil</option>
+              </select>
+              <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#2563eb,#38bdf8);font-weight:700;" onclick="adminAnnounceSend()">Gönder</button>
+            </div>
+            <div id="adminAnnounceStatus" style="font-size:12px;color:#94a3b8;margin-bottom:10px;min-height:14px;"></div>
             <div id="adminAcUserBox" style="font-size:12px;color:#94a3b8;margin-bottom:10px;min-height:18px;"></div>
             <div style="font-weight:700;color:#e2e8f0;font-size:13px;margin:8px 0 6px;">Son loglar</div>
             <div id="adminAcLogs" style="max-height:280px;overflow:auto;font-size:11px;color:#cbd5e1;border:1px solid #334155;border-radius:8px;background:#020617;"></div>
 
+
+            <div style="margin-top:16px;padding-top:12px;border-top:1px solid #334155;">
+              <div class="youth-section-title">🛡️ Admin denetim kaydı</div>
+              <div style="font-size:12px;color:#94a3b8;margin:4px 0 8px;line-height:1.4;">
+                Ban, unban, hesap kapatma, bağış onay/red işlemleri.
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;" onclick="adminAuditRefresh()">Yenile</button>
+                <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#334155;" onclick="adminRetentionRun(true)">Saklama önizle</button>
+                <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#7f1d1d;" onclick="adminRetentionRun(false)">Saklama temizle</button>
+              </div>
+              <div id="adminRetentionNote" style="font-size:11px;color:#94a3b8;margin-bottom:8px;min-height:14px;"></div>
+              <div id="adminAuditLogs" style="max-height:260px;overflow:auto;font-size:11px;color:#cbd5e1;border:1px solid #334155;border-radius:8px;background:#020617;padding:8px;">
+                Admin girişi sonrası yüklenir…
+              </div>
+            </div>
             <div style="margin-top:16px;padding-top:12px;border-top:1px solid #334155;">
               <div class="youth-section-title">📋 Anket düzenle</div>
               <input id="adminPollQuestion" type="text" placeholder="Anket sorusu" maxlength="200" style="width:100%;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;margin-bottom:8px;box-sizing:border-box;" />
@@ -14263,16 +14438,25 @@
           const player = (s && s.playerName) || "Oyuncu";
           const team = (s && s.clubName) || "-";
           const value = (s && s[key]) || 0;
-          const teamSafe = String(team).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+          const esc =
+            typeof adminAcEscape === "function"
+              ? adminAcEscape
+              : function (t) {
+                  return String(t == null ? "" : t);
+                };
+          const teamSafe = String(team)
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "\\'")
+            .replace(/"/g, "&quot;");
           return (
             '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);font-size:12px;"><span>' +
             (i + 1) +
             '. <span class="clickable-player" style="cursor:pointer;text-decoration:underline;color:#e2e8f0;">' +
-            player +
+            esc(player) +
             '</span> <span class="clickable-team" style="color:#64748b;cursor:pointer;text-decoration:underline;" onclick="event.stopPropagation();typeof openClubProfileByName===\'function\'&&openClubProfileByName(\'' +
             teamSafe +
             '\')">( ' +
-            team +
+            esc(team) +
             ' )</span></span><b style="color:' +
             color +
             ';">' +
@@ -15070,16 +15254,23 @@
             typeof canModerateForum === "function" && canModerateForum();
           const isAuthor = me && author && me === author;
           const delId = p.id != null ? p.id : foundIdx >= 0 ? foundIdx : idOrIdx;
+          const escUser =
+            typeof adminAcEscape === "function"
+              ? adminAcEscape
+              : function (t) {
+                  return String(t == null ? "" : t);
+                };
           body.innerHTML =
             '<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:10px;align-items:flex-start;">' +
             '<div><div style="font-weight:800;color:#38bdf8;font-size:15px;cursor:pointer;text-decoration:underline;" onclick="if(typeof openManagerProfile===\'function\')openManagerProfile(\'' +
             String(p.user || "Menajer")
               .replace(/\\/g, "\\\\")
-              .replace(/'/g, "\\'") +
+              .replace(/'/g, "\\'")
+              .replace(/"/g, "&quot;") +
             '\')">' +
-            (p.user || "?") +
+            escUser(p.user || "?") +
             '</div><div style="color:#64748b;font-size:11px;margin-top:2px;">' +
-            (p.time || "") +
+            escUser(p.time || "") +
             "</div></div>" +
             (canMod || isAuthor
               ? '<button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;background:#7f1d1d;cursor:pointer;" onclick="event.stopPropagation();deleteForumPostAt(' +
@@ -15139,8 +15330,16 @@ function addForumPost() {
         const me = String(managerName || "").toLowerCase();
         list.innerHTML = forumPosts
           .map(function (p, idx) {
+            const esc =
+              typeof adminAcEscape === "function"
+                ? adminAcEscape
+                : function (t) {
+                    return String(t == null ? "" : t);
+                  };
             const delId = p.id != null ? p.id : idx;
-            const title = String(p.text || "").split("\n")[0].slice(0, 80);
+            const title = esc(
+              String(p.text || "").split("\n")[0].slice(0, 80),
+            );
             const isAuthor =
               me && String(p.user || "").toLowerCase() === me;
             const showDel = canMod || isAuthor;
@@ -15152,9 +15351,9 @@ function addForumPost() {
               ')">' +
               '<div style="display:flex;justify-content:space-between;margin-bottom:4px;gap:8px;">' +
               '<b style="color:#38bdf8;">' +
-              (p.user || "?") +
+              esc(p.user || "?") +
               '</b><span style="color:#64748b;font-size:11px;flex-shrink:0;">' +
-              (p.time || "") +
+              esc(p.time || "") +
               (showDel
                 ? ' <button type="button" class="sub-btn" style="width:auto;padding:2px 8px;font-size:10px;background:#7f1d1d;" onclick="event.preventDefault();event.stopPropagation();deleteForumPostAt(' +
                   JSON.stringify(delId) +
@@ -20176,21 +20375,28 @@ function addForumPost() {
         list.innerHTML = userMessages
           .map(function (m) {
             const other = m.from === "me" ? m.to : m.from;
+            const esc =
+              typeof adminAcEscape === "function"
+                ? adminAcEscape
+                : function (t) {
+                    return String(t == null ? "" : t);
+                  };
             const un = String(other || "")
               .replace(/\\/g, "\\\\")
-              .replace(/'/g, "\\'");
+              .replace(/'/g, "\\'")
+              .replace(/"/g, "&quot;");
             const fromId = m.fromUserId || m.userId || "";
             const label =
               m.from === "me"
                 ? 'Sen → <span style="color:#38bdf8;cursor:pointer;text-decoration:underline;" onclick="openManagerProfile(\'' +
                   un +
                   "')\">" +
-                  m.to +
+                  esc(m.to) +
                   "</span>"
                 : '<span style="color:#38bdf8;cursor:pointer;text-decoration:underline;" onclick="openManagerProfile(\'' +
                   un +
                   "')\">" +
-                  m.from +
+                  esc(m.from) +
                   "</span>";
             const replyBtn =
               m.from !== "me"
@@ -21127,13 +21333,334 @@ function addForumPost() {
         } catch (e2) {}
       }
 
-      /** Hesabı sil — yalnızca sunucu admini */
+      function _emClearLocalAfterAccountClose(selfName) {
+        try {
+          const keys = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (
+              k &&
+              (k.indexOf("eliteManager") >= 0 ||
+                k.indexOf("em_") === 0 ||
+                (selfName && k.indexOf(String(selfName).toLowerCase()) >= 0))
+            )
+              keys.push(k);
+          }
+          keys.forEach(function (k) {
+            try {
+              localStorage.removeItem(k);
+            } catch (e) {}
+          });
+        } catch (e) {}
+      }
+
+      async function exportOwnData() {
+        try {
+          const token =
+            (typeof localStorage !== "undefined" &&
+              (localStorage.getItem("em_jwt_token") ||
+                localStorage.getItem("em_token") ||
+                localStorage.getItem("token"))) ||
+            "";
+          if (!token) throw new Error("Oturum bulunamadı — tekrar giriş yap");
+          const base =
+            (typeof API_BASE !== "undefined" && API_BASE) ||
+            (typeof window.API_BASE !== "undefined" && window.API_BASE) ||
+            "";
+          const res = await fetch(base + "/api/auth/export-data", {
+            method: "GET",
+            headers: {
+              Authorization: "Bearer " + token,
+              Accept: "application/json",
+            },
+          });
+          const data = await res.json().catch(function () {
+            return null;
+          });
+          if (!res.ok) {
+            throw new Error(
+              (data && data.error) || "Veri indirme başarısız (" + res.status + ")",
+            );
+          }
+          const blob = new Blob([JSON.stringify(data, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download =
+            "elite-manager-verilerim-" +
+            new Date().toISOString().slice(0, 10) +
+            ".json";
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function () {
+            try {
+              URL.revokeObjectURL(url);
+              a.remove();
+            } catch (e) {}
+          }, 500);
+        } catch (e) {
+          alert((e && e.message) || "Veri indirme başarısız");
+        }
+      }
+      window.exportOwnData = exportOwnData;
+
+      async function changeOwnPassword() {
+        const cur = (document.getElementById("chgPwCurrent") || {}).value || "";
+        const n1 = (document.getElementById("chgPwNew") || {}).value || "";
+        const n2 = (document.getElementById("chgPwNew2") || {}).value || "";
+        if (!cur || !n1) {
+          alert("Mevcut ve yeni şifreyi gir.");
+          return;
+        }
+        if (n1.length < 8) {
+          alert("Yeni şifre en az 8 karakter olmalı.");
+          return;
+        }
+        if (n1 !== n2) {
+          alert("Yeni şifre tekrarı eşleşmiyor.");
+          return;
+        }
+        try {
+          if (typeof apiFetch !== "function")
+            throw new Error("Sunucu bağlantısı yok");
+          const r = await apiFetch("/api/auth/change-password", {
+            method: "POST",
+            body: JSON.stringify({
+              currentPassword: cur,
+              newPassword: n1,
+            }),
+          });
+          if (r && r.ok === false)
+            throw new Error(r.error || "Şifre değiştirilemedi");
+          try {
+            localStorage.removeItem("em_jwt_token");
+            localStorage.removeItem("em_jwt_refresh");
+          } catch (e) {}
+          alert(
+            (r && r.message) ||
+              "Şifre güncellendi. Tekrar giriş yapman gerekiyor.",
+          );
+          try {
+            location.reload();
+          } catch (e) {}
+        } catch (e) {
+          alert((e && e.message) || "Şifre değiştirilemedi");
+        }
+      }
+      window.changeOwnPassword = changeOwnPassword;
+
+      async function logoutAllSessions() {
+        if (
+          !confirm(
+            "Tüm cihazlardaki oturumlar sonlandırılacak. Devam?",
+          )
+        )
+          return;
+        try {
+          if (typeof apiFetch !== "function")
+            throw new Error("Sunucu bağlantısı yok");
+          const r = await apiFetch("/api/auth/logout-all", {
+            method: "POST",
+            body: JSON.stringify({}),
+          });
+          try {
+            localStorage.removeItem("em_jwt_token");
+            localStorage.removeItem("em_jwt_refresh");
+            localStorage.removeItem("em_token");
+          } catch (e) {}
+          alert(
+            (r && r.message) ||
+              "Tüm oturumlar sonlandırıldı. Tekrar giriş yap.",
+          );
+          try {
+            location.reload();
+          } catch (e) {}
+        } catch (e) {
+          alert((e && e.message) || "İşlem başarısız");
+        }
+      }
+      window.logoutAllSessions = logoutAllSessions;
+
+      async function refreshLastLoginInfo() {
+        const el = document.getElementById("lastLoginInfo");
+        if (!el) return;
+        try {
+          if (typeof apiFetch !== "function") return;
+          const data = await apiFetch("/api/auth/me");
+          const u = (data && data.user) || data || {};
+          const last = u.lastLoginAt || u.last_login_at;
+          if (last) {
+            el.textContent =
+              "Son giriş: " + new Date(last).toLocaleString("tr-TR");
+          } else {
+            el.textContent = "";
+          }
+        } catch (e) {
+          /* sessiz */
+        }
+      }
+      window.refreshLastLoginInfo = refreshLastLoginInfo;
+      try {
+        if (document.getElementById("lastLoginInfo"))
+          refreshLastLoginInfo();
+      } catch (e0) {}
+
+      async function refreshEmailVerifyStatus() {
+        const el = document.getElementById("emailVerifyStatus");
+        if (!el) return;
+        try {
+          const token =
+            localStorage.getItem("em_jwt_token") ||
+            localStorage.getItem("em_token") ||
+            "";
+          if (!token) {
+            el.textContent = "Oturum yok.";
+            return;
+          }
+          const base =
+            (typeof API_BASE !== "undefined" && API_BASE) ||
+            (typeof window.API_BASE !== "undefined" && window.API_BASE) ||
+            "";
+          const res = await fetch(base + "/api/auth/me", {
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json().catch(function () {
+            return null;
+          });
+          if (!res.ok) {
+            el.textContent = (data && data.error) || "Durum alınamadı.";
+            return;
+          }
+          const u = data.user || {};
+          if (!u.email) {
+            el.textContent = "Hesabında e-posta yok. Kayıtta e-posta eklenmemiş.";
+            return;
+          }
+          if (u.emailVerified) {
+            el.innerHTML =
+              '<span style="color:#4ade80">✓ Doğrulanmış</span> — ' +
+              String(u.email).replace(/[<>]/g, "");
+          } else {
+            el.innerHTML =
+              '<span style="color:#fbbf24">Bekliyor</span> — ' +
+              String(u.email).replace(/[<>]/g, "") +
+              ". Kutunu (ve spam) kontrol et.";
+          }
+        } catch (e) {
+          el.textContent = "Durum alınamadı.";
+        }
+      }
+      async function resendEmailVerification() {
+        try {
+          if (typeof apiFetch !== "function")
+            throw new Error("Sunucu bağlantısı yok");
+          const r = await apiFetch("/api/auth/resend-verification", {
+            method: "POST",
+            body: JSON.stringify({}),
+          });
+          if (r && r.ok === false)
+            throw new Error(r.error || "Gönderilemedi");
+          alert((r && r.message) || "Doğrulama bağlantısı gönderildi.");
+          refreshEmailVerifyStatus();
+        } catch (e) {
+          alert((e && e.message) || "Gönderilemedi");
+        }
+      }
+      window.resendEmailVerification = resendEmailVerification;
+      window.refreshEmailVerifyStatus = refreshEmailVerifyStatus;
+      try {
+        document.addEventListener("DOMContentLoaded", function () {
+          setTimeout(refreshEmailVerifyStatus, 800);
+        });
+      } catch (e) {}
+
+
+
+      // ---- KVKK / çerez onayı ----
+      const EM_COOKIE_CONSENT_KEY = "em_cookie_consent";
+      function acceptCookieConsent() {
+        try {
+          localStorage.setItem(
+            EM_COOKIE_CONSENT_KEY,
+            JSON.stringify({ accepted: true, at: new Date().toISOString(), v: 1 }),
+          );
+        } catch (e) {}
+        const b = document.getElementById("cookieConsentBanner");
+        if (b) b.style.display = "none";
+      }
+      window.acceptCookieConsent = acceptCookieConsent;
+      function showCookieConsentIfNeeded() {
+        try {
+          const raw = localStorage.getItem(EM_COOKIE_CONSENT_KEY);
+          if (raw) {
+            const o = JSON.parse(raw);
+            if (o && o.accepted) return;
+          }
+        } catch (e) {}
+        const b = document.getElementById("cookieConsentBanner");
+        if (b) b.style.display = "block";
+      }
+      try {
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", showCookieConsentIfNeeded);
+        } else {
+          showCookieConsentIfNeeded();
+        }
+      } catch (e) {}
+
+
+      /** Kendi hesabını KVKK soft-delete ile kapat (şifre zorunlu) */
+      async function closeOwnAccount() {
+        const pwEl = document.getElementById("selfDeletePassword");
+        const password = pwEl ? String(pwEl.value || "") : "";
+        if (!password) {
+          alert("Hesabı kapatmak için şifreni gir.");
+          return;
+        }
+        if (
+          !confirm(
+            "Hesabını kapatmak istediğine emin misin?\n\nKişisel verilerin anonimleştirilecek. Bu işlem geri alınamaz.",
+          )
+        )
+          return;
+        if (!confirm("Son uyarı: Hesap kapatılsın mı?")) return;
+        const selfName =
+          (typeof currentUsername !== "undefined" && currentUsername) ||
+          (typeof localStorage !== "undefined" &&
+            localStorage.getItem("em_username")) ||
+          "";
+        try {
+          if (typeof apiFetch !== "function")
+            throw new Error("Sunucu bağlantısı yok");
+          const r = await apiFetch("/api/auth/delete-account", {
+            method: "POST",
+            body: JSON.stringify({ password: password }),
+          });
+          if (r && r.ok === false)
+            throw new Error(r.error || "Hesap kapatılamadı");
+        } catch (e) {
+          alert((e && e.message) || "Hesap kapatılamadı");
+          return;
+        }
+        _emClearLocalAfterAccountClose(selfName);
+        alert("Hesabın kapatıldı. Giriş ekranına yönlendiriliyorsun.");
+        try {
+          location.reload();
+        } catch (e) {}
+      }
+      window.closeOwnAccount = closeOwnAccount;
+
+      /** Hesabı kapat — admin: hedef kullanıcı; self için şifre ister */
       async function deleteUserAccount() {
         const isAd =
           typeof window.__emIsServerAdmin === "function" &&
           window.__emIsServerAdmin();
         if (!isAd) {
-          alert("Bu işlem yalnızca admin hesabı ile yapılabilir.");
+          alert(
+            "Bu işlem yalnızca admin hesabı ile yapılabilir. Kendi hesabın için «Hesabımı kapat» bölümünü kullan.",
+          );
           return;
         }
         let target = "";
@@ -21151,53 +21678,42 @@ function addForumPost() {
           !confirm(
             '"' +
               who +
-              '" kalıcı silinsin mi?\n\nSunucu kaydı ve ilişkili veriler silinir. Geri alınamaz.',
+              '" kapatılsın mı?\n\nPII anonimleştirilir; lig/maç geçmişi sistemde kalır. Geri alınamaz.',
           )
         )
           return;
-        if (!confirm("Son uyarı: Hesap tamamen silinsin mi?")) return;
+        if (!confirm("Son uyarı: Hesap kapatılsın mı?")) return;
         try {
           if (typeof apiFetch !== "function")
             throw new Error("Sunucu bağlantısı yok");
+          const body = {};
+          if (target) body.targetUsername = target;
+          else {
+            const pw = prompt("Kendi hesabını kapatmak için şifreni gir:");
+            if (!pw) return;
+            body.password = pw;
+          }
           const r = await apiFetch("/api/auth/delete-account", {
             method: "POST",
-            body: JSON.stringify({ targetUsername: target || undefined }),
+            body: JSON.stringify(body),
           });
           if (r && r.ok === false)
-            throw new Error(r.error || "Silme başarısız");
+            throw new Error(r.error || "Kapatma başarısız");
         } catch (e) {
-          alert((e && e.message) || "Hesap silinemedi");
+          alert((e && e.message) || "Hesap kapatılamadı");
           return;
         }
-        // Kendi hesabı silindiyse yerel temizle + çıkış
         const deletedSelf =
           !target ||
           String(target).toLowerCase() === String(selfName).toLowerCase();
         if (deletedSelf) {
-          try {
-            const keys = [];
-            for (let i = 0; i < localStorage.length; i++) {
-              const k = localStorage.key(i);
-              if (
-                k &&
-                (k.indexOf("eliteManager") >= 0 ||
-                  k.indexOf("em_") === 0 ||
-                  k.indexOf(String(selfName).toLowerCase()) >= 0)
-              )
-                keys.push(k);
-            }
-            keys.forEach(function (k) {
-              try {
-                localStorage.removeItem(k);
-              } catch (e) {}
-            });
-          } catch (e) {}
-          alert("Hesap silindi. Giriş ekranına yönlendiriliyorsun.");
+          _emClearLocalAfterAccountClose(selfName);
+          alert("Hesap kapatıldı. Giriş ekranına yönlendiriliyorsun.");
           try {
             location.reload();
           } catch (e) {}
         } else {
-          alert('"' + who + '" sunucudan silindi.');
+          alert('"' + who + '" kapatıldı ve anonimleştirildi.');
           try {
             const inp = document.getElementById("adminDeleteTargetUser");
             if (inp) inp.value = "";
@@ -21316,6 +21832,35 @@ function addForumPost() {
       window.adminFullWorldReset = adminFullWorldReset;
 
       // ---- Admin Anti-Cheat panel (UI) ----
+
+      function updateRegPasswordStrength() {
+        const inp = document.getElementById("regPassword");
+        const bar = document.getElementById("regPasswordStrengthBar");
+        const txt = document.getElementById("regPasswordStrengthText");
+        const p = (inp && inp.value) || "";
+        let score = 0;
+        if (p.length >= 8) score += 1;
+        if (p.length >= 12) score += 1;
+        if (/[a-z]/.test(p) && /[A-Z]/.test(p)) score += 1;
+        if (/\d/.test(p)) score += 1;
+        if (/[^A-Za-z0-9]/.test(p)) score += 1;
+        const labels = ["çok zayıf", "zayıf", "orta", "iyi", "güçlü", "çok güçlü"];
+        const colors = ["#64748b", "#f87171", "#fb923c", "#fbbf24", "#4ade80", "#22d3ee"];
+        const pct = Math.min(100, Math.round((score / 5) * 100));
+        if (bar) {
+          bar.style.width = (p ? pct : 0) + "%";
+          bar.style.background = colors[score] || colors[0];
+        }
+        if (txt) {
+          txt.textContent = p
+            ? "Şifre gücü: " + (labels[score] || labels[0]) +
+              (p.length < 8 ? " (en az 8 karakter)" : "")
+            : "Şifre gücü: —";
+          txt.style.color = colors[score] || colors[0];
+        }
+      }
+      window.updateRegPasswordStrength = updateRegPasswordStrength;
+
       function adminAcEscape(t) {
         return String(t == null ? "" : t)
           .replace(/&/g, "&amp;")
@@ -21346,11 +21891,95 @@ function addForumPost() {
         if (typeof window.__emAdminAcLookup === "function")
           window.__emAdminAcLookup();
       }
+      function adminAcUnlockLogin() {
+        if (typeof window.__emAdminAcUnlockLogin === "function")
+          window.__emAdminAcUnlockLogin();
+      }
+      function adminAcLoadLocked() {
+        if (typeof window.__emAdminAcLocked === "function")
+          window.__emAdminAcLocked();
+      }
+      function adminAcOnlineUsers() {
+        if (typeof window.__emAdminAcOnlineUsers === "function")
+          window.__emAdminAcOnlineUsers();
+      }
+      function adminAcRevokeSessions() {
+        if (typeof window.__emAdminAcRevokeSessions === "function")
+          window.__emAdminAcRevokeSessions();
+      }
+      function adminMaintSet(enabled) {
+        if (typeof window.__emAdminMaintSet === "function")
+          window.__emAdminMaintSet(!!enabled);
+      }
+      function adminMaintRefresh() {
+        if (typeof window.__emAdminMaintRefresh === "function")
+          window.__emAdminMaintRefresh();
+      }
+      function adminAnnounceSend() {
+        if (typeof window.__emAdminAnnounceSend === "function")
+          window.__emAdminAnnounceSend();
+      }
+      function adminAuditRefresh() {
+        if (typeof window.__emAdminAuditRefresh === "function") {
+          window.__emAdminAuditRefresh();
+          return;
+        }
+        const el = document.getElementById("adminAuditLogs");
+        if (el) el.innerText = "Sunucu bağlantısı gerekli.";
+      }
+      window.adminAuditRefresh = adminAuditRefresh;
+
+      async function adminRetentionRun(dryRun) {
+        const note = document.getElementById("adminRetentionNote");
+        if (!dryRun) {
+          if (
+            !confirm(
+              "Eski loglar ve süresi dolmuş e-posta tokenları silinecek. Devam?",
+            )
+          )
+            return;
+        }
+        try {
+          if (typeof apiFetch !== "function")
+            throw new Error("Sunucu bağlantısı yok");
+          if (note) note.textContent = "Çalışıyor…";
+          const r = await apiFetch("/api/admin/retention-run", {
+            method: "POST",
+            body: JSON.stringify({ dryRun: !!dryRun }),
+          });
+          if (r && r.ok === false)
+            throw new Error(r.error || "İşlem başarısız");
+          if (note)
+            note.textContent = dryRun
+              ? "Önizleme tamam (detay için sunucu log / yanıt)."
+              : "Temizlik tamam.";
+          if (r && r.log) {
+            console.log("[retention]", r.log);
+            alert(
+              (dryRun ? "Önizleme:\n\n" : "Sonuç:\n\n") +
+                String(r.log).slice(-1500),
+            );
+          }
+          if (typeof adminAuditRefresh === "function") adminAuditRefresh();
+        } catch (e) {
+          if (note) note.textContent = e.message || "Hata";
+          alert((e && e.message) || "Retention başarısız");
+        }
+      }
+      window.adminRetentionRun = adminRetentionRun;
+
       window.adminAcRefresh = adminAcRefresh;
       window.adminAcLoadBanned = adminAcLoadBanned;
       window.adminAcBan = adminAcBan;
       window.adminAcUnban = adminAcUnban;
       window.adminAcLookup = adminAcLookup;
+      window.adminAcUnlockLogin = adminAcUnlockLogin;
+      window.adminAcLoadLocked = adminAcLoadLocked;
+      window.adminAcOnlineUsers = adminAcOnlineUsers;
+      window.adminAcRevokeSessions = adminAcRevokeSessions;
+      window.adminMaintSet = adminMaintSet;
+      window.adminMaintRefresh = adminMaintRefresh;
+      window.adminAnnounceSend = adminAnnounceSend;
       window.adminAcEscape = adminAcEscape;
 
       function canManageStaff() {
@@ -22978,9 +23607,21 @@ function addForumPost() {
         const email = document.getElementById("regEmail").value.trim();
         const password = document.getElementById("regPassword").value;
         const errorEl = document.getElementById("registerError");
+        const legalOk = document.getElementById("regLegalAccept");
+        if (legalOk && !legalOk.checked) {
+          errorEl.innerText =
+            "Kayıt için Gizlilik / KVKK ve Kullanım Koşulları'nı kabul etmelisin.";
+          return;
+        }
+        const ageOk = document.getElementById("regAgeAccept");
+        if (ageOk && !ageOk.checked) {
+          errorEl.innerText =
+            "Kayıt için yaş / yasal temsilci onayını işaretlemelisin.";
+          return;
+        }
         if (!username || !email || password.length < 6) {
           errorEl.innerText =
-            "Lütfen tüm alanları doğru doldurun (şifre en az 6 karakter).";
+            "Lütfen tüm alanları doğru doldurun (şifre en az 8 karakter).";
           return;
         }
         errorEl.innerText = "";

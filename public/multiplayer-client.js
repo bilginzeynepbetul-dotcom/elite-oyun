@@ -220,7 +220,7 @@
       }
     } catch (e2) {}
     try {
-      if (code === "TOKEN_REVOKED" || code === "BANNED") {
+      if (code === "TOKEN_REVOKED" || code === "BANNED" || code === "ACCOUNT_DELETED" || code === "EMAIL_NOT_VERIFIED" || code === "ACCOUNT_LOCKED") {
         const msg =
           message ||
           (code === "BANNED"
@@ -274,7 +274,7 @@
     if (
       res.status === 401 &&
       data &&
-      (data.code === "TOKEN_REVOKED" || data.code === "BANNED")
+      (data.code === "TOKEN_REVOKED" || data.code === "BANNED" || data.code === "ACCOUNT_DELETED" || data.code === "EMAIL_NOT_VERIFIED" || data.code === "ACCOUNT_LOCKED")
     ) {
       forceClientLogout(data.code, data.error);
       throw new Error(data.error || "Oturum sonlandı");
@@ -295,11 +295,28 @@
       forceClientLogout("SESSION_END", (data && data.error) || null);
     }
     if (!res.ok) {
-      if (res.status === 401 || res.status === 403)
-        throw new Error(
-          (data && data.error) || "Oturum gerekli — tekrar giriş yap",
-        );
-      throw new Error((data && data.error) || "HTTP " + res.status);
+      if (data && data.code === "MAINTENANCE") {
+        try {
+          if (typeof window.__emSetMaintenance === "function") {
+            window.__emSetMaintenance(true, data.error || data.message);
+          }
+        } catch (eM) {}
+      }
+      const msg =
+        (data && data.error) ||
+        (res.status === 401 || res.status === 403
+          ? "Oturum gerekli — tekrar giriş yap"
+          : "HTTP " + res.status);
+      const err = new Error(msg);
+      err.status = res.status;
+      err.code = data && data.code;
+      err.payload = data || null;
+      err.retryAfterMs =
+        (data && data.retryAfterMs) ||
+        (data && data.locked_until
+          ? Math.max(0, new Date(data.locked_until).getTime() - Date.now())
+          : null);
+      throw err;
     }
     return data;
   }
@@ -1000,6 +1017,64 @@
           b.style.color = "#f87171";
         }
       } catch (eB) {}
+    });
+    socket.on("session:ended", function (payload) {
+      try {
+        const code = (payload && payload.code) || "TOKEN_REVOKED";
+        const msg =
+          (payload && payload.message) ||
+          "Oturumunuz sonlandırıldı. Tekrar giriş yapın.";
+        if (typeof forceClientLogout === "function") {
+          forceClientLogout(code, msg);
+        } else if (typeof window.__emForceClientLogout === "function") {
+          window.__emForceClientLogout(code, msg);
+        }
+        try {
+          if (socket) socket.disconnect();
+        } catch (eD) {}
+      } catch (eS) {}
+    });
+    socket.on("maintenance:status", function (payload) {
+      try {
+        const on = !!(payload && payload.enabled);
+        const msg =
+          (payload && payload.message) ||
+          "Bakım çalışması sürüyor. Lütfen biraz sonra tekrar dene.";
+        if (typeof window.__emSetMaintenance === "function") {
+          window.__emSetMaintenance(on, msg);
+        }
+        if (on) {
+          try {
+            setConnBanner(true, "🛠️ Bakım: " + String(msg).slice(0, 80));
+          } catch (eB) {}
+        } else {
+          try {
+            setConnBanner(false);
+          } catch (eB2) {}
+        }
+      } catch (eM) {}
+    });
+    socket.on("admin:announce", function (payload) {
+      try {
+        const msg = (payload && payload.message) || "";
+        if (!msg) return;
+        const level = (payload && payload.level) || "info";
+        const prefix =
+          level === "urgent" ? "🚨 " : level === "warn" ? "⚠️ " : "📢 ";
+        try {
+          setConnBanner(true, prefix + String(msg).slice(0, 100));
+          setTimeout(function () {
+            try {
+              if (!window.__emMaintenance) setConnBanner(false);
+            } catch (eT) {}
+          }, level === "urgent" ? 20000 : 12000);
+        } catch (eB) {}
+        try {
+          if (typeof alert === "function" && level === "urgent") {
+            alert(prefix + msg);
+          }
+        } catch (eA) {}
+      } catch (eAnn) {}
     });
     socket.on("connect_error", (err) => {
       console.warn("[em] socket bağlantı hatası:", err && err.message);
@@ -2595,6 +2670,19 @@ function renderServerMatchState(state) {
     set("mgrProfileUsername", managerName);
     set("mgrProfileAvatar", managerName.charAt(0).toUpperCase());
     try {
+      const prev =
+        (data && data.previousLastLoginAt) ||
+        (data && data.user && data.user.previousLastLoginAt);
+      if (prev) {
+        const el = document.getElementById("lastLoginInfo");
+        if (el)
+          el.textContent =
+            "Önceki giriş: " + new Date(prev).toLocaleString("tr-TR");
+      } else if (typeof window.refreshLastLoginInfo === "function") {
+        window.refreshLastLoginInfo();
+      }
+    } catch (ePrev) {}
+    try {
       const uno = document.getElementById("mgrProfileUserNo");
       if (uno)
         uno.innerText =
@@ -2648,6 +2736,13 @@ function renderServerMatchState(state) {
       if (errorEl) errorEl.innerText = "Kullanıcı adı ve şifre gerekli.";
       return;
     }
+    if (window.__emMaintenance) {
+      if (errorEl)
+        errorEl.innerText =
+          window.__emMaintenanceMsg ||
+          "Bakım çalışması sürüyor. Lütfen biraz sonra tekrar dene.";
+      return;
+    }
     if (errorEl) errorEl.innerText = "Giriş yapılıyor...";
     try {
       const data = await apiFetch("/api/auth/login", {
@@ -2659,7 +2754,77 @@ function renderServerMatchState(state) {
       if (errorEl) errorEl.innerText = "";
       await afterServerLogin(data);
     } catch (e) {
-      if (errorEl) errorEl.innerText = e.message || "Giriş başarısız.";
+      let msg = e.message || "Giriş başarısız.";
+      if (e && e.code === "MAINTENANCE") {
+        msg =
+          e.message ||
+          "Bakım çalışması sürüyor. Lütfen biraz sonra tekrar dene.";
+        try {
+          if (typeof window.__emSetMaintenance === "function")
+            window.__emSetMaintenance(true, msg);
+        } catch (eM) {}
+        if (errorEl) errorEl.innerText = msg;
+        return;
+      }
+      if (
+        e &&
+        (e.code === "BAD_CREDENTIALS" ||
+          (e.payload && e.payload.remainingAttempts != null))
+      ) {
+        const rem =
+          (e.payload && e.payload.remainingAttempts != null
+            ? e.payload.remainingAttempts
+            : null);
+        if (rem != null) {
+          msg =
+            (e.message || "Kullanıcı adı veya şifre hatalı") +
+            (String(e.message || "").indexOf("Kalan") >= 0
+              ? ""
+              : " · Kalan deneme: " + rem);
+        }
+      }
+      if (e && e.code === "ACCOUNT_LOCKED") {
+        const ms = Number(e.retryAfterMs || 0);
+        const mins = ms > 0 ? Math.max(1, Math.ceil(ms / 60000)) : null;
+        msg =
+          e.message ||
+          "Hesap geçici olarak kilitlendi.";
+        if (mins) msg += " Yaklaşık " + mins + " dk sonra tekrar dene.";
+        // Geri sayım (opsiyonel UI)
+        try {
+          if (errorEl && ms > 0) {
+            const until = Date.now() + ms;
+            if (window._emLoginLockTimer) clearInterval(window._emLoginLockTimer);
+            window._emLoginLockTimer = setInterval(function () {
+              const left = until - Date.now();
+              if (left <= 0) {
+                clearInterval(window._emLoginLockTimer);
+                window._emLoginLockTimer = null;
+                if (errorEl)
+                  errorEl.innerText =
+                    "Kilit süresi doldu. Tekrar giriş deneyebilirsin.";
+                return;
+              }
+              const s = Math.ceil(left / 1000);
+              const m = Math.floor(s / 60);
+              const sec = s % 60;
+              if (errorEl)
+                errorEl.innerText =
+                  "Hesap kilitli · kalan " +
+                  (m > 0 ? m + " dk " : "") +
+                  sec +
+                  " sn";
+            }, 1000);
+          }
+        } catch (eT) {}
+      } else if (msg.indexOf("doğrulama") >= 0 || msg.indexOf("EMAIL") >= 0) {
+        msg +=
+          " Aşağıdaki «Doğrulama maili…» ile tekrar gönderebilirsin.";
+      }
+      if (errorEl && !(e && e.code === "ACCOUNT_LOCKED" && window._emLoginLockTimer))
+        errorEl.innerText = msg;
+      else if (errorEl && e && e.code === "ACCOUNT_LOCKED" && !window._emLoginLockTimer)
+        errorEl.innerText = msg;
     }
   }
 
@@ -2676,6 +2841,20 @@ function renderServerMatchState(state) {
       document.getElementById("regSecurityAnswer") || {}
     ).value?.trim();
     const errorEl = document.getElementById("registerError");
+    const legalOk = document.getElementById("regLegalAccept");
+    if (legalOk && !legalOk.checked) {
+      if (errorEl)
+        errorEl.innerText =
+          "Kayıt için Gizlilik / KVKK ve Kullanım Koşulları'nı kabul etmelisin.";
+      return;
+    }
+    const ageOk = document.getElementById("regAgeAccept");
+    if (ageOk && !ageOk.checked) {
+      if (errorEl)
+        errorEl.innerText =
+          "Kayıt için yaş / yasal temsilci onayını işaretlemelisin.";
+      return;
+    }
     if (!username || username.length < 3) {
       if (errorEl) errorEl.innerText = "Kullanıcı adı en az 3 karakter olmalı.";
       return;
@@ -2706,6 +2885,8 @@ function renderServerMatchState(state) {
           country,
           securityQuestion,
           securityAnswer,
+          ageAccepted: true,
+          legalAccepted: true,
         }),
       });
       applyAuthTokens(data);
@@ -6928,11 +7109,22 @@ function renderServerMatchState(state) {
       const controller = new AbortController();
       const t = setTimeout(() => controller.abort(), 20000);
       try {
-        const res = await fetch(API_BASE + "/health", {
+        const res = await fetch(API_BASE + "/api/health", {
           method: "GET",
           signal: controller.signal,
         });
         _emServerOnline = res.ok;
+        let data = null;
+        try {
+          data = await res.json();
+        } catch (eJ) {}
+        if (data && data.maintenance) {
+          window.__emMaintenance = true;
+          window.__emMaintenanceMsg =
+            data.message || data.error || "Bakım çalışması sürüyor.";
+        } else if (res.ok) {
+          window.__emMaintenance = false;
+        }
       } finally {
         clearTimeout(t);
       }
@@ -6940,6 +7132,14 @@ function renderServerMatchState(state) {
       _emServerOnline = false;
     }
     updateServerStatusUI();
+    try {
+      if (typeof window.__emSetMaintenance === "function") {
+        window.__emSetMaintenance(
+          !!window.__emMaintenance,
+          window.__emMaintenanceMsg,
+        );
+      }
+    } catch (eM) {}
     return _emServerOnline;
   }
   function updateServerStatusUI() {
@@ -6949,18 +7149,22 @@ function renderServerMatchState(state) {
         : function (k) {
             return k;
           };
-    const txt =
+    let txt =
       _emServerOnline === true
         ? tt("server_online")
         : _emServerOnline === false
           ? tt("server_offline")
           : tt("server_check");
-    const col =
+    let col =
       _emServerOnline === true
         ? "#4ade80"
         : _emServerOnline === false
           ? "#f87171"
           : "#94a3b8";
+    if (window.__emMaintenance && _emServerOnline) {
+      txt = "🛠️ Bakım modu";
+      col = "#fbbf24";
+    }
     ["emServerStatus", "loginServerStatus"].forEach(function (id) {
       const el = document.getElementById(id);
       if (el) {
@@ -6969,6 +7173,24 @@ function renderServerMatchState(state) {
       }
     });
   }
+  window.__emSetMaintenance = function (on, msg) {
+    window.__emMaintenance = !!on;
+    window.__emMaintenanceMsg = msg || "";
+    try {
+      const ban = document.getElementById("maintenanceBanner");
+      const banMsg = document.getElementById("maintenanceBannerMsg");
+      if (ban) {
+        if (on) ban.classList.add("visible");
+        else ban.classList.remove("visible");
+      }
+      if (banMsg && msg) banMsg.textContent = msg;
+      if (on) document.body.classList.add("maintenance-on");
+      else document.body.classList.remove("maintenance-on");
+    } catch (e) {}
+    try {
+      updateServerStatusUI();
+    } catch (e2) {}
+  };
   window.__emProbeServer = probeServerHealth;
 
   // Giriş: sunucu varsa online, yoksa yerel (offline) kariyer
@@ -7518,6 +7740,78 @@ function renderServerMatchState(state) {
     }
   };
 
+
+  window.__emAdminAuditRefresh = async function () {
+    const el = document.getElementById("adminAuditLogs");
+    if (!el) return;
+    try {
+      await __emDetectAdmin();
+      if (!window.__emServerAdmin) {
+        el.innerText = "Admin yetkisi yok.";
+        return;
+      }
+      el.innerHTML = '<span style="color:#64748b;">Yükleniyor…</span>';
+      const data = await apiFetch("/api/admin/audit-log?limit=60");
+      const logs = (data && data.logs) || [];
+      if (!logs.length) {
+        el.innerHTML = '<span style="color:#64748b;">Kayıt yok.</span>';
+        return;
+      }
+      const esc =
+        typeof adminAcEscape === "function"
+          ? adminAcEscape
+          : function (s) {
+              return String(s == null ? "" : s)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+            };
+      el.innerHTML = logs
+        .map(function (L) {
+          const when = L.created_at
+            ? new Date(L.created_at).toLocaleString("tr-TR")
+            : "";
+          const admin = esc(L.admin_username || (L.admin_id || "?").toString().slice(0, 8));
+          const action = esc(L.action || "?");
+          const target = esc(L.target_label || L.target_user_id || "—");
+          let det = "";
+          try {
+            det =
+              L.details && typeof L.details === "object"
+                ? JSON.stringify(L.details)
+                : String(L.details || "");
+          } catch (e) {
+            det = "";
+          }
+          if (det.length > 120) det = det.slice(0, 120) + "…";
+          det = esc(det);
+          return (
+            '<div style="padding:6px 4px;border-bottom:1px solid #1e293b;line-height:1.35;">' +
+            '<div style="color:#64748b;">' +
+            when +
+            " · admin <b style=\"color:#e2e8f0;\">" +
+            admin +
+            "</b></div>" +
+            '<div><code style="color:#fbbf24;">' +
+            action +
+            "</code> → <span style=\"color:#38bdf8;\">" +
+            target +
+            "</span></div>" +
+            (det
+              ? '<div style="color:#64748b;margin-top:2px;">' + det + "</div>"
+              : "") +
+            "</div>"
+          );
+        })
+        .join("");
+    } catch (e) {
+      el.innerHTML =
+        '<span style="color:#f87171;">Hata: ' +
+        (e && e.message ? e.message : e) +
+        "</span>";
+    }
+  };
+
   window.__emAdminAcRefresh = async function () {
     const sum = document.getElementById("adminAcSummary");
     const logsEl = document.getElementById("adminAcLogs");
@@ -7539,16 +7833,61 @@ function renderServerMatchState(state) {
         if (typeof window.adminDonationsRefresh === "function")
           window.adminDonationsRefresh();
       } catch (eD) {}
+      try {
+        if (typeof window.__emAdminAuditRefresh === "function")
+          window.__emAdminAuditRefresh();
+      } catch (eA) {}
+      try {
+        if (typeof window.__emAdminMaintRefresh === "function")
+          window.__emAdminMaintRefresh();
+      } catch (eM) {}
 
-      const [summary, logs] = await Promise.all([
+      const [summary, logs, sec] = await Promise.all([
         apiFetch("/api/admin/anti-cheat/summary"),
         apiFetch("/api/admin/anti-cheat/logs?limit=40"),
+        apiFetch("/api/admin/security-overview").catch(function () {
+          return null;
+        }),
       ]);
 
       if (sum) {
         const by = (summary && summary.last24h && summary.last24h.byAction) || [];
         const top = (summary && summary.last24h && summary.last24h.topUsers) || [];
-        let html =
+        let html = "";
+        if (sec && sec.ok) {
+          const m = sec.maintenance || {};
+          const locks = (sec.locks && sec.locks.count) || 0;
+          const bans = (sec.bans && sec.bans.count) || 0;
+          const pol = sec.loginPolicy || {};
+          html +=
+            '<div style="margin-bottom:10px;padding:8px;border-radius:8px;background:#020617;border:1px solid #334155;">' +
+            '<div style="font-weight:700;color:#e2e8f0;margin-bottom:6px;">Güvenlik özeti</div>' +
+            '<div style="display:flex;flex-wrap:wrap;gap:10px 16px;font-size:12px;">' +
+            "<div>Bakım: " +
+            (m.enabled
+              ? '<span style="color:#fbbf24;">AÇIK</span> <span style="color:#64748b;">(' +
+                (m.source || "?") +
+                ")</span>"
+              : '<span style="color:#4ade80;">kapalı</span>') +
+            "</div>" +
+            "<div>Kilitli: <b style=\"color:" +
+            (locks ? "#fbbf24" : "#94a3b8") +
+            ';\">' +
+            locks +
+            "</b></div>" +
+            "<div>Banlı: <b style=\"color:" +
+            (bans ? "#f87171" : "#94a3b8") +
+            ';\">' +
+            bans +
+            "</b></div>" +
+            '<div style="color:#64748b;">Politika: ' +
+            (pol.maxFailures || 8) +
+            " fail / " +
+            (pol.lockMinutes || 15) +
+            " dk</div>" +
+            "</div></div>";
+        }
+        html +=
           '<div style="margin-bottom:6px;"><b style="color:#fbbf24;">Son 24 saat</b></div>';
         if (!by.length) html += '<div style="color:#64748b;">Olay yok.</div>';
         else
@@ -7719,6 +8058,273 @@ function renderServerMatchState(state) {
     }
   };
 
+  window.__emAdminMaintRefresh = async function () {
+    const el = document.getElementById("adminMaintStatus");
+    try {
+      const data = await apiFetch("/api/admin/maintenance");
+      const on = !!(data && data.enabled);
+      const src = (data && data.source) || "?";
+      const msg = (data && data.message) || "";
+      if (el) {
+        el.innerHTML =
+          (on
+            ? '<span style="color:#fbbf24;">AÇIK</span>'
+            : '<span style="color:#4ade80;">kapalı</span>') +
+          " · kaynak: <code style=\"color:#38bdf8;\">" +
+          src +
+          "</code>" +
+          (data && data.envForced
+            ? ' <span style="color:#f87171;">(env zorunlu)</span>'
+            : "") +
+          (msg
+            ? '<div style="margin-top:4px;color:#94a3b8;">' +
+              (typeof adminAcEscape === "function"
+                ? adminAcEscape(msg)
+                : msg) +
+              "</div>"
+            : "");
+      }
+      const inp = document.getElementById("adminMaintMsg");
+      if (inp && msg && !inp.value) inp.value = msg;
+    } catch (e) {
+      if (el) el.textContent = e.message || "Durum alınamadı";
+    }
+  };
+
+  window.__emAdminAnnounceSend = async function () {
+    const inp = document.getElementById("adminAnnounceMsg");
+    const sel = document.getElementById("adminAnnounceLevel");
+    const st = document.getElementById("adminAnnounceStatus");
+    const message = inp && inp.value ? String(inp.value).trim() : "";
+    const level = sel && sel.value ? sel.value : "info";
+    if (!message || message.length < 2) {
+      alert("Duyuru metni yaz.");
+      return;
+    }
+    if (!confirm("Tüm çevrimiçi oyunculara gönderilsin mi?\n\n" + message)) return;
+    try {
+      if (st) st.textContent = "Gönderiliyor…";
+      const data = await apiFetch("/api/admin/announce", {
+        method: "POST",
+        body: JSON.stringify({ message: message, level: level }),
+      });
+      if (st)
+        st.textContent =
+          "Gönderildi · alıcı socket ≈ " + (data.recipients != null ? data.recipients : "?");
+      if (inp) inp.value = "";
+    } catch (e) {
+      if (st) st.textContent = e.message || "Hata";
+      alert(e.message || "Duyuru gönderilemedi");
+    }
+  };
+
+  window.__emAdminMaintSet = async function (enabled) {
+    const el = document.getElementById("adminMaintStatus");
+    const inp = document.getElementById("adminMaintMsg");
+    const message = inp && inp.value ? String(inp.value).trim() : "";
+    if (enabled) {
+      if (
+        !confirm(
+          "Bakım modu AÇILSIN mı? Oyuncular API’ye erişemez (health hariç).",
+        )
+      )
+        return;
+    } else {
+      if (!confirm("Bakım modu kapatılsın mı?")) return;
+    }
+    try {
+      if (el) el.textContent = "Kaydediliyor…";
+      const body = { enabled: !!enabled };
+      if (message) body.message = message;
+      const data = await apiFetch("/api/admin/maintenance", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      if (el) {
+        el.innerHTML =
+          (data && data.enabled
+            ? '<span style="color:#fbbf24;">AÇIK</span>'
+            : '<span style="color:#4ade80;">kapalı</span>') +
+          " · kaydedildi";
+      }
+      if (typeof window.__emAdminMaintRefresh === "function")
+        window.__emAdminMaintRefresh();
+      // Kendi istemci bandını güncelle
+      try {
+        if (typeof window.__emSetMaintenance === "function") {
+          window.__emSetMaintenance(
+            !!(data && data.enabled),
+            (data && data.message) || message || "",
+          );
+        }
+      } catch (eM) {}
+    } catch (e) {
+      alert(e.message || "Bakım ayarlanamadı");
+      if (el) el.textContent = e.message || "Hata";
+    }
+  };
+
+  window.__emAdminAcOnlineUsers = async function () {
+    const logsEl = document.getElementById("adminAcLogs");
+    const box = document.getElementById("adminAcUserBox");
+    try {
+      const data = await apiFetch("/api/admin/online-users");
+      const list = (data && data.users) || [];
+      if (box) {
+        box.innerHTML =
+          '<span style="color:#2dd4bf;">Çevrimiçi: ' +
+          (data.count || 0) +
+          " kullanıcı · " +
+          (data.socketCount || 0) +
+          " socket</span>";
+      }
+      if (logsEl) {
+        logsEl.innerHTML = list.length
+          ? list
+              .map(function (u) {
+                const name =
+                  typeof adminAcEscape === "function"
+                    ? adminAcEscape(u.username || "#" + u.userId)
+                    : u.username || u.userId;
+                return (
+                  '<div style="padding:8px 10px;border-bottom:1px solid #1e293b;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
+                  "<div><b style=\"color:#e2e8f0;\">" +
+                  name +
+                  '</b> <span style="color:#94a3b8;">#' +
+                  String(u.userId).slice(0, 8) +
+                  "</span>" +
+                  '<div style="color:#64748b;font-size:11px;">socket × ' +
+                  (u.sockets || 1) +
+                  (u.clubId ? " · club " + String(u.clubId).slice(0, 8) : "") +
+                  "</div></div>" +
+                  '<button type="button" class="sub-btn" style="width:auto;padding:4px 10px;background:linear-gradient(90deg,#7c3aed,#a78bfa);font-size:11px;" onclick="(function(){var el=document.getElementById(\'adminBanUser\');if(el)el.value=\'' +
+                  String(u.username || u.userId).replace(/'/g, "") +
+                  '\';if(typeof window.__emAdminAcRevokeSessions===\'function\')window.__emAdminAcRevokeSessions();})()">Oturum düşür</button>' +
+                  "</div>"
+                );
+              })
+              .join("")
+          : '<div style="padding:12px;color:#64748b;">Çevrimiçi authenticated kullanıcı yok.</div>';
+      }
+    } catch (e) {
+      if (logsEl)
+        logsEl.innerHTML =
+          '<div style="padding:12px;color:#f87171;">' +
+          (e.message || "Liste alınamadı") +
+          "</div>";
+    }
+  };
+
+  window.__emAdminAcRevokeSessions = async function () {
+    const target = (document.getElementById("adminBanUser") || {}).value;
+    if (!target || !String(target).trim()) {
+      alert("Kullanıcı adı veya id gir.");
+      return;
+    }
+    if (
+      !confirm(
+        "Tüm oturumları düşür: " +
+          target +
+          " ?\nKullanıcı tüm cihazlardan çıkış yapmış olur.",
+      )
+    )
+      return;
+    try {
+      const res = await apiFetch("/api/admin/revoke-sessions", {
+        method: "POST",
+        body: JSON.stringify({ target: String(target).trim() }),
+      });
+      alert(res.message || ("Oturumlar iptal: " + (res.username || target)));
+      if (typeof window.__emAdminAcLookup === "function")
+        window.__emAdminAcLookup();
+    } catch (e) {
+      alert(e.message || "Oturum iptali başarısız");
+    }
+  };
+
+  window.__emAdminAcUnlockLogin = async function () {
+    const target = (document.getElementById("adminBanUser") || {}).value;
+    if (!target || !String(target).trim()) {
+      alert("Kullanıcı adı veya id gir.");
+      return;
+    }
+    if (!confirm("Giriş kilidini aç: " + target + " ?")) return;
+    try {
+      const res = await apiFetch("/api/admin/unlock-login", {
+        method: "POST",
+        body: JSON.stringify({ target: String(target).trim() }),
+      });
+      alert(
+        res.message ||
+          ("Kilit açıldı: " + (res.username || target)),
+      );
+      if (typeof window.__emAdminAcLookup === "function")
+        window.__emAdminAcLookup();
+      if (typeof window.__emAdminAcRefresh === "function")
+        window.__emAdminAcRefresh();
+    } catch (e) {
+      alert(e.message || "Kilit açma başarısız");
+    }
+  };
+
+  window.__emAdminAcLocked = async function () {
+    const logsEl = document.getElementById("adminAcLogs");
+    const box = document.getElementById("adminAcUserBox");
+    try {
+      const data = await apiFetch("/api/admin/locked");
+      const list = (data && (data.locked_users || data.users)) || [];
+      if (box) {
+        box.innerHTML =
+          list.length === 0
+            ? '<span style="color:#4ade80;">Şu an kilitli hesap yok.</span>'
+            : '<span style="color:#fbbf24;">Kilitli hesap: ' +
+              list.length +
+              "</span>";
+      }
+      if (logsEl) {
+        logsEl.innerHTML = list.length
+          ? list
+              .map(function (u) {
+                const name =
+                  typeof adminAcEscape === "function"
+                    ? adminAcEscape(u.username || "#" + u.id)
+                    : u.username || u.id;
+                const until = u.locked_until
+                  ? typeof adminAcEscape === "function"
+                    ? adminAcEscape(String(u.locked_until))
+                    : String(u.locked_until)
+                  : "—";
+                const fails = Number(u.failed_login_count || 0);
+                return (
+                  '<div style="padding:8px 10px;border-bottom:1px solid #1e293b;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
+                  "<div><b style=\"color:#e2e8f0;\">" +
+                  name +
+                  '</b> <span style="color:#94a3b8;">#' +
+                  u.id +
+                  "</span>" +
+                  '<div style="color:#94a3b8;font-size:11px;">fail=' +
+                  fails +
+                  " · until " +
+                  until +
+                  "</div></div>" +
+                  '<button type="button" class="sub-btn" style="width:auto;padding:4px 10px;background:linear-gradient(90deg,#0d9488,#14b8a6);font-size:11px;" onclick="(function(){var el=document.getElementById(\'adminBanUser\');if(el)el.value=\'' +
+                  String(u.username || u.id).replace(/'/g, "") +
+                  '\';if(typeof window.__emAdminAcUnlockLogin===\'function\')window.__emAdminAcUnlockLogin();})()">Kilit aç</button>' +
+                  "</div>"
+                );
+              })
+              .join("")
+          : '<div style="padding:12px;color:#64748b;">Kilitli hesap yok.</div>';
+      }
+    } catch (e) {
+      if (logsEl)
+        logsEl.innerHTML =
+          '<div style="padding:12px;color:#f87171;">' +
+          (e.message || "Liste alınamadı") +
+          "</div>";
+    }
+  };
+
   window.__emAdminAcLookup = async function () {
     const target = (document.getElementById("adminBanUser") || {}).value;
     const box = document.getElementById("adminAcUserBox");
@@ -7733,6 +8339,24 @@ function renderServerMatchState(state) {
       const u = data.user || {};
       const club = data.club;
       if (box) {
+        var lockBit = "";
+        if (u.is_locked || (u.locked_until && new Date(u.locked_until) > new Date())) {
+          lockBit =
+            ' <span style="color:#fbbf24;">KİLİTLİ</span>' +
+            (u.locked_until
+              ? " <span style=\"color:#94a3b8;\">→ " +
+                (typeof adminAcEscape === "function"
+                  ? adminAcEscape(String(u.locked_until))
+                  : String(u.locked_until)) +
+                "</span>"
+              : "");
+        }
+        var failBit =
+          u.failed_login_count != null
+            ? "<div>Başarısız giriş: " +
+              Number(u.failed_login_count || 0) +
+              "</div>"
+            : "";
         box.innerHTML =
           "<b style=\"color:#e2e8f0;\">" +
           (typeof adminAcEscape === "function"
@@ -7743,6 +8367,7 @@ function renderServerMatchState(state) {
           (u.banned || u.is_banned
             ? ' <span style="color:#f87171;">BANNED</span>'
             : ' <span style="color:#4ade80;">aktif</span>') +
+          lockBit +
           (u.ban_reason
             ? "<div>Sebep: " +
               (typeof adminAcEscape === "function"
@@ -7750,6 +8375,7 @@ function renderServerMatchState(state) {
                 : u.ban_reason) +
               "</div>"
             : "") +
+          failBit +
           (club
             ? "<div>Kulüp: " +
               (typeof adminAcEscape === "function"
