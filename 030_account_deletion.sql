@@ -24,8 +24,11 @@ CREATE INDEX IF NOT EXISTS idx_users_deleted_at
   WHERE deleted_at IS NOT NULL;
 
 -- Aktif kullanıcılar için e-posta benzersizliği (silinmiş hesaplar e-postayı serbest bırakır)
-DROP INDEX IF EXISTS uq_users_email;
+-- Not: uq_users_email bir UNIQUE CONSTRAINT'in index'i olabileceğinden, önce constraint
+-- olarak düşürülmeli (bu index'i de otomatik siler); ardından düz bir index olarak
+-- kalmış olma ihtimaline karşı DROP INDEX IF EXISTS ile güvence altına alınır.
 ALTER TABLE users DROP CONSTRAINT IF EXISTS uq_users_email;
+DROP INDEX IF EXISTS uq_users_email;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email_active
   ON users (LOWER(email))
   WHERE email IS NOT NULL AND deleted_at IS NULL;
