@@ -1,0 +1,27 @@
+# Ortam değişkenleri / secret'lar — ASLA commit edilmez
+.env
+.env.*
+!.env.example
+!env.elite.example
+
+# Bağımlılıklar
+node_modules/
+
+# Loglar
+logs/
+*.ndjson
+npm-debug.log*
+
+# Editör / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Build / geçici
+*.tmp
+coverage/
+
+# DB yedekleri
+backups/
+*.sql.gz

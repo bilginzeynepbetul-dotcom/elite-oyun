@@ -68,7 +68,7 @@ const authMiddleware = async (req, res, next) => {
     // Kullanıcıyı kontrol et (+ token_version)
     const userResult = await db.query(
       `SELECT id, username, email, is_banned, banned_until, ban_reason,
-              COALESCE(token_version, 0) AS token_version
+              deleted_at, COALESCE(token_version, 0) AS token_version
        FROM users WHERE id = $1`,
       [userId]
     );
@@ -78,6 +78,13 @@ const authMiddleware = async (req, res, next) => {
     }
 
     const user = userResult.rows[0];
+
+    if (user.deleted_at) {
+      return res.status(401).json({
+        error: 'Bu hesap kapatılmış',
+        code: 'ACCOUNT_DELETED',
+      });
+    }
 
     // Oturum iptali: şifre sıfırlama / logout-all / ban sonrası eski JWT düşer
     const tv = Number(user.token_version) || 0;

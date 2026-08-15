@@ -242,11 +242,23 @@ const getRecent = getRecentErrors;
 function checkAdminToken(req) {
   const token = (process.env.ERROR_ADMIN_TOKEN || "").trim();
   if (!token) return false;
-  const hdr =
-    (req.headers && (req.headers["x-error-token"] || req.headers["x-admin-token"])) ||
-    (req.query && req.query.token) ||
-    "";
-  return String(hdr) === token;
+  const hdr = String(
+    (req.headers &&
+      (req.headers["x-error-token"] || req.headers["x-admin-token"])) ||
+      (req.query && req.query.token) ||
+      "",
+  );
+  // GÜVENLİK: sabit zamanlı karşılaştırma — normal === ile karakter
+  // karakter erken çıkış yapıldığından token uzunluk/önek bilgisi
+  // timing farkıyla sızabilir.
+  const a = Buffer.from(hdr);
+  const b = Buffer.from(token);
+  if (a.length !== b.length) return false;
+  try {
+    return crypto.timingSafeEqual(a, b);
+  } catch (_) {
+    return false;
+  }
 }
 
 module.exports = {

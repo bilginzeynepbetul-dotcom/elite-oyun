@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('./db');
 const { isAdmin } = require('./authMiddleware');
+const { writeAdminAudit, clientIp } = require('./adminAudit');
 
 // Kullanıcının ban durumunu döner (routes/authRoutes.js authMiddleware bunu her istekte çağırır)
 async function getBanStatus(userId) {
@@ -16,7 +17,7 @@ async function getBanStatus(userId) {
     if (banned_until && new Date() >= new Date(banned_until)) {
       // Süre dolmuş, otomatik kaldır
       await db.query(
-        'UPDATE users SET is_banned = FALSE, banned_until = NULL, ban_reason = NULL WHERE id = $1',
+        'UPDATE users SET is_banned = FALSE, banned_until = NULL, ban_reason = NULL, failed_login_count = 0, locked_until = NULL WHERE id = $1',
         [userId]
       );
       return { banned: false };
@@ -100,6 +101,15 @@ router.post('/ban', isAdmin, async (req, res) => {
       ]
     );
     
+    await writeAdminAudit({
+      adminId,
+      action: 'ban',
+      targetUserId: targetUser.id,
+      targetLabel: targetUser.username,
+      details: { reason: reason || 'Kural ihlali', hours, banned_until: bannedUntil },
+      ip: clientIp(req),
+    });
+
     res.json({
       success: true,
       message: `${targetUser.username} ${hours} saat banlandı`,
@@ -130,7 +140,7 @@ router.post('/unban', isAdmin, async (req, res) => {
     
     // Ban kaldır
     await db.query(
-      'UPDATE users SET is_banned = FALSE, banned_until = NULL, ban_reason = NULL WHERE id = $1',
+      'UPDATE users SET is_banned = FALSE, banned_until = NULL, ban_reason = NULL, failed_login_count = 0, locked_until = NULL WHERE id = $1',
       [targetUser.id]
     );
     
@@ -147,6 +157,15 @@ router.post('/unban', isAdmin, async (req, res) => {
       ]
     );
     
+    await writeAdminAudit({
+      adminId,
+      action: 'unban',
+      targetUserId: targetUser.id,
+      targetLabel: targetUser.username,
+      details: { reason: 'Admin tarafından kaldırıldı' },
+      ip: clientIp(req),
+    });
+
     res.json({
       success: true,
       message: `${targetUser.username} banı kaldırıldı`

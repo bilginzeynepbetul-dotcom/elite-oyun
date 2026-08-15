@@ -42,3 +42,26 @@ services:
 
 volumes:
   em_pg:
+
+  # Opsiyonel: günlük DB yedek (profile: backup)
+  # Kullanım: docker compose --profile backup run --rm backup
+  backup:
+    profiles: ["backup"]
+    image: postgres:16-alpine
+    environment:
+      DATABASE_URL: postgres://em:em@db:5432/elite_manager
+      BACKUP_DIR: /backups
+      BACKUP_KEEP: "14"
+    volumes:
+      - ./backups:/backups
+      - .:/app:ro
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        apk add --no-cache nodejs npm >/dev/null
+        node scripts/backup-db.js --out /backups --keep 14
+

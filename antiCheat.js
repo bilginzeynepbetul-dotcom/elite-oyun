@@ -99,6 +99,10 @@ function rateLimitMiddleware(opts) {
     const uid = (req.user && req.user.id) || req.ip || "anon";
     const path = (req.route && req.route.path) || req.path || "";
     const r = rateLimit(prefix + ":" + uid + ":" + path, max, windowMs);
+    try {
+      res.setHeader("X-RateLimit-Limit", String(max));
+      if (!r.ok) res.setHeader("X-RateLimit-Remaining", "0");
+    } catch (_) {}
     if (!r.ok) {
       res.setHeader("Retry-After", String(Math.ceil((r.retryAfterMs || 1000) / 1000)));
       return res.status(429).json(r);
