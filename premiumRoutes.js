@@ -264,7 +264,10 @@ function createPremiumRouter() {
       const { enrichClubId } = require("./routes/authRoutes");
       const clubId = await enrichClubId(req);
       if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
-      const name = String((req.body && req.body.name) || "").trim().slice(0, 32);
+      const name = String((req.body && req.body.name) || "")
+        .replace(/[<>]/g, "")
+        .trim()
+        .slice(0, 32);
       if (name.length < 3) {
         return res.status(400).json({ error: "Takım adı en az 3 karakter" });
       }

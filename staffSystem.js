@@ -49,7 +49,18 @@ async function hireCoach(clubId, skill, level) {
     return { ok: false, error: "En fazla 4 antrenör" };
   }
 
-  await clubsRepo.adjustBalance(clubId, -(salary * 2), "Antrenör işe alım");
+  const paidOk = await clubsRepo.adjustBalance(
+    clubId,
+    -(salary * 2),
+    "Antrenör işe alım",
+  );
+  // GÜVENLİK: adjustBalance içeride FOR UPDATE ile atomik kontrol yapıyor —
+  // üstteki ön-kontrol (satır 40) sadece iyimser bir kontrol, gerçek garanti
+  // burada. Sonuç kontrol edilmezse eşzamanlı isteklerle (4 farklı branş için
+  // aynı anda istek atarak) bakiye yetmediği halde antrenör eklenebiliyordu.
+  if (!paidOk) {
+    return { ok: false, error: "Yetersiz bakiye (2 haftalık maaş peşin)" };
+  }
   const name = (SKILL_LABELS[sk] || sk) + " Antrenörü Lv" + lv;
   await query(
     `INSERT INTO club_coaches (club_id, skill, level, salary, name)

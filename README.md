@@ -66,3 +66,11 @@ Ayrıntılar: `env.elite.example`
 9. **Donation alanları** — gerçek IBAN/Papara.
 10. Deploy sonrası `npm run test:all`.
 11. **Güvenlik (özet)** — graceful shutdown (SIGTERM); JWT `tv` ile iptal (şifre sıfırlama / ban / `POST /api/auth/logout-all`); şifre min 8; reset brute-force kilidi; trust proxy; güvenlik başlıkları; HS256 sabiti.
+
+## Security
+
+See [SECURITY.md](./SECURITY.md).
+
+## Production
+
+See [PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md) and [DEPLOY.md](./DEPLOY.md).

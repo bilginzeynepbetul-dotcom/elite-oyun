@@ -152,6 +152,36 @@ function getLiveMatches() {
   return liveMatches;
 }
 
+/** Kullanıcının tüm socket bağlantılarını kes (token iptali / ban) */
+function disconnectUserSockets(userId, reason) {
+  if (!userId || !io) return 0;
+  const uid = String(userId);
+  let n = 0;
+  try {
+    for (const [, sock] of io.of("/").sockets) {
+      if (sock.user && String(sock.user.id) === uid) {
+        try {
+          sock.emit("session:ended", {
+            code: reason || "TOKEN_REVOKED",
+            message: "Oturumunuz sonlandırıldı. Tekrar giriş yapın.",
+          });
+        } catch (_) {}
+        try {
+          sock.disconnect(true);
+        } catch (_) {}
+        n += 1;
+      }
+    }
+  } catch (e) {
+    try {
+      logger.warn("disconnectUserSockets", { err: e });
+    } catch (_) {}
+  }
+  return n;
+}
+global.__emDisconnectUserSockets = disconnectUserSockets;
+global.__emGetIo = getIo;
+
 
 app.use(
   cors({
@@ -172,6 +202,25 @@ app.use((req, res, next) => {
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=()",
   );
+  // Hafif CSP — inline script/style mevcut UI için gerekli; object/base kısıtlı
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "img-src 'self' data: blob:; " +
+      "font-src 'self' data:; " +
+      "connect-src 'self' ws: wss:; " +
+      "object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+  );
+  // Production'da HTTPS zorunlu kıl (Render TLS termination yapıyor,
+  // tarayıcıya bir sonraki ziyaretlerde otomatik https'e geçmesini söyler)
+  if (isProd) {
+    res.setHeader(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains",
+    );
+  }
   if (req.path && String(req.path).startsWith("/api")) {
     res.setHeader("Cache-Control", "no-store");
   }
@@ -184,6 +233,155 @@ try {
     app.use(errorTracker.requestContextMiddleware());
   }
 } catch (_) {}
+
+// ------------------------------------------------------------
+// Bakım modu — env (zorunlu) VEYA game_settings (admin runtime)
+// Env MAINTENANCE_MODE=1 → her zaman açık (API ile kapatılamaz)
+// DB key: maintenance_mode=1 / maintenance_message
+// ------------------------------------------------------------
+const _maintCache = {
+  at: 0,
+  on: false,
+  message: null,
+  source: "none",
+  ttlMs: 3000,
+};
+
+function envMaintenanceOn() {
+  const v = String(process.env.MAINTENANCE_MODE || "").toLowerCase();
+  return v === "1" || v === "true" || v === "yes" || v === "on";
+}
+
+function defaultMaintenanceMessage() {
+  return (
+    process.env.MAINTENANCE_MESSAGE ||
+    "Bakım çalışması sürüyor. Lütfen biraz sonra tekrar dene."
+  );
+}
+
+async function getMaintenanceState() {
+  if (envMaintenanceOn()) {
+    return {
+      on: true,
+      message: defaultMaintenanceMessage(),
+      source: "env",
+    };
+  }
+  const now = Date.now();
+  if (now - _maintCache.at < _maintCache.ttlMs) {
+    return {
+      on: _maintCache.on,
+      message: _maintCache.message || defaultMaintenanceMessage(),
+      source: _maintCache.source,
+    };
+  }
+  try {
+    const seasonConfig = require("./seasonConfig");
+    const raw = await seasonConfig.getSetting("maintenance_mode", "0");
+    const msg = await seasonConfig.getSetting("maintenance_message", null);
+    const on =
+      String(raw || "0") === "1" ||
+      String(raw || "").toLowerCase() === "true";
+    _maintCache.at = now;
+    _maintCache.on = on;
+    _maintCache.message = msg || defaultMaintenanceMessage();
+    _maintCache.source = "db";
+    return {
+      on,
+      message: _maintCache.message,
+      source: "db",
+    };
+  } catch (e) {
+    _maintCache.at = now;
+    _maintCache.on = false;
+    _maintCache.source = "error";
+    return { on: false, message: defaultMaintenanceMessage(), source: "error" };
+  }
+}
+
+/** Sync uyumluluk — cache'e bakar; yoksa env */
+function isMaintenanceMode() {
+  if (envMaintenanceOn()) return true;
+  return !!_maintCache.on;
+}
+
+function maintenanceMessage() {
+  if (_maintCache.message) return _maintCache.message;
+  return defaultMaintenanceMessage();
+}
+
+function invalidateMaintenanceCache() {
+  _maintCache.at = 0;
+}
+
+// Export for admin routes
+global.__emGetMaintenanceState = getMaintenanceState;
+global.__emInvalidateMaintenanceCache = invalidateMaintenanceCache;
+
+async function isAdminBearer(req) {
+  try {
+    const hdr = req.headers.authorization || "";
+    const token = hdr.startsWith("Bearer ") ? hdr.slice(7) : null;
+    if (!token) return false;
+    const jwt = require("jsonwebtoken");
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return false;
+    const decoded = jwt.verify(token, secret, { algorithms: ["HS256"] });
+    if (decoded.typ === "refresh") return false;
+    const adminUsername = process.env.ADMIN_USERNAME;
+    if (!adminUsername) return false;
+    const uname = String(decoded.username || "").toLowerCase();
+    return uname === String(adminUsername).toLowerCase();
+  } catch (_) {
+    return false;
+  }
+}
+
+// Bakım modu — API kapalı; health + statik + verify + admin serbest
+app.use(async (req, res, next) => {
+  let st;
+  try {
+    st = await getMaintenanceState();
+  } catch (_) {
+    return next();
+  }
+  if (!st || !st.on) return next();
+  const p = String(req.path || "");
+  if (
+    !p.startsWith("/api") ||
+    p === "/api/health" ||
+    p === "/api/healthz" ||
+    p === "/api/status" ||
+    p === "/health" ||
+    p === "/readyz" ||
+    p === "/api/readyz" ||
+    p === "/api/version" ||
+    p === "/version" ||
+    p === "/api/auth/verify-email" ||
+    p === "/api/auth/resend-verification-public"
+  ) {
+    return next();
+  }
+  const bypass = process.env.MAINTENANCE_BYPASS_TOKEN;
+  if (
+    bypass &&
+    (req.headers["x-maintenance-bypass"] === bypass ||
+      req.query.bypass === bypass)
+  ) {
+    return next();
+  }
+  // Admin JWT ile tüm /api/admin/* (bakım aç/kapa dahil)
+  if (p.startsWith("/api/admin") && (await isAdminBearer(req))) {
+    return next();
+  }
+  res.setHeader("Retry-After", "120");
+  res.status(503).json({
+    error: st.message || defaultMaintenanceMessage(),
+    code: "MAINTENANCE",
+    maintenance: true,
+    source: st.source,
+  });
+});
 
 // Statik frontend — HTML/JS önbelleğe alınmasın (deploy sonrası eski UI kalmasın)
 app.use(
@@ -205,25 +403,106 @@ app.use(
 
 // Health check (Render / uptime monitörleri / Docker healthcheck için)
 app.get(["/healthz", "/api/healthz"], async (req, res) => {
+  let st = { on: false, message: null, source: "none" };
+  try {
+    st = await getMaintenanceState();
+  } catch (_) {}
   try {
     await require("./db").query("SELECT 1");
-    res.status(200).json({ ok: true, db: "up", ts: Date.now() });
+    res.status(200).json({
+      ok: true,
+      db: "up",
+      ts: Date.now(),
+      maintenance: !!st.on,
+      message: st.on ? st.message : undefined,
+      maintenanceSource: st.source,
+    });
   } catch (e) {
-    res.status(503).json({ ok: false, db: "down", error: e.message });
+    res.status(503).json({
+      ok: false,
+      db: "down",
+      error: e.message,
+      maintenance: !!st.on,
+    });
   }
 });
 
-// Health (errorTracker stats dahil)
-app.get("/api/health", (_req, res) => {
+// Readiness — bakım veya DB down iken 503 (yük dengeleyici trafiği keser)
+// Liveness için /healthz kullanın (process ayakta mı)
+app.get(["/readyz", "/api/readyz"], async (req, res) => {
+  let st = { on: false, message: null, source: "none" };
+  try {
+    st = await getMaintenanceState();
+  } catch (_) {}
+  if (st.on) {
+    res.setHeader("Retry-After", "120");
+    return res.status(503).json({
+      ok: false,
+      ready: false,
+      reason: "maintenance",
+      maintenance: true,
+      message: st.message,
+      maintenanceSource: st.source,
+      ts: Date.now(),
+    });
+  }
+  try {
+    await require("./db").query("SELECT 1");
+    res.status(200).json({
+      ok: true,
+      ready: true,
+      db: "up",
+      maintenance: false,
+      ts: Date.now(),
+    });
+  } catch (e) {
+    res.status(503).json({
+      ok: false,
+      ready: false,
+      reason: "db_down",
+      db: "down",
+      error: e.message,
+      ts: Date.now(),
+    });
+  }
+});
+
+// Sürüm / build bilgisi (monitoring, destek)
+app.get(["/api/version", "/version"], (_req, res) => {
+  let pkgVersion = "0.0.0";
+  try {
+    pkgVersion = require("./package.json").version || pkgVersion;
+  } catch (_) {}
+  res.json({
+    ok: true,
+    name: "elite-manager",
+    version: pkgVersion,
+    node: process.version,
+    env: process.env.NODE_ENV || "development",
+    build: process.env.BUILD_SHA || process.env.RENDER_GIT_COMMIT || null,
+    startedAt: global.__emStartedAt || null,
+    ts: new Date().toISOString(),
+  });
+});
+
+// Health (errorTracker stats dahil) + bakım durumu
+app.get(["/api/health", "/api/status", "/health"], async (_req, res) => {
   let errors = null;
   try {
     errors = errorTracker.getStats && errorTracker.getStats();
+  } catch (_) {}
+  let st = { on: false, message: null, source: "none" };
+  try {
+    st = await getMaintenanceState();
   } catch (_) {}
   res.json({
     ok: true,
     name: "elite-manager",
     ts: new Date().toISOString(),
     liveMatches: liveMatches.size,
+    maintenance: !!st.on,
+    message: st.on ? st.message : undefined,
+    maintenanceSource: st.source,
     errors,
   });
 });
@@ -231,6 +510,18 @@ app.get("/api/health", (_req, res) => {
 // ------------------------------------------------------------
 // Auth (public)
 // ------------------------------------------------------------
+
+// Yasal sayfalar (kısa URL)
+app.get(["/gizlilik", "/privacy", "/kvkk"], (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "privacy.html"));
+});
+app.get(["/kullanim-kosullari", "/terms"], (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "terms.html"));
+});
+app.get(["/cerezler", "/cookies"], (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "cookies.html"));
+});
+
 app.use("/api/auth", createAuthRouter());
 
 // ------------------------------------------------------------
@@ -240,14 +531,15 @@ const api = express.Router();
 api.use(authMiddleware);
 
 
-/** Kulüp/kullanıcı bazlı sıkı rate limit — pahalı yazma uçları */
+/** Kulüp/kullanıcı bazlı sıkı rate limit — pahalı yazma uçları
+ * GÜVENLİK: IP kısmı için ham X-Forwarded-For header'ı ASLA elle
+ * parse edilmez — client bu header'ı serbestçe set edebildiğinden
+ * (örn. her istekte rastgele bir değer göndererek) limiti tamamen
+ * atlatabilir. `app.set("trust proxy", 1)` zaten yapılandırıldığı
+ * için Express'in kendi hesapladığı req.ip güvenilir kaynaktır. */
 function strictLimit(req, res, action, max, windowMs) {
   const id =
-    (req.user && (req.user.id || req.user.userId)) ||
-    (req.headers["x-forwarded-for"] &&
-      String(req.headers["x-forwarded-for"]).split(",")[0].trim()) ||
-    req.ip ||
-    "anon";
+    (req.user && (req.user.id || req.user.userId)) || req.ip || "anon";
   const r = antiCheat.rateLimit("strict:" + action + ":" + id, max, windowMs);
   if (!r.ok) {
     res.setHeader(
@@ -261,13 +553,10 @@ function strictLimit(req, res, action, max, windowMs) {
 }
 
 // Global API rate limit (kullanıcı veya IP başına)
+// GÜVENLİK: X-Forwarded-For elle parse edilmiyor (bkz. strictLimit yorumu) —
+// req.ip, trust proxy ayarıyla zaten doğru client IP'sini verir.
 api.use((req, res, next) => {
-  const uid =
-    (req.user && (req.user.id || req.user.userId)) ||
-    (req.headers["x-forwarded-for"] &&
-      String(req.headers["x-forwarded-for"]).split(",")[0].trim()) ||
-    req.ip ||
-    "anon";
+  const uid = (req.user && (req.user.id || req.user.userId)) || req.ip || "anon";
   const max = parseInt(process.env.API_RATE_LIMIT_MAX || "120", 10) || 120;
   const windowMs =
     parseInt(process.env.API_RATE_LIMIT_WINDOW_MS || "60000", 10) || 60_000;
@@ -883,6 +1172,30 @@ app.use(
 // ------------------------------------------------------------
 io.use(async (socket, next) => {
   try {
+    // IP başına bağlantı denemesi limiti (handshake flood)
+    try {
+      const ip =
+        (socket.handshake && socket.handshake.address) ||
+        (socket.request && socket.request.ip) ||
+        "unknown";
+      const maxConn = Math.max(
+        20,
+        Number(process.env.SOCKET_IP_CONNECT_MAX || 60) || 60,
+      );
+      const winMs = Math.max(
+        10_000,
+        Number(process.env.SOCKET_IP_CONNECT_WINDOW_MS || 60_000) || 60_000,
+      );
+      const rl = antiCheat.rateLimit(
+        "sock:connect:" + ip,
+        maxConn,
+        winMs,
+      );
+      if (!rl.ok) {
+        return next(new Error("Çok fazla bağlantı denemesi. Biraz bekleyin."));
+      }
+    } catch (_) {}
+
     const token =
       (socket.handshake.auth && socket.handshake.auth.token) ||
       (socket.handshake.query && socket.handshake.query.token) ||
@@ -902,12 +1215,16 @@ io.use(async (socket, next) => {
     // token_version + ban kontrolü
     try {
       const { rows } = await require("./db").query(
-        `SELECT COALESCE(token_version, 0) AS token_version, is_banned, banned_until
+        `SELECT COALESCE(token_version, 0) AS token_version, is_banned, banned_until,
+                deleted_at
          FROM users WHERE id = $1`,
         [decoded.sub],
       );
       const u = rows[0];
       if (!u) return next(new Error("Geçersiz token"));
+      if (u.deleted_at) {
+        return next(new Error("Hesap kapatılmış"));
+      }
       const tv = Number(u.token_version) || 0;
       if (decoded.tv == null || Number(decoded.tv) !== tv) {
         return next(new Error("Oturum iptal edilmiş"));
@@ -932,6 +1249,7 @@ io.use(async (socket, next) => {
       id: decoded.sub,
       username: decoded.username,
       clubId: clubId || null,
+      tv: decoded.tv != null ? Number(decoded.tv) : null,
     };
     next();
   } catch (e) {
@@ -977,6 +1295,58 @@ io.on("connection", (socket) => {
         socketId: socket.id,
       });
     } catch (_) {}
+
+    // Periyodik oturum doğrulama — iptal/ban/silme sonrası uzun yaşayan socket'leri kes
+    const revalidateMs = Math.max(
+      60_000,
+      Number(process.env.SOCKET_REVALIDATE_MS || 300000) || 300000,
+    );
+    const revalidateTimer = setInterval(async () => {
+      if (!socket.user || !socket.user.id) return;
+      try {
+        const { rows } = await require("./db").query(
+          `SELECT COALESCE(token_version, 0) AS token_version,
+                  is_banned, banned_until, deleted_at
+           FROM users WHERE id = $1`,
+          [socket.user.id],
+        );
+        const u = rows[0];
+        let kill = null;
+        if (!u || u.deleted_at) kill = "ACCOUNT_DELETED";
+        else if (u.is_banned) {
+          const until = u.banned_until ? new Date(u.banned_until) : null;
+          if (!until || until > new Date()) kill = "BANNED";
+        } else if (
+          socket.user.tv != null &&
+          Number(socket.user.tv) !== Number(u.token_version)
+        ) {
+          kill = "TOKEN_REVOKED";
+        }
+        // tv yoksa handshake'te zaten kontrol edildi; tv'yi sakla
+        if (u && socket.user.tv == null) {
+          socket.user.tv = Number(u.token_version) || 0;
+        }
+        if (kill) {
+          try {
+            socket.emit("session:ended", {
+              code: kill,
+              message: "Oturumunuz sonlandırıldı. Tekrar giriş yapın.",
+            });
+          } catch (_) {}
+          try {
+            socket.disconnect(true);
+          } catch (_) {}
+        }
+      } catch (_) {
+        /* DB geçici hata — bir sonraki tur */
+      }
+    }, revalidateMs);
+    if (typeof revalidateTimer.unref === "function") revalidateTimer.unref();
+    socket.on("disconnect", () => {
+      try {
+        clearInterval(revalidateTimer);
+      } catch (_) {}
+    });
   }
 
   socket.on("fixture:watch", async (payload) => {

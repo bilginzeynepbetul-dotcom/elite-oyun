@@ -1,6 +1,7 @@
 // ============================================================
 // premiumSystem.js — Elite abonelik (sunucu kaynağı)
 // ============================================================
+const { writeAdminAudit } = require("./adminAudit");
 const { query } = require("./db");
 
 const PLANS = {
@@ -443,6 +444,18 @@ async function reviewDonation(donationId, adminUserId, accept, adminNote) {
        WHERE id = $1`,
       [donationId, String(adminNote || "").slice(0, 500) || null, adminUserId || null],
     );
+    await writeAdminAudit({
+      adminId: adminUserId || null,
+      action: "donation_reject",
+      targetUserId: don.user_id,
+      targetLabel: "donation:" + String(donationId),
+      details: {
+        donationId,
+        plan: don.plan,
+        amount_cents: don.amount_cents,
+        adminNote: adminNote || null,
+      },
+    });
     return { ok: true, status: "rejected" };
   }
   const act = await activatePlan(don.user_id, don.plan, {
@@ -456,6 +469,19 @@ async function reviewDonation(donationId, adminUserId, accept, adminNote) {
      WHERE id = $1`,
     [donationId, String(adminNote || "").slice(0, 500) || null, adminUserId || null],
   );
+  await writeAdminAudit({
+    adminId: adminUserId || null,
+    action: "donation_approve",
+    targetUserId: don.user_id,
+    targetLabel: "donation:" + String(donationId),
+    details: {
+      donationId,
+      plan: don.plan,
+      amount_cents: don.amount_cents,
+      adminNote: adminNote || null,
+      elite: act.status,
+    },
+  });
   return { ok: true, status: "approved", elite: act.status };
 }
 
