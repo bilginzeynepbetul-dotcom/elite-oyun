@@ -73,13 +73,17 @@ if (String(process.env.JWT_SECRET).length < 16) {
   );
   process.exit(1);
 }
+const isProd =
+  String(process.env.NODE_ENV || "").toLowerCase() === "production";
 if (!process.env.DATABASE_URL) {
+  if (isProd) {
+    console.error("[boot] Production'da DATABASE_URL zorunlu.");
+    process.exit(1);
+  }
   console.warn(
     "[boot] DATABASE_URL yok — DB bağlantısı başarısız olabilir.",
   );
 }
-const isProd =
-  String(process.env.NODE_ENV || "").toLowerCase() === "production";
 if (!process.env.CORS_ORIGIN || !String(process.env.CORS_ORIGIN).trim()) {
   if (isProd) {
     console.error(
@@ -89,6 +93,17 @@ if (!process.env.CORS_ORIGIN || !String(process.env.CORS_ORIGIN).trim()) {
   }
   console.warn(
     "[boot] CORS_ORIGIN boş — tüm origin'lere izin veriliyor. Production'da domain yazın.",
+  );
+}
+if (!process.env.ADMIN_USERNAME || !String(process.env.ADMIN_USERNAME).trim()) {
+  if (isProd) {
+    console.error(
+      "[boot] Production'da ADMIN_USERNAME zorunlu (admin kayıt kullanıcı adı).",
+    );
+    process.exit(1);
+  }
+  console.warn(
+    "[boot] ADMIN_USERNAME yok — admin paneli / ban / sezon yetkisi çalışmaz.",
   );
 }
 if (process.env.ELITE_ALLOW_MOCK === "1") {
@@ -406,9 +421,13 @@ api.get("/fixtures", async (req, res) => {
 api.get("/fixtures/next", async (req, res) => {
   try {
     const clubId = await enrichClubId(req);
-    if (!clubId) return res.json({ fixture: null });
+    if (!clubId) return res.json({ fixture: null, club: null });
+    const club = await clubsRepo.getClub(clubId);
     const fixture = await leagueRepo.getNextFixtureForClub(clubId);
-    res.json({ fixture: fixture || null });
+    res.json({
+      fixture: fixture || null,
+      club: club ? { id: club.id, name: club.name } : null,
+    });
   } catch (e) {
     logger.error("GET /fixtures/next", { err: e });
     res.status(500).json({ error: "Sıradaki maç alınamadı" });
@@ -672,7 +691,10 @@ api.get("/forum", async (req, res) => {
 api.post("/forum", async (req, res) => {
   try {
     if (!strictLimit(req, res, "forum-post", 8, 60_000)) return;
-    const text = String((req.body && req.body.text) || "").trim().slice(0, 200);
+    const text = String((req.body && req.body.text) || "")
+      .replace(/[<>]/g, "")
+      .trim()
+      .slice(0, 200);
     if (!text) return res.status(400).json({ error: "text gerekli" });
     const post = await socialSystem.addForumPost(
       req.user.id,
@@ -710,7 +732,10 @@ api.post("/messages", async (req, res) => {
   try {
     if (!strictLimit(req, res, "msg-send", 20, 60_000)) return;
     const toUsername = String((req.body && req.body.to) || "").trim();
-    const text = String((req.body && req.body.text) || "").trim().slice(0, 1000);
+    const text = String((req.body && req.body.text) || "")
+      .replace(/[<>]/g, "")
+      .trim()
+      .slice(0, 1000);
     if (!toUsername || !text) {
       return res.status(400).json({ error: "to ve text gerekli" });
     }

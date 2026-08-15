@@ -55,7 +55,10 @@ async function setTicketPrice(clubId, price) {
 
 async function rename(clubId, name) {
   const state = await getState(clubId);
-  const n = String(name || "").trim().slice(0, 64);
+  const n = String(name || "")
+    .replace(/[<>]/g, "")
+    .trim()
+    .slice(0, 64);
   if (!n) return { ok: false, error: "İsim gerekli" };
   state.name = n;
   await stadiumRepo.saveStadiumState(clubId, state);
