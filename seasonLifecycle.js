@@ -31,22 +31,79 @@ function nextYearLabel(label) {
   return y1 + "/" + String(y2).padStart(2, "0");
 }
 
+/** Sezon fikstür sayıları (UI + finalize kontrolü) */
+async function countFixturesByStatus(seasonId) {
+  const { rows } = await query(
+    `SELECT
+       COUNT(*) FILTER (WHERE status = 'finished')::int AS finished,
+       COUNT(*) FILTER (WHERE status = 'scheduled')::int AS scheduled,
+       COUNT(*) FILTER (WHERE status = 'live')::int AS live,
+       COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled,
+       COUNT(*) FILTER (WHERE status IN ('scheduled','live'))::int AS open,
+       COUNT(*)::int AS total
+     FROM fixtures WHERE season_id = $1`,
+    [seasonId],
+  );
+  const s = rows[0] || {};
+  return {
+    finished: s.finished || 0,
+    scheduled: s.scheduled || 0,
+    live: s.live || 0,
+    cancelled: s.cancelled || 0,
+    open: s.open || 0,
+    total: s.total || 0,
+  };
+}
+
+/** Tüm maçlar bitmiş mi? */
+async function isSeasonComplete(seasonId) {
+  const counts = await countFixturesByStatus(seasonId);
+  if (!counts.total) return false;
+  return counts.open === 0;
+}
+
+/** seasons satırı (status / champion alanları 022 migration ile gelir) */
+async function readSeasonRow(seasonId) {
+  try {
+    const { rows } = await query(
+      `SELECT id, country, division, year_label AS "yearLabel",
+              is_current AS "isCurrent",
+              status,
+              champion_name AS "championName",
+              champion_club_id AS "championClubId",
+              finished_at AS "finishedAt"
+       FROM seasons WHERE id = $1`,
+      [seasonId],
+    );
+    return rows[0] || null;
+  } catch (e) {
+    // Eski şema (status / champion yok)
+    const { rows } = await query(
+      `SELECT id, country, division, year_label AS "yearLabel",
+              is_current AS "isCurrent"
+       FROM seasons WHERE id = $1`,
+      [seasonId],
+    );
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      ...r,
+      status: r.isCurrent ? "active" : "finished",
+      championName: null,
+      championClubId: null,
+      finishedAt: null,
+    };
+  }
+}
+
 async function tryFinalizeAfterLeagueMatch(fixtureId) {
   if (!fixtureId) return { ok: false, skipped: true };
   const fixture = await leagueRepo.getFixtureById(fixtureId);
   if (!fixture || !fixture.seasonId) return { ok: false, skipped: true };
 
-  const { rows } = await query(
-    `SELECT
-       COUNT(*) FILTER (WHERE status = 'finished')::int AS finished,
-       COUNT(*) FILTER (WHERE status IN ('scheduled','live'))::int AS open,
-       COUNT(*)::int AS total
-     FROM fixtures WHERE season_id = $1`,
-    [fixture.seasonId],
-  );
-  const s = rows[0];
-  if (!s || s.open > 0 || s.total === 0) {
-    return { ok: true, skipped: true, open: s && s.open };
+  const counts = await countFixturesByStatus(fixture.seasonId);
+  if (!counts.total || counts.open > 0) {
+    return { ok: true, skipped: true, open: counts.open };
   }
   return finalizeSeason(fixture.seasonId, {});
 }
@@ -242,4 +299,7 @@ module.exports = {
   finalizeSeason,
   prizeForRank,
   nextYearLabel,
+  countFixturesByStatus,
+  isSeasonComplete,
+  readSeasonRow,
 };

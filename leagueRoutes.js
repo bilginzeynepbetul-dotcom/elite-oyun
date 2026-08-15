@@ -312,8 +312,15 @@ function createLeagueRouter() {
           : open + " maç kaldı (" + (counts.finished || 0) + " bitti / " + (counts.total || 0) + " toplam)",
       });
     } catch (e) {
-      console.error("[league/season-status]", e);
-      res.status(500).json({ error: "Sezon durumu alınamadı" });
+      console.error(
+        "[league/season-status]",
+        e && e.message ? e.message : e,
+        e && e.code ? e.code : "",
+      );
+      res.status(500).json({
+        error: "Sezon durumu alınamadı",
+        detail: String((e && e.message) || e).slice(0, 200),
+      });
     }
   });
 
