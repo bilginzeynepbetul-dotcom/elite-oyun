@@ -41,6 +41,12 @@ const files = [
   "026_daily_challenges.sql",
   "027_token_version.sql",
   "028_national_schema_ensure.sql",
+  "029_username_ci_unique.sql",
+  "030_account_deletion.sql",
+  "031_account_deletion_audit.sql",
+  "032_admin_audit_log.sql",
+  "033_email_verification.sql",
+  "034_login_lockout.sql",
 ];
 
 async function ensureMigrationsTable() {
