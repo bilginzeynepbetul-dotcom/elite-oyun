@@ -218,10 +218,17 @@ function createAuthRouter() {
       const password = String((req.body && req.body.password) || "");
       const emailRaw = (req.body && req.body.email) || null;
       const email = emailRaw ? String(emailRaw).trim().slice(0, 255) : null;
-      const teamName = (req.body && req.body.teamName) || null;
+      const teamNameRaw = (req.body && req.body.teamName) || null;
+      const teamName = teamNameRaw
+        ? String(teamNameRaw)
+            .replace(/[<>]/g, "")
+            .trim()
+            .slice(0, 48) || null
+        : null;
       const country =
-        String((req.body && req.body.country) || "Türkiye").trim() ||
-        "Türkiye";
+        String((req.body && req.body.country) || "Türkiye")
+          .replace(/[<>]/g, "")
+          .trim() || "Türkiye";
       const securityQuestion = String(
         (req.body && req.body.securityQuestion) || "",
       ).trim();
