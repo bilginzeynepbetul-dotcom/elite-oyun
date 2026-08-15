@@ -164,6 +164,25 @@ function playerAvgSkill(p) {
 function sanitizePlayer(p) {
   if (!p || typeof p !== "object") return null;
   const out = Object.assign({}, p);
+  // Stored XSS önlemi: isim/pozisyon içindeki HTML karakterlerini temizle
+  if (out.name != null) {
+    out.name = String(out.name)
+      .replace(/[<>]/g, "")
+      .trim()
+      .slice(0, 48);
+  }
+  if (out.pos != null) {
+    out.pos = String(out.pos)
+      .replace(/[<>]/g, "")
+      .trim()
+      .slice(0, 12);
+  }
+  if (out.naturalPos != null) {
+    out.naturalPos = String(out.naturalPos)
+      .replace(/[<>]/g, "")
+      .trim()
+      .slice(0, 12);
+  }
   SKILL_KEYS.forEach((k) => {
     if (out[k] != null) {
       out[k] = clampNum(out[k], LIMITS.skillMin, LIMITS.skillMax, 10);

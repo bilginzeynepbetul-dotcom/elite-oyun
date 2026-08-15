@@ -18,12 +18,29 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES
-        value: 7d
+        value: 2h
+      - key: JWT_REFRESH_EXPIRES
+        value: 30d
+      # Dashboard'dan kendi admin kullanıcı adını yaz (kayıt olduğun username)
       - key: ADMIN_USERNAME
-        value: murat
+        sync: false
       - key: NODE_ENV
         value: production
+      # ZORUNLU: https://senin-domain.com (virgülle birden fazla)
       - key: CORS_ORIGIN
         sync: false
       - key: ELITE_ALLOW_MOCK
         value: "0"
+      - key: PUBLIC_URL
+        sync: false
+      # Bağış bilgileri (Dashboard'dan doldur)
+      - key: DONATION_IBAN
+        sync: false
+      - key: DONATION_IBAN_NAME
+        sync: false
+      - key: DONATION_PAPARA
+        sync: false
+      - key: DONATION_PAPARA_NAME
+        sync: false
+      - key: DONATION_NOTE
+        value: Açıklamaya kullanıcı adınızı yazın. Ödeme sonrası Elite sayfasından bağışı bildirin.

@@ -34,13 +34,37 @@ function uid() {
   return crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
 }
 
-function randomName(used) {
+/**
+ * Bot ismi üret.
+ * opts.index verilirse aynı index → aynı isim tercihi (deterministik);
+ * böylece boş DB'de lig doldurma her ortamda benzer isimler üretir.
+ * Yine de used set'inde varsa sıradaki kombinasyona geçer.
+ */
+function randomName(used, opts = {}) {
+  const set = used instanceof Set ? used : new Set();
+  const idx =
+    opts.index != null && Number.isFinite(Number(opts.index))
+      ? Math.abs(Number(opts.index))
+      : null;
+
+  if (idx != null) {
+    // Deterministik tarama: first/second kombinasyonunu index ile dolaş
+    const total = BOT_FIRST.length * BOT_SECOND.length;
+    for (let k = 0; k < total; k++) {
+      const n =
+        BOT_FIRST[(idx + k) % BOT_FIRST.length] +
+        " " +
+        BOT_SECOND[Math.floor((idx + k) / BOT_FIRST.length) % BOT_SECOND.length];
+      if (!set.has(n.toLowerCase())) return n;
+    }
+  }
+
   for (let i = 0; i < 40; i++) {
     const n =
       BOT_FIRST[Math.floor(Math.random() * BOT_FIRST.length)] +
       " " +
       BOT_SECOND[Math.floor(Math.random() * BOT_SECOND.length)];
-    if (!used.has(n.toLowerCase())) return n;
+    if (!set.has(n.toLowerCase())) return n;
   }
   return "Bot FC " + Math.floor(Math.random() * 9000 + 1000);
 }
@@ -182,7 +206,14 @@ async function createBotClub(opts = {}) {
       [country],
     );
     const used = new Set(existingNames.map((r) => r.n));
-    const name = opts.name || randomName(used);
+    const name =
+      opts.name ||
+      randomName(used, {
+        index:
+          opts.nameIndex != null
+            ? opts.nameIndex
+            : used.size + (opts.division || 1) * 17,
+      });
 
     const clubId = uid();
     // user_id NULL + is_bot TRUE (003 migration sonrası)
@@ -302,7 +333,13 @@ async function ensureLeagueFilled(opts = {}) {
 
   for (let i = 0; i < need; i++) {
     const strength = 3 + Math.floor(Math.random() * 5);
-    const bot = await createBotClub({ country, division, strength });
+    // nameIndex: ülke+lig+sıra → benzer isimler (tamamen rastgele değil)
+    const bot = await createBotClub({
+      country,
+      division,
+      strength,
+      nameIndex: current + i + division * 31 + country.length,
+    });
     created.push(bot);
   }
 

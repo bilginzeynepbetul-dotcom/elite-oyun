@@ -21,11 +21,13 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgres://em:em@db:5432/elite_manager
-      # UYARI: Production'da mutlaka güçlü rastgele bir secret kullanın
-      JWT_SECRET: dev-secret-change-in-prod
+      # Yerel geliştirme — production'da Render env kullan
+      JWT_SECRET: local-dev-only-change-me-32chars
       ADMIN_USERNAME: admin
+      NODE_ENV: development
       ELITE_ALLOW_MOCK: "0"
       PORT: "3000"
+      CORS_ORIGIN: "http://localhost:3000"
     depends_on:
       db:
         condition: service_healthy

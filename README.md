@@ -60,7 +60,7 @@ Ayrıntılar: `env.elite.example`
 3. **ADMIN_USERNAME** — yönetici kullanıcı adı (case-insensitive). O kullanıcı adıyla kayıt = admin.
 4. **CORS_ORIGIN** — production'da **zorunlu** (`NODE_ENV=production` + boş CORS → boot fail). Virgülle çoklu domain.
 5. **ELITE_ALLOW_MOCK=0** — production'da `1` yasak (boot fail).
-6. **npm run migrate** — `001`…`027` (token_version dahil). `npm start` otomatik migrate eder.
+6. **npm run migrate** — `001`…`028` (token_version + national schema ensure dahil). `npm start` otomatik migrate eder.
 7. **Health check** — `/healthz` (DB) ve `/api/health` (errorTracker stats).
 8. **Loglar** — `ERROR_LOG_FILE`, `ERROR_WEBHOOK_URL`, `ERROR_ADMIN_TOKEN`.
 9. **Donation alanları** — gerçek IBAN/Papara.
