@@ -123,10 +123,17 @@ async function claimManager(nationalTeamId, userId, clubId) {
 // ---------------- TD başvuru / atama ----------------
 async function applyForManager(nationalTeamId, userId, clubId, message) {
   try {
+    const safeMsg =
+      message == null
+        ? null
+        : String(message)
+            .replace(/[<>]/g, "")
+            .trim()
+            .slice(0, 500) || null;
     const { rows } = await query(
       `INSERT INTO national_manager_applications (national_team_id, user_id, club_id, message)
        VALUES ($1, $2, $3, $4) RETURNING id`,
-      [nationalTeamId, userId, clubId, message || null],
+      [nationalTeamId, userId, clubId, safeMsg],
     );
     return { ok: true, applicationId: rows[0].id };
   } catch (e) {
