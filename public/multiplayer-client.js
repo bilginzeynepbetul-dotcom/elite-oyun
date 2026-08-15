@@ -2015,10 +2015,15 @@ function renderServerMatchState(state) {
     const n = name || "—";
     // Onclick attribute'una gömülen JS string literali için ayrı kaçış,
     // görünen HTML içeriği için ayrı kaçış gerekir — ikisi karıştırılmamalı.
-    const jsSafe = String(n).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    // NOT: escapeHtml JS string bağlamında kullanılmamalı (&#39; JS'i bozar).
+    const jsSafe = String(n)
+      .replace(/\\/g, "\\\\")
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, "")
+      .replace(/\n/g, " ");
     return (
       '<span class="clickable-team" style="cursor:pointer;color:#e2e8f0;text-decoration:underline;" onclick="event.stopPropagation();typeof openClubProfileByName===\'function\'&&openClubProfileByName(\'' +
-      escapeHtml(jsSafe) +
+      jsSafe +
       "')\">" +
       escapeHtml(n) +
       "</span>"
@@ -2295,9 +2300,9 @@ function renderServerMatchState(state) {
             "<span><b style=\"color:#38bdf8;\">" +
             (i + 1) +
             ".</b> " +
-            r.name +
+            escapeHtml(r.name) +
             "</span><b style=\"color:#4ade80;\">" +
-            r.g +
+            escapeHtml(r.g) +
             " gol</b></div>";
         });
       }
@@ -3146,11 +3151,11 @@ function renderServerMatchState(state) {
             .map(function (r) {
               return (
                 '<div class="youth-row"><span class="player-name">' +
-                (r.name || "?") +
+                escapeHtml(r.name || "?") +
                 '</span><span class="player-pos">' +
-                (r.pos || "") +
+                escapeHtml(r.pos || "") +
                 " · " +
-                (r.age || "?") +
+                escapeHtml(r.age != null ? r.age : "?") +
                 "y</span></div>"
               );
             })
@@ -3370,13 +3375,13 @@ function renderServerMatchState(state) {
             .map(function (r) {
               return (
                 '<div class="youth-row"><span class="player-name">' +
-                (r.name || "?") +
+                escapeHtml(r.name || "?") +
                 '</span><span style="color:#86efac;font-size:11px;">' +
-                (r.skillLabel || r.skill || "") +
+                escapeHtml(r.skillLabel || r.skill || "") +
                 ": +" +
-                (r.delta != null ? r.delta : "?") +
+                escapeHtml(r.delta != null ? r.delta : "?") +
                 " → " +
-                (r.to != null ? Math.round(r.to) : "") +
+                escapeHtml(r.to != null ? Math.round(r.to) : "") +
                 "</span></div>"
               );
             })
