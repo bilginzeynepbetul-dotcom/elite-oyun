@@ -50,13 +50,34 @@ const files = [
 ];
 
 async function ensureMigrationsTable() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS schema_migrations (
-      id SERIAL PRIMARY KEY,
-      filename TEXT NOT NULL UNIQUE,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        id SERIAL PRIMARY KEY,
+        filename TEXT NOT NULL UNIQUE,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+  } catch (e) {
+    if (e.code === "42501") {
+      console.error(
+        "[migrate] ✗ schema_migrations oluşturulamadı (42501 yetki yok).",
+      );
+      console.error(
+        "[migrate]   DATABASE_URL içindeki kullanıcının bu veritabanında",
+      );
+      console.error(
+        "[migrate]   CREATE TABLE yetkisi olmalı. Render/Supabase'te genelde",
+      );
+      console.error(
+        "[migrate]   varsayılan connection string yeterlidir; yanlış DB veya",
+      );
+      console.error(
+        "[migrate]   read-only replica kullanmadığınızdan emin olun.",
+      );
+    }
+    throw e;
+  }
 
   // Bazı ortamlarda schema_migrations tablosu daha önce farklı (bozuk) bir
   // yapıyla oluşturulmuş olabilir — örn. "filename" sütunu INTEGER tipinde.
@@ -114,6 +135,63 @@ async function markApplied(filename) {
   );
 }
 
+function maskDatabaseUrl(url) {
+  try {
+    const u = new URL(url.replace(/^postgres(ql)?:/i, "http:"));
+    const user = u.username || "?";
+    const host = u.hostname || "?";
+    const port = u.port || "";
+    const db = (u.pathname || "/").replace(/^\//, "") || "?";
+    return `${user}@${host}${port ? ":" + port : ""}/${db}`;
+  } catch (_) {
+    return "(parse edilemedi)";
+  }
+}
+
+async function diagnosePrivileges() {
+  try {
+    const { rows } = await query(
+      `SELECT current_user AS usr,
+              current_database() AS db,
+              has_database_privilege(current_user, current_database(), 'CREATE') AS can_create`,
+    );
+    const r = rows[0] || {};
+    console.log(
+      `[migrate] bağlantı: user=${r.usr} db=${r.db} CREATE=${r.can_create}`,
+    );
+    if (r.can_create === false) {
+      console.error(
+        "[migrate] ✗ Bu kullanıcının veritabanında CREATE yetkisi YOK (42501 kaynağı).",
+      );
+      console.error(
+        "[migrate]   Çözüm özeti:",
+      );
+      console.error(
+        "[migrate]   • Render: Dashboard → Database → Connect → External/Internal URL (owner user)",
+      );
+      console.error(
+        "[migrate]   • Supabase: Project Settings → Database → Connection string (URI)",
+      );
+      console.error(
+        "[migrate]     session mode kullan (port 5432), pooler 6543 transaction mode değil",
+      );
+      console.error(
+        "[migrate]   • Yerel Docker: postgres://em:em@localhost:5432/elite_manager",
+      );
+      console.error(
+        "[migrate]   • Read-only replica / viewer role kullanmayın",
+      );
+      await pool.end();
+      process.exit(1);
+    }
+  } catch (e) {
+    console.warn(
+      "[migrate] yetki teşhisi atlandı:",
+      String(e.message || e).slice(0, 120),
+    );
+  }
+}
+
 async function run() {
   if (!process.env.DATABASE_URL) {
     console.error(
@@ -123,6 +201,8 @@ async function run() {
   }
 
   console.log("[migrate] başlıyor…");
+  console.log("[migrate] hedef:", maskDatabaseUrl(process.env.DATABASE_URL));
+  await diagnosePrivileges();
   await ensureMigrationsTable();
 
   for (const file of files) {
@@ -168,6 +248,20 @@ async function run() {
         );
       } else {
         console.error("[migrate] ✗ hata:", file, errMsg);
+        if (e.code === "42501") {
+          console.error(
+            "[migrate] 💡 42501 = yetersiz yetki (insufficient_privilege).",
+          );
+          console.error(
+            "[migrate]    • CREATE EXTENSION artık kullanılmıyor (PG 14+).",
+          );
+          console.error(
+            "[migrate]    • DB kullanıcısının CREATE / CREATE TABLE yetkisi olmalı.",
+          );
+          console.error(
+            "[migrate]    • Read-only replica veya yanlış DATABASE_URL kullanmayın.",
+          );
+        }
         try {
           client.release();
         } catch (_) {}
