@@ -5,12 +5,14 @@
 
 BEGIN;
 
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- gen_random_uuid() PostgreSQL 13+ çekirdekte (pgcrypto gerekmez).
+-- CREATE EXTENSION managed DB'lerde (Render/Supabase/Neon) 42501 verir;
+-- bu yüzden hiç çağırmıyoruz. Proje PG 14+ gerektirir.
 
 -- ------------------------------------------------------------
 -- 1. Users
 -- ------------------------------------------------------------
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username      VARCHAR(32) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
@@ -22,12 +24,12 @@ CREATE TABLE users (
   CONSTRAINT uq_users_email UNIQUE (email)
 );
 
-CREATE INDEX idx_users_username_lower ON users (LOWER(username));
+CREATE INDEX IF NOT EXISTS idx_users_username_lower ON users (LOWER(username));
 
 -- ------------------------------------------------------------
 -- 2. Clubs & economy
 -- ------------------------------------------------------------
-CREATE TABLE clubs (
+CREATE TABLE IF NOT EXISTS clubs (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name          VARCHAR(64) NOT NULL,
@@ -43,9 +45,9 @@ CREATE TABLE clubs (
   CONSTRAINT uq_clubs_user UNIQUE (user_id)
 );
 
-CREATE INDEX idx_clubs_country_division ON clubs (country, division);
+CREATE INDEX IF NOT EXISTS idx_clubs_country_division ON clubs (country, division);
 
-CREATE TABLE finance_ledger (
+CREATE TABLE IF NOT EXISTS finance_ledger (
   id         BIGSERIAL PRIMARY KEY,
   club_id    UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
   amount     BIGINT NOT NULL,
@@ -53,12 +55,12 @@ CREATE TABLE finance_ledger (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_ledger_club_ts ON finance_ledger (club_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ledger_club_ts ON finance_ledger (club_id, created_at DESC);
 
 -- ------------------------------------------------------------
 -- 3. Players
 -- ------------------------------------------------------------
-CREATE TABLE players (
+CREATE TABLE IF NOT EXISTS players (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   club_id         UUID REFERENCES clubs(id) ON DELETE SET NULL,
   name            VARCHAR(64) NOT NULL,
@@ -98,13 +100,13 @@ CREATE TABLE players (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_players_club ON players (club_id);
-CREATE INDEX idx_players_club_starter ON players (club_id, is_starter);
+CREATE INDEX IF NOT EXISTS idx_players_club ON players (club_id);
+CREATE INDEX IF NOT EXISTS idx_players_club_starter ON players (club_id, is_starter);
 
 -- ------------------------------------------------------------
 -- 4. Seasons, standings, fixtures
 -- ------------------------------------------------------------
-CREATE TABLE seasons (
+CREATE TABLE IF NOT EXISTS seasons (
   id         SERIAL PRIMARY KEY,
   country    VARCHAR(48) NOT NULL,
   division   SMALLINT NOT NULL,
@@ -113,7 +115,7 @@ CREATE TABLE seasons (
   CONSTRAINT uq_seasons_cdy UNIQUE (country, division, year_label)
 );
 
-CREATE TABLE league_standings (
+CREATE TABLE IF NOT EXISTS league_standings (
   id         BIGSERIAL PRIMARY KEY,
   season_id  INT NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
   club_id    UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
@@ -127,7 +129,7 @@ CREATE TABLE league_standings (
   CONSTRAINT uq_standings_season_club UNIQUE (season_id, club_id)
 );
 
-CREATE INDEX idx_standings_season_pts ON league_standings (season_id, pts DESC, gf DESC);
+CREATE INDEX IF NOT EXISTS idx_standings_season_pts ON league_standings (season_id, pts DESC, gf DESC);
 
 DO $$
 BEGIN
@@ -137,7 +139,7 @@ BEGIN
 END
 $$;
 
-CREATE TABLE fixtures (
+CREATE TABLE IF NOT EXISTS fixtures (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   season_id     INT NOT NULL REFERENCES seasons(id),
   home_club_id  UUID NOT NULL REFERENCES clubs(id),
@@ -151,15 +153,15 @@ CREATE TABLE fixtures (
   CONSTRAINT chk_fixtures_different_clubs CHECK (home_club_id <> away_club_id)
 );
 
-CREATE INDEX idx_fixtures_kickoff ON fixtures (kickoff_at);
-CREATE INDEX idx_fixtures_status ON fixtures (status);
-CREATE INDEX idx_fixtures_home ON fixtures (home_club_id);
-CREATE INDEX idx_fixtures_away ON fixtures (away_club_id);
+CREATE INDEX IF NOT EXISTS idx_fixtures_kickoff ON fixtures (kickoff_at);
+CREATE INDEX IF NOT EXISTS idx_fixtures_status ON fixtures (status);
+CREATE INDEX IF NOT EXISTS idx_fixtures_home ON fixtures (home_club_id);
+CREATE INDEX IF NOT EXISTS idx_fixtures_away ON fixtures (away_club_id);
 
 -- ------------------------------------------------------------
 -- 5. Match archive
 -- ------------------------------------------------------------
-CREATE TABLE match_results (
+CREATE TABLE IF NOT EXISTS match_results (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   fixture_id   UUID UNIQUE REFERENCES fixtures(id) ON DELETE SET NULL,
   home_club_id UUID NOT NULL REFERENCES clubs(id),
@@ -171,7 +173,7 @@ CREATE TABLE match_results (
   finished_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE match_logs (
+CREATE TABLE IF NOT EXISTS match_logs (
   id         BIGSERIAL PRIMARY KEY,
   match_id   UUID NOT NULL REFERENCES match_results(id) ON DELETE CASCADE,
   minute     SMALLINT,
@@ -179,7 +181,7 @@ CREATE TABLE match_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_match_logs_match ON match_logs (match_id);
+CREATE INDEX IF NOT EXISTS idx_match_logs_match ON match_logs (match_id);
 
 -- ------------------------------------------------------------
 -- 6. Transfer market
@@ -192,7 +194,7 @@ BEGIN
 END
 $$;
 
-CREATE TABLE transfer_listings (
+CREATE TABLE IF NOT EXISTS transfer_listings (
   id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   player_id               UUID REFERENCES players(id) ON DELETE SET NULL,
   seller_club_id          UUID REFERENCES clubs(id) ON DELETE SET NULL,
@@ -207,13 +209,13 @@ CREATE TABLE transfer_listings (
   created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_listings_active_ends
+CREATE INDEX IF NOT EXISTS idx_listings_active_ends
   ON transfer_listings (auction_ends_at)
   WHERE status = 'active';
 
-CREATE INDEX idx_listings_seller ON transfer_listings (seller_club_id);
+CREATE INDEX IF NOT EXISTS idx_listings_seller ON transfer_listings (seller_club_id);
 
-CREATE TABLE transfer_bids (
+CREATE TABLE IF NOT EXISTS transfer_bids (
   id          BIGSERIAL PRIMARY KEY,
   listing_id  UUID NOT NULL REFERENCES transfer_listings(id) ON DELETE CASCADE,
   club_id     UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
@@ -222,12 +224,12 @@ CREATE TABLE transfer_bids (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_bids_listing ON transfer_bids (listing_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bids_listing ON transfer_bids (listing_id, created_at DESC);
 
 -- ------------------------------------------------------------
 -- 7. Youth academy
 -- ------------------------------------------------------------
-CREATE TABLE youth_academy (
+CREATE TABLE IF NOT EXISTS youth_academy (
   club_id               UUID PRIMARY KEY REFERENCES clubs(id) ON DELETE CASCADE,
   scout_level           SMALLINT NOT NULL DEFAULT 1
                           CHECK (scout_level BETWEEN 1 AND 5),
@@ -243,7 +245,7 @@ CREATE TABLE youth_academy (
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE youth_discoveries (
+CREATE TABLE IF NOT EXISTS youth_discoveries (
   id         BIGSERIAL PRIMARY KEY,
   club_id    UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
   player_id  UUID REFERENCES players(id) ON DELETE SET NULL,
@@ -253,12 +255,12 @@ CREATE TABLE youth_discoveries (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_youth_disc_club ON youth_discoveries (club_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_youth_disc_club ON youth_discoveries (club_id, created_at DESC);
 
 -- ------------------------------------------------------------
 -- 8. Training & coaches
 -- ------------------------------------------------------------
-CREATE TABLE club_coaches (
+CREATE TABLE IF NOT EXISTS club_coaches (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   club_id    UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
   skill      VARCHAR(16) NOT NULL,
@@ -268,7 +270,7 @@ CREATE TABLE club_coaches (
   CONSTRAINT uq_coaches_club_skill UNIQUE (club_id, skill)
 );
 
-CREATE TABLE training_log (
+CREATE TABLE IF NOT EXISTS training_log (
   id          BIGSERIAL PRIMARY KEY,
   club_id     UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
   player_id   UUID REFERENCES players(id) ON DELETE SET NULL,
@@ -279,12 +281,12 @@ CREATE TABLE training_log (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_training_club_ts ON training_log (club_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_training_club_ts ON training_log (club_id, created_at DESC);
 
 -- ------------------------------------------------------------
 -- 9. Stadium
 -- ------------------------------------------------------------
-CREATE TABLE stadiums (
+CREATE TABLE IF NOT EXISTS stadiums (
   club_id           UUID PRIMARY KEY REFERENCES clubs(id) ON DELETE CASCADE,
   name              VARCHAR(64) NOT NULL,
   capacity          INT NOT NULL DEFAULT 24500
@@ -299,7 +301,7 @@ CREATE TABLE stadiums (
 -- ------------------------------------------------------------
 -- 10. Social: forum, messages, notifications
 -- ------------------------------------------------------------
-CREATE TABLE forum_posts (
+CREATE TABLE IF NOT EXISTS forum_posts (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID REFERENCES users(id) ON DELETE SET NULL,
   username   VARCHAR(32) NOT NULL,
@@ -307,9 +309,9 @@ CREATE TABLE forum_posts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_forum_ts ON forum_posts (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_forum_ts ON forum_posts (created_at DESC);
 
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   from_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   to_user_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -318,10 +320,10 @@ CREATE TABLE messages (
   CONSTRAINT chk_messages_not_self CHECK (from_user_id <> to_user_id)
 );
 
-CREATE INDEX idx_messages_to_ts ON messages (to_user_id, created_at DESC);
-CREATE INDEX idx_messages_from_ts ON messages (from_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_to_ts ON messages (to_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_from_ts ON messages (from_user_id, created_at DESC);
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   icon       VARCHAR(8) NOT NULL DEFAULT '🔔',
@@ -331,7 +333,7 @@ CREATE TABLE notifications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_notifs_user_unread ON notifications (user_id, is_read, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifs_user_unread ON notifications (user_id, is_read, created_at DESC);
 
 -- ------------------------------------------------------------
 -- 11. updated_at trigger helper
@@ -344,18 +346,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_clubs_updated ON clubs;
 CREATE TRIGGER trg_clubs_updated
   BEFORE UPDATE ON clubs
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_players_updated ON players;
 CREATE TRIGGER trg_players_updated
   BEFORE UPDATE ON players
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_youth_updated ON youth_academy;
 CREATE TRIGGER trg_youth_updated
   BEFORE UPDATE ON youth_academy
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_stadiums_updated ON stadiums;
 CREATE TRIGGER trg_stadiums_updated
   BEFORE UPDATE ON stadiums
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -364,14 +370,22 @@ CREATE TRIGGER trg_stadiums_updated
 -- 12. Seed: current season (Türkiye div 1) + forum welcome
 -- ------------------------------------------------------------
 INSERT INTO seasons (country, division, year_label, is_current)
-VALUES ('Türkiye', 1, '2025/26', TRUE);
+VALUES ('Türkiye', 1, '2025/26', TRUE)
+ON CONFLICT (country, division, year_label) DO NOTHING;
 
-INSERT INTO forum_posts (user_id, username, text, created_at) VALUES
-  (NULL, 'Admin',
-   'Hoş geldiniz! Transfer, stadyum ve altyapı güncellemeleri aktif.',
-   NOW() - INTERVAL '1 hour'),
-  (NULL, 'ScoutTR',
-   'Altyapıdan genç çekmek uzun vadede kazandırıyor.',
-   NOW() - INTERVAL '1 day');
+INSERT INTO forum_posts (user_id, username, text, created_at)
+SELECT NULL, 'Admin',
+       'Hoş geldiniz! Transfer, stadyum ve altyapı güncellemeleri aktif.',
+       NOW() - INTERVAL '1 hour'
+WHERE NOT EXISTS (
+  SELECT 1 FROM forum_posts WHERE username = 'Admin' AND text LIKE 'Hoş geldiniz!%'
+);
+INSERT INTO forum_posts (user_id, username, text, created_at)
+SELECT NULL, 'ScoutTR',
+       'Altyapıdan genç çekmek uzun vadede kazandırıyor.',
+       NOW() - INTERVAL '1 day'
+WHERE NOT EXISTS (
+  SELECT 1 FROM forum_posts WHERE username = 'ScoutTR' AND text LIKE 'Altyapıdan genç%'
+);
 
 COMMIT;

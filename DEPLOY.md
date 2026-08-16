@@ -89,7 +89,14 @@ Cron örneği (her gece 03:15):
 15 3 * * * cd /app && DATABASE_URL=... npm run backup >> /var/log/elite-backup.log 2>&1
 ```
 
-Render / harici: günlük Cron Job ile aynı komut.
+Render Blueprint (`render.yaml`) artık iki cron tanımlar:
+- `elite-manager-backup` — günlük `npm run backup` (03:15 UTC)
+- `elite-manager-retention` — haftalık `npm run retention` (Pazar 04:00 UTC)
+
+Blueprint ile deploy edince cron’lar otomatik oluşur. Free planda disk **ephemeral**;
+yedek dosyaları kalıcı değildir — gerçek felaket kurtarma için dış yedek (S3/R2) ekleyin.
+
+Manuel: Render Dashboard → New → Cron Job (gerekirse).
 
 Admin UI: Anti-Cheat panelinde **Kilit aç** / **Kilitli listesi** (`POST /api/admin/unlock-login`, `GET /api/admin/locked`).
 
