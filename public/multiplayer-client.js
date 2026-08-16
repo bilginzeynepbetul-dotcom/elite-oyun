@@ -2348,39 +2348,89 @@ function renderServerMatchState(state) {
     list.innerHTML =
       '<div style="color:#64748b;text-align:center;padding:12px;">Yükleniyor...</div>';
     try {
-      const data = await fetchCupBracket();
-      const goals = {};
-      (data.bracket || []).forEach((f) => {
-        if (f.status !== "finished") return;
-        if (f.homeName) {
-          goals[f.homeName] = (goals[f.homeName] || 0) + (Number(f.homeGoals) || 0);
-        }
-        if (f.awayName) {
-          goals[f.awayName] = (goals[f.awayName] || 0) + (Number(f.awayGoals) || 0);
-        }
-      });
-      const ranked = Object.keys(goals)
-        .map((n) => ({ name: n, g: goals[n] }))
-        .sort((a, b) => b.g - a.g);
-      let html =
-        '<div class="youth-section-title">👑 Kupa Gol Krallığı (takım)</div>' +
-        '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Oyuncu bazlı kupa istatistiği yakında; şimdilik takım golleri.</div>';
-      if (!ranked.length) {
+      // Oyuncu gol/asist: /api/cup/stats ; yedek olarak takım golleri (bracket)
+      let goalKing = [];
+      let assistKing = [];
+      try {
+        const stats = await apiFetch("/api/cup/stats?limit=15");
+        goalKing = (stats && stats.goalKing) || [];
+        assistKing = (stats && stats.assistKing) || [];
+      } catch (_) {}
+
+      let html = '<div class="youth-section-title">👑 Kupa Gol / Asist Krallığı</div>';
+
+      if (goalKing.length) {
         html +=
-          '<div style="color:#64748b;text-align:center;padding:12px;">Henüz oynanmış kupa maçı yok.</div>';
-      } else {
-        ranked.forEach((r, i) => {
+          '<div style="font-size:11px;color:#94a3b8;margin:8px 0 4px;">Gol krallığı (oyuncu)</div>';
+        goalKing.forEach((r, i) => {
           html +=
             '<div style="display:flex;justify-content:space-between;padding:8px 10px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:8px;font-size:13px;color:#e2e8f0;">' +
             "<span><b style=\"color:#38bdf8;\">" +
             (i + 1) +
             ".</b> " +
-            escapeHtml(r.name) +
-            "</span><b style=\"color:#4ade80;\">" +
-            escapeHtml(r.g) +
+            escapeHtml(r.playerName || r.name || "?") +
+            ' <span style="color:#64748b;font-size:11px;">' +
+            escapeHtml(r.clubName || "") +
+            "</span></span><b style=\"color:#4ade80;\">" +
+            escapeHtml(String(r.goals != null ? r.goals : r.g || 0)) +
             " gol</b></div>";
         });
       }
+
+      if (assistKing.length) {
+        html +=
+          '<div style="font-size:11px;color:#94a3b8;margin:12px 0 4px;">Asist krallığı (oyuncu)</div>';
+        assistKing.forEach((r, i) => {
+          html +=
+            '<div style="display:flex;justify-content:space-between;padding:8px 10px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:8px;font-size:13px;color:#e2e8f0;">' +
+            "<span><b style=\"color:#a78bfa;\">" +
+            (i + 1) +
+            ".</b> " +
+            escapeHtml(r.playerName || r.name || "?") +
+            ' <span style="color:#64748b;font-size:11px;">' +
+            escapeHtml(r.clubName || "") +
+            "</span></span><b style=\"color:#c4b5fd;\">" +
+            escapeHtml(String(r.assists != null ? r.assists : 0)) +
+            " asist</b></div>";
+        });
+      }
+
+      // Oyuncu verisi yoksa takım gol sıralaması (bracket fallback)
+      if (!goalKing.length && !assistKing.length) {
+        const data = await fetchCupBracket();
+        const goals = {};
+        (data.bracket || []).forEach((f) => {
+          if (f.status !== "finished") return;
+          if (f.homeName)
+            goals[f.homeName] =
+              (goals[f.homeName] || 0) + (Number(f.homeGoals) || 0);
+          if (f.awayName)
+            goals[f.awayName] =
+              (goals[f.awayName] || 0) + (Number(f.awayGoals) || 0);
+        });
+        const ranked = Object.keys(goals)
+          .map((n) => ({ name: n, g: goals[n] }))
+          .sort((a, b) => b.g - a.g);
+        html +=
+          '<div style="font-size:11px;color:#94a3b8;margin:8px 0 4px;">Takım golleri (henüz oyuncu scorer kaydı yok)</div>';
+        if (!ranked.length) {
+          html +=
+            '<div style="color:#64748b;text-align:center;padding:12px;">Henüz oynanmış kupa maçı yok.</div>';
+        } else {
+          ranked.forEach((r, i) => {
+            html +=
+              '<div style="display:flex;justify-content:space-between;padding:8px 10px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:8px;font-size:13px;color:#e2e8f0;">' +
+              "<span><b style=\"color:#38bdf8;\">" +
+              (i + 1) +
+              ".</b> " +
+              escapeHtml(r.name) +
+              "</span><b style=\"color:#4ade80;\">" +
+              escapeHtml(r.g) +
+              " gol</b></div>";
+          });
+        }
+      }
+
       list.innerHTML = html;
     } catch (e) {
       list.innerHTML =
@@ -7296,19 +7346,38 @@ function renderServerMatchState(state) {
   // Elite — sunucu abonelik + ödeme
   // ============================================================
   window.__emPurchaseElite = async function (plan) {
+    // Stripe yok — Destek Ol (bağış) + yönetici onayı modeli
     try {
+      if (typeof window.goToPremium === "function") {
+        window.goToPremium();
+        if (typeof pushNotification === "function")
+          pushNotification(
+            "⭐",
+            "Elite için Destek Ol ile katkı yap; yönetici onaylayınca aktif olur.",
+            "Üyelik",
+          );
+        return;
+      }
+      const note = document.getElementById("premiumPayNote");
+      if (note)
+        note.innerText =
+          "Elite: Destek Ol ile bağış bildir → yönetici onaylar. Plan: " +
+          (plan || "monthly");
       if (typeof pushNotification === "function")
         pushNotification(
-          "🔒",
-          "Elite yükseltme şu an kapalı. Yakında açılacak.",
+          "⭐",
+          "Elite için Destek Ol panelini kullan.",
           "Üyelik",
         );
-      else alert("Elite yükseltme şu an kapalı. Yakında açılacak.");
+      else
+        alert(
+          "Elite için Destek Ol (bağış) kullan. Yönetici onaylayınca üyelik açılır.",
+        );
     } catch (e) {
-      alert("Elite yükseltme şu an kapalı. Yakında açılacak.");
+      alert("Elite için Destek Ol panelini açın.");
     }
     return;
-    /* eski satın alma kodu — geçici devre dışı */
+    /* eski Stripe/checkout kodu — Destek Ol modeline geçildi */
     const note = document.getElementById("premiumPayNote");
     const isConnectivityError = (e) =>
       e instanceof TypeError ||
