@@ -4,7 +4,7 @@
   "description": "Elite Manager API",
   "main": "server.js",
   "engines": {
-    "node": ">=20 <21"
+    "node": ">=20"
   },
   "scripts": {
     "start": "npm run migrate && node server.js",

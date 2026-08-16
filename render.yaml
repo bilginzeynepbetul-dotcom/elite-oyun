@@ -44,3 +44,47 @@ services:
         sync: false
       - key: DONATION_NOTE
         value: Açıklamaya kullanıcı adınızı yazın. Ödeme sonrası Elite sayfasından bağışı bildirin.
+
+  # Haftalık KVKK / log temizliği (Pazar 04:00 UTC)
+  - type: cron
+    name: elite-manager-retention
+    runtime: docker
+    plan: free
+    schedule: "0 4 * * 0"
+    dockerCommand: npm run retention
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: elite-manager-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: RETENTION_ANTI_CHEAT_DAYS
+        value: "90"
+      - key: RETENTION_ADMIN_AUDIT_DAYS
+        value: "365"
+      - key: RETENTION_ACCOUNT_DELETION_LOG_DAYS
+        value: "730"
+      - key: RETENTION_CLEAR_EXPIRED_EMAIL_TOKENS
+        value: "1"
+
+  # Günlük DB yedek denemesi (03:15 UTC)
+  # NOT: Free disk geçicidir — kalıcı yedek için dış depolama (S3 vb.) gerekir.
+  # pg_dump imajda vardır; çıktı /app/backups (ephemeral).
+  - type: cron
+    name: elite-manager-backup
+    runtime: docker
+    plan: free
+    schedule: "15 3 * * *"
+    dockerCommand: npm run backup
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: elite-manager-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: BACKUP_DIR
+        value: /app/backups
+      - key: BACKUP_KEEP
+        value: "7"
