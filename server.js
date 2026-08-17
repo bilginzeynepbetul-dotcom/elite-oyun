@@ -50,7 +50,7 @@ const { createContinentalRouter } = require("./continentalRoutes");
 const { createMatchArchiveRouter } = require("./matchArchiveRoutes");
 const { createAchievementsRouter } = require("./achievementsRoutes");
 const { createDailyChallengeRouter } = require("./dailyChallengeRoutes");
-const { createAdminSeasonRouter } = require("./adminSeasonRoutes");
+const { createAdminSeasonRouter, createPublicAnnouncementsRouter } = require("./adminSeasonRoutes");
 const { createAdminCompatRouter } = require("./adminCompatRoutes");
 const adminAntiCheatRouter = require("./adminAntiCheatRoutes");
 
@@ -1104,10 +1104,13 @@ api.use(createMatchArchiveRouter());
 api.use("/achievements", createAchievementsRouter());
 api.use("/challenges", createDailyChallengeRouter());
 
+// Duyurular — herkes okur (admin korumasının dışında)
+api.use(createPublicAnnouncementsRouter());
+
 // Admin
 api.use("/admin", isAdmin, createAdminSeasonRouter());
 api.use("/admin", isAdmin, createAdminCompatRouter());
-api.use("/admin", isAdmin, adminAntiCheatRouter);
+api.use("/admin/anti-cheat", isAdmin, adminAntiCheatRouter);
 
 // Hata listesi — admin kullanıcı VEYA X-Error-Token (ERROR_ADMIN_TOKEN)
 api.get("/admin/errors", (req, res, next) => {
