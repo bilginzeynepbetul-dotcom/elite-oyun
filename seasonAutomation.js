@@ -11,7 +11,7 @@ const trainingAuto = require("./trainingAuto");
 
 const STUCK_LIVE_HOURS = Number(process.env.STUCK_LIVE_HOURS) || 3;
 const OVERDUE_SCHEDULED_HOURS =
-  Number(process.env.OVERDUE_SCHEDULED_HOURS) || 48;
+  Number(process.env.OVERDUE_SCHEDULED_HOURS) || 2;
 
 async function finalizePlayerOfMonth() {
   const now = new Date();
@@ -74,6 +74,79 @@ async function cleanupStuckLive() {
     }
   }
   return { ok: true, closed: n };
+}
+
+/**
+ * Saati gelmiş ama hâlâ scheduled olan maçları hızlı skorla bitirip
+ * puan durumuna işler. Canlı motor başlatılamadıysa / insan offline ise
+ * ligin ilerlemesi için gerekli.
+ * - Bot-bot: kickoff + 1 dk
+ * - İnsan içeren: kickoff + 30 dk (oyuncu oynamazsa AI sim)
+ */
+function randomMatchScore() {
+  // 0-4 arası gerçekçi skor dağılımı
+  const weights = [0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4];
+  const a = weights[Math.floor(Math.random() * weights.length)];
+  const b = weights[Math.floor(Math.random() * weights.length)];
+  return [a, b];
+}
+
+async function autoResolveDueMatches() {
+  // Önce bot-bot (kickoff geçmiş)
+  const { rows: botRows } = await query(
+    `SELECT f.id, f.home_club_id, f.away_club_id
+     FROM fixtures f
+     JOIN clubs h ON h.id = f.home_club_id
+     JOIN clubs a ON a.id = f.away_club_id
+     WHERE f.status = 'scheduled'
+       AND f.kickoff_at <= NOW()
+       AND COALESCE(h.is_bot, FALSE) = TRUE
+       AND COALESCE(a.is_bot, FALSE) = TRUE
+     ORDER BY f.kickoff_at ASC
+     LIMIT 40`,
+  );
+  // İnsan içeren — 30 dk gecikme
+  const { rows: humanRows } = await query(
+    `SELECT f.id, f.home_club_id, f.away_club_id
+     FROM fixtures f
+     JOIN clubs h ON h.id = f.home_club_id
+     JOIN clubs a ON a.id = f.away_club_id
+     WHERE f.status = 'scheduled'
+       AND f.kickoff_at <= NOW() - INTERVAL '30 minutes'
+       AND (COALESCE(h.is_bot, FALSE) = FALSE OR COALESCE(a.is_bot, FALSE) = FALSE)
+     ORDER BY f.kickoff_at ASC
+     LIMIT 20`,
+  );
+  let n = 0;
+  const seen = new Set();
+  for (const f of botRows.concat(humanRows)) {
+    if (seen.has(f.id)) continue;
+    seen.add(f.id);
+    try {
+      if (!f.home_club_id || !f.away_club_id) {
+        await query(
+          `UPDATE fixtures SET status = 'finished', home_goals = 0, away_goals = 0 WHERE id = $1 AND status = 'scheduled'`,
+          [f.id],
+        );
+        n++;
+        continue;
+      }
+      const [hg, ag] = randomMatchScore();
+      const result = await leagueRepo.applyMatchResult(f.id, hg, ag, null);
+      if (result && result.ok) {
+        n++;
+        try {
+          const seasonLifecycle = require("./seasonLifecycle");
+          if (seasonLifecycle.tryFinalizeAfterLeagueMatch) {
+            await seasonLifecycle.tryFinalizeAfterLeagueMatch(f.id);
+          }
+        } catch (_) {}
+      }
+    } catch (e) {
+      console.warn("[seasonAuto] autoResolve", f.id, e.message);
+    }
+  }
+  return { ok: true, resolved: n };
 }
 
 async function forfeitOverdue() {
@@ -154,6 +227,11 @@ async function runSeasonAutomation() {
     out.stuck = { error: e.message };
   }
   try {
+    out.autoResolve = await autoResolveDueMatches();
+  } catch (e) {
+    out.autoResolve = { error: e.message };
+  }
+  try {
     out.overdue = await forfeitOverdue();
   } catch (e) {
     out.overdue = { error: e.message };
@@ -176,6 +254,7 @@ module.exports = {
   runSeasonAutomation,
   finalizePlayerOfMonth,
   cleanupStuckLive,
+  autoResolveDueMatches,
   forfeitOverdue,
   finalizeCompletedSeasons,
 };

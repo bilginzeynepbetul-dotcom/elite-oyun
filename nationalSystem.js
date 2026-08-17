@@ -462,24 +462,43 @@ async function buildCountryRankingRows(category) {
   return rows;
 }
 
+/**
+ * Milli eleme torba + grup kurası.
+ * - 4 torba (serpme)
+ * - Grup sayısı = ceil(n / 4), her grupta ~4 takım (64 ülke → 16 grup)
+ * - n < 16 ise en az 4 grup (eksik torba toleranslı)
+ */
+function groupCountFor(n) {
+  const teams = Math.max(0, Number(n) || 0);
+  if (teams <= 0) return 4;
+  // Her grup 4 takım; 4–16 grup arası tut
+  const g = Math.ceil(teams / 4);
+  return Math.max(4, Math.min(16, g));
+}
+
 function potsFromRows(rows) {
   const sorted = (rows || []).slice().sort((a, b) => b.pts - a.pts);
+  const nGroups = groupCountFor(sorted.length);
+  // 4 torba: her torbaya yaklaşık nGroups takım
   const pots = [[], [], [], []];
   sorted.forEach((r, i) => {
-    const pot = Math.min(3, Math.floor(i / 4));
+    const pot = Math.min(3, Math.floor(i / Math.max(1, nGroups)));
     pots[pot].push(Object.assign({}, r, { pot: pot + 1 }));
   });
   return pots;
 }
 
 function drawGroupsFromPots(rows) {
-  const pots = potsFromRows(rows).map((p) => p.slice());
+  const sorted = (rows || []).slice().sort((a, b) => b.pts - a.pts);
+  const nGroups = groupCountFor(sorted.length);
+  const pots = potsFromRows(sorted).map((p) => p.slice());
   pots.forEach((pot) => shuffleInPlace(pot));
-  const groups = [[], [], [], []];
+  const groups = Array.from({ length: nGroups }, () => []);
+  // Serpme: her torbadan sırayla gruplara
   for (let potIdx = 0; potIdx < 4; potIdx++) {
-    for (let g = 0; g < 4; g++) {
-      const team = pots[potIdx][g];
-      if (team) groups[g].push(team);
+    for (let i = 0; i < pots[potIdx].length; i++) {
+      const g = i % nGroups;
+      groups[g].push(pots[potIdx][i]);
     }
   }
   return groups;
@@ -510,7 +529,7 @@ async function getOrCreateGroupDraw(category, force = false) {
       );
       if (gs[0] && gs[0].value) {
         const saved = JSON.parse(gs[0].value);
-        if (saved && saved.groups && saved.groups.length === 4) {
+        if (saved && saved.groups && saved.groups.length >= 4) {
           const byC = {};
           rows.forEach((r) => {
             byC[r.c] = r;

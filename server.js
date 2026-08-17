@@ -823,12 +823,29 @@ api.post("/youth/draw", async (req, res) => {
     if (!strictLimit(req, res, "youth-draw", 5, 60000)) return;
     const preferredSkill =
       (req.body && (req.body.preferredSkill || req.body.skill)) || null;
-    const r = await youthSystem.drawPlayer(clubId, preferredSkill);
-    if (!r.ok) return res.status(400).json({ error: r.error });
+    const country =
+      (req.body && (req.body.country || req.body.sourceCountry)) || null;
+    const r = await youthSystem.drawPlayer(clubId, preferredSkill, country);
+    if (!r.ok) return res.status(400).json({ error: r.error, cost: r.cost });
     res.json(r);
   } catch (e) {
     logger.error("POST /youth/draw", { err: e });
     res.status(500).json({ error: "Keşif başarısız" });
+  }
+});
+
+api.post("/youth/branch", async (req, res) => {
+  try {
+    const clubId = await enrichClubId(req);
+    if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
+    if (!strictLimit(req, res, "youth-branch", 5, 60000)) return;
+    const country = (req.body && req.body.country) || null;
+    const r = await youthSystem.buildBranch(clubId, country);
+    if (!r.ok) return res.status(400).json({ error: r.error, cost: r.cost });
+    res.json(r);
+  } catch (e) {
+    logger.error("POST /youth/branch", { err: e });
+    res.status(500).json({ error: "Şube inşa edilemedi" });
   }
 });
 
@@ -1047,7 +1064,13 @@ api.post("/messages", async (req, res) => {
 });
 
 api.post("/messages/read", async (req, res) => {
-  res.json({ ok: true });
+  try {
+    const result = await socialRepo.markMessagesRead(req.user.id);
+    res.json({ ok: true, updated: (result && result.updated) || 0 });
+  } catch (e) {
+    console.error("[messages/read]", e);
+    res.status(500).json({ error: "Okundu işaretlenemedi" });
+  }
 });
 
 api.get("/notifications", async (req, res) => {
@@ -1584,6 +1607,19 @@ try {
 }
 try {
   socialSystem.seedForumIfEmpty().catch(() => {});
+  // Tüm ülkelerin 1. ligini bot + fikstür ile işlevsel tut (idempotent)
+  try {
+    const botClubs = require("./botClubs");
+    botClubs
+      .bootstrapAllLeagues({ targetSize: 8, divisions: [1] })
+      .then((r) => {
+        if (r && r.leagues)
+          console.log("[boot] league bootstrap", r.leagues, "ülke/lig kontrol");
+      })
+      .catch((e) => console.warn("[boot] league bootstrap", e.message));
+  } catch (eBoot) {
+    console.warn("[boot] league bootstrap require", eBoot.message);
+  }
 } catch (_) {}
 
 // Milli takım şeması (007/009/011) — Render DB shell olmadan da tamamlanır

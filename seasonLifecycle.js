@@ -256,7 +256,7 @@ async function finalizeSeason(seasonId, opts = {}) {
   // Youth draws reset
   try {
     await query(
-      `UPDATE youth_academy ya SET draws_this_season = 0
+      `UPDATE youth_academy ya SET draws_this_season = 0, home_draws_this_season = 0
        FROM clubs c WHERE c.id = ya.club_id AND c.country = $1 AND c.division = $2`,
       [season.country, division],
     );
