@@ -47,6 +47,9 @@ const files = [
   "032_admin_audit_log.sql",
   "033_email_verification.sql",
   "034_login_lockout.sql",
+  "035_messages_is_read.sql",
+  "036_youth_branches.sql",
+  "037_youth_home_draws.sql",
 ];
 
 async function ensureMigrationsTable() {
