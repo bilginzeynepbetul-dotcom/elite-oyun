@@ -4065,14 +4065,20 @@ function renderServerMatchState(state) {
 
   function wireStadiumToServer() {
     const _origGo = window.goToStadium;
-    window.goToStadium = async function () {
+    window.goToStadium = async function (tab) {
       try {
         hideMainMenuAndShowBack();
         switchPage("page-stadium");
-        if (typeof showStadiumTab === "function") showStadiumTab("facility");
+        if (typeof showStadiumTab === "function")
+          showStadiumTab(
+            tab === "youth" || tab === "economy" ? tab : "facility",
+          );
       } catch (e) {
-        if (_origGo) return _origGo();
+        if (_origGo) return _origGo(tab);
       }
+      // Akademi/ekonomi sekmeleri kendi senkronizasyonlarını showStadiumTab
+      // içinde tetikliyor; burada yalnızca tesis (facility) verisini çekiyoruz.
+      if (tab === "youth" || tab === "economy") return;
       const note = document.getElementById("stadiumNote");
       if (note) note.innerText = "Yükleniyor...";
       const st = await fetchStadiumFromServer();

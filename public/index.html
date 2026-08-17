@@ -18055,6 +18055,17 @@ function addForumPost() {
             }
           } catch (e) {}
         }
+        if (t === "facility") {
+          try {
+            // Kapasite/bilet fiyatı gibi değerler sunucuda kalıcı — sekme
+            // doğrudan (goToStadium() üzerinden geçmeden) açıldığında da
+            // güncel veriyi çek.
+            if (typeof window.fetchStadiumFromServer === "function") {
+              window.fetchStadiumFromServer().catch(function () {});
+            }
+            if (typeof updateStadiumUI === "function") updateStadiumUI();
+          } catch (e) {}
+        }
         if (t === "youth") {
           ensureYouthHostedInStadium();
           try {
