@@ -17301,6 +17301,21 @@ function addForumPost() {
       function goToTactics() {
         hideMainMenuAndShowBack();
         switchPage("page-tactics");
+        // Güvenlik: gerçekte aktif bir maç yokken `matchStarted` bayrağı
+        // (bağlantı kopması / kaçırılan "maç bitti" event'i gibi bir
+        // sebeple) takılı kalmışsa taktik sahası tıklamaları sessizce
+        // engellenir. Sunucu tarafında izlenen bir maç yoksa güvenle
+        // sıfırla.
+        try {
+          if (
+            matchStarted &&
+            !window._emServerMatchActive &&
+            !window._emWatchingFixtureId
+          ) {
+            matchStarted = false;
+            matchEnded = true;
+          }
+        } catch (eMs) {}
         // Kulüp kadrosunu boşsa onar, asla silme
         try {
           if (
@@ -18043,6 +18058,12 @@ function addForumPost() {
         if (t === "youth") {
           ensureYouthHostedInStadium();
           try {
+            // Gerçek (DB'de kayıtlı) akademi durumunu sunucudan çek —
+            // aksi halde eski/varsayılan yerel değerler (örn. seviye 1)
+            // gösterilmeye devam eder.
+            if (typeof window.fetchYouthFromServer === "function") {
+              window.fetchYouthFromServer().catch(function () {});
+            }
             if (typeof updateYouthUI === "function") updateYouthUI("home");
             if (typeof updateYouthAcademyUI === "function") updateYouthAcademyUI();
             if (typeof renderYouthRoster === "function") renderYouthRoster("home");
@@ -27900,7 +27921,29 @@ function renderTransferPage() {
         side = side || "home";
         const container = document.getElementById(side + "YouthRoster");
         if (!container) return;
-        const roster = youthRoster[side] || [];
+        // Akademiden gelen oyuncular artık sunucuda (players tablosu) tutuluyor
+        // ve /api/team ile bench'e geliyor — eski `youthRoster[side]` dizisi
+        // sunucu tarafı çekimlerde hiç doldurulmuyordu (panel hep boş
+        // görünüyordu). Kaynak olarak team.bench + fromAcademy bayrağını,
+        // yoksa eski yerel diziyi (offline / legacy) kullan.
+        let roster = youthRoster[side] || [];
+        try {
+          const team = side === "home" ? teamConfig.home : teamConfig.away;
+          const benchAcademy = ((team && team.bench) || []).filter(
+            (p) => p && p.fromAcademy,
+          );
+          if (benchAcademy.length) {
+            const seen = new Set();
+            roster = benchAcademy
+              .concat(roster)
+              .filter((p) => {
+                const key = String((p && p.id) != null ? p.id : Math.random());
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+              });
+          }
+        } catch (e) {}
         if (roster.length === 0) {
           container.innerHTML =
             '<div style="color:#64748b;font-size:12px;padding:10px 0;text-align:center;">Henüz akademiden oyuncu katılmadı. Keşfet butonunu kullan.</div>';

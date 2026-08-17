@@ -3558,8 +3558,15 @@ function renderServerMatchState(state) {
     if (!window._emYouthPoll) {
       window._emYouthPoll = setInterval(async function () {
         try {
-          const page = document.getElementById("page-youth");
-          if (!page || !page.classList.contains("active")) return;
+          // "Altyapı" sekmesi #stadiumTabYouth içinde gösteriliyor —
+          // eski #page-youth kontrolü panel hiç "active" olmadığı için
+          // bu polling'i sessizce hiç çalıştırmıyordu.
+          const tab = document.getElementById("stadiumTabYouth");
+          const legacyPage = document.getElementById("page-youth");
+          const visible =
+            (tab && tab.style.display !== "none" && tab.offsetParent !== null) ||
+            (legacyPage && legacyPage.classList.contains("active"));
+          if (!visible) return;
           if (!getToken()) return;
           await fetchYouthFromServer();
         } catch (e) {}
