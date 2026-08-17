@@ -7138,6 +7138,10 @@ function renderServerMatchState(state) {
     _natSelectedPlayerId = null;
     renderNationalManage();
   };
+  window.saveNationalLineup = async function () {
+    if (typeof window.saveNationalLineupClick === "function")
+      return window.saveNationalLineupClick();
+  };
   window.saveNationalLineupClick = async function () {
     const starterPlayerIds = _natLineup.filter((s) => s.playerId).map((s) => s.playerId);
     const assignments = _natLineup

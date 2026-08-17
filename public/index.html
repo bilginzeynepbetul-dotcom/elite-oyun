@@ -12650,6 +12650,92 @@
           localStorage.setItem(contactStorageKey(), JSON.stringify((list || []).slice(0, 100)));
         } catch (e) {}
       }
+
+      window.submitContactFromCommunity = function () {
+        const subEl = document.getElementById("contactSubjectCommunity");
+        const msgEl = document.getElementById("contactMessageCommunity");
+        const note = document.getElementById("contactNoteCommunity");
+        const sub = (subEl && subEl.value) || "diger";
+        const msg = ((msgEl && msgEl.value) || "").trim();
+        if (!msg || msg.length < 5) {
+          if (note)
+            note.innerHTML =
+              '<span style="color:#f87171;">En az 5 karakter yaz.</span>';
+          return;
+        }
+        const entry = {
+          id: "c_" + Date.now(),
+          from: typeof managerName !== "undefined" ? managerName || "Misafir" : "Misafir",
+          subject: sub,
+          text: msg.slice(0, 800),
+          at: new Date().toISOString(),
+          read: false,
+          source: "community",
+        };
+        try {
+          const list =
+            typeof loadContactInbox === "function" ? loadContactInbox() : [];
+          list.unshift(entry);
+          if (typeof saveContactInbox === "function") saveContactInbox(list);
+        } catch (e) {}
+        if (msgEl) msgEl.value = "";
+        if (note)
+          note.innerHTML =
+            '<span style="color:#4ade80;">Mesajın alındı. Yönetici en kısa sürede inceleyecek.</span>';
+        try {
+          if (typeof renderContactAdminInbox === "function")
+            renderContactAdminInbox();
+        } catch (e) {}
+      };
+
+      window.resendVerifyPublicFromLogin = async function () {
+        try {
+          const userEl =
+            document.getElementById("loginUsername") ||
+            document.getElementById("loginUser") ||
+            document.getElementById("username");
+          const emailEl = document.getElementById("loginEmail");
+          const username = ((userEl && userEl.value) || "").trim();
+          const email = ((emailEl && emailEl.value) || "").trim();
+          if (!username && !email) {
+            alert("Doğrulama maili için kullanıcı adı veya e-posta gir.");
+            return;
+          }
+          const body = {};
+          if (username) body.username = username;
+          if (email) body.email = email;
+          let r;
+          if (typeof apiFetch === "function") {
+            r = await apiFetch("/api/auth/resend-verification-public", {
+              method: "POST",
+              body: JSON.stringify(body),
+            });
+          } else {
+            const res = await fetch("/api/auth/resend-verification-public", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            r = await res.json().catch(function () {
+              return {};
+            });
+          }
+          alert(
+            (r && r.message) ||
+              "Eğer hesap varsa doğrulama bağlantısı gönderildi. Spam kutusunu da kontrol et.",
+          );
+        } catch (e) {
+          alert((e && e.message) || "Gönderilemedi");
+        }
+      };
+
+      window.saveNationalLineup = async function () {
+        if (typeof window.saveNationalLineupClick === "function") {
+          return window.saveNationalLineupClick();
+        }
+        alert("Milli takım kaydı için sunucu bağlantısı gerekli.");
+      };
+
       window.submitContactMessage = function () {
         const sub = (document.getElementById("contactSubject") || {}).value || "diger";
         const msg = ((document.getElementById("contactMessage") || {}).value || "").trim();
@@ -26727,11 +26813,15 @@ function addForumPost() {
       }
 
       function canDrawYouth() {
-        // Sezon başında 12 hak; haftalık limit yok — sezon bitene kadar kullanılabilir
-        youthAcademy.maxDrawsPerSeason = youthAcademy.maxDrawsPerSeason || 12;
+        // Temel 12 + her yabancı şube +1
+        var base = typeof youthBaseDraws !== "undefined" ? youthBaseDraws : 12;
+        var extra =
+          typeof youthBranches !== "undefined" && youthBranches
+            ? youthBranches.length
+            : 0;
+        youthAcademy.maxDrawsPerSeason = base + extra;
         return (
-          (youthAcademy.drawsThisSeason || 0) <
-          (youthAcademy.maxDrawsPerSeason || 12)
+          (youthAcademy.drawsThisSeason || 0) < youthAcademy.maxDrawsPerSeason
         );
       }
 
