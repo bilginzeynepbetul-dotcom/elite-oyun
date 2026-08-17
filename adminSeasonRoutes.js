@@ -11,6 +11,39 @@ const clubsRepo = require("./repos/clubsRepo");
 const { isAdmin } = require("./nationalSystem");
 const { enrichClubId } = require("./routes/authRoutes");
 
+// ---- Duyurular (herkes okur; yalnız admin yazar) ----
+// Modül seviyesinde: hem admin router'ı hem de herkese açık router'ı kullanır.
+async function loadAnnouncements() {
+  try {
+    const raw = await seasonConfig.getSetting("announcements", "[]");
+    const arr = JSON.parse(raw || "[]");
+    return Array.isArray(arr) ? arr : [];
+  } catch (_) {
+    return [];
+  }
+}
+async function saveAnnouncements(list) {
+  await seasonConfig.setSetting(
+    "announcements",
+    JSON.stringify(Array.isArray(list) ? list.slice(0, 50) : []),
+  );
+}
+
+// GET /api/announcements — herkes (isAdmin korumasının DIŞINDA, ayrıca mount edilir)
+function createPublicAnnouncementsRouter() {
+  const pubRouter = express.Router();
+  pubRouter.get("/announcements", async (req, res) => {
+    try {
+      const announcements = await loadAnnouncements();
+      res.json({ announcements });
+    } catch (e) {
+      console.error("[announcements GET]", e);
+      res.status(500).json({ error: "Duyurular alınamadı" });
+    }
+  });
+  return pubRouter;
+}
+
 function createAdminSeasonRouter() {
   const router = express.Router();
 
@@ -23,36 +56,8 @@ function createAdminSeasonRouter() {
     return true;
   }
 
-  // ---- Duyurular (herkes okur; yalnız admin yazar) ----
-  async function loadAnnouncements() {
-    try {
-      const raw = await seasonConfig.getSetting("announcements", "[]");
-      const arr = JSON.parse(raw || "[]");
-      return Array.isArray(arr) ? arr : [];
-    } catch (_) {
-      return [];
-    }
-  }
-  async function saveAnnouncements(list) {
-    await seasonConfig.setSetting(
-      "announcements",
-      JSON.stringify(Array.isArray(list) ? list.slice(0, 50) : []),
-    );
-  }
-
-  // GET /api/announcements — herkes (auth ile gelir)
-  router.get("/announcements", async (req, res) => {
-    try {
-      const announcements = await loadAnnouncements();
-      res.json({ announcements });
-    } catch (e) {
-      console.error("[announcements GET]", e);
-      res.status(500).json({ error: "Duyurular alınamadı" });
-    }
-  });
-
   // POST /api/admin/announcements — sadece admin
-  router.post("/admin/announcements", async (req, res) => {
+  router.post("/announcements", async (req, res) => {
     try {
       if (!requireAdmin(req, res)) return;
       const text = String((req.body && req.body.text) || "").trim().slice(0, 500);
@@ -86,7 +91,7 @@ function createAdminSeasonRouter() {
   });
 
   // DELETE /api/admin/announcements/:id
-  router.delete("/admin/announcements/:id", async (req, res) => {
+  router.delete("/announcements/:id", async (req, res) => {
     try {
       if (!requireAdmin(req, res)) return;
       const id = String(req.params.id || "");
@@ -101,7 +106,7 @@ function createAdminSeasonRouter() {
   });
 
   // GET /api/admin/season-config
-  router.get("/admin/season-config", async (req, res) => {
+  router.get("/season-config", async (req, res) => {
     try {
       if (!requireAdmin(req, res)) return;
       const cfg = await seasonConfig.getConfig();
@@ -114,7 +119,7 @@ function createAdminSeasonRouter() {
 
   // POST /api/admin/season-config
   // body: { seasonStartAt: "2026-08-10" | ISO, intervalHours?: number }
-  router.post("/admin/season-config", async (req, res) => {
+  router.post("/season-config", async (req, res) => {
     try {
       if (!requireAdmin(req, res)) return;
       const body = req.body || {};
@@ -140,7 +145,7 @@ function createAdminSeasonRouter() {
   // POST /api/admin/regenerate-fixtures
   // body: { country?, division?, force?: true }
   // force true → scheduled maçları siler, season_start_at'ten yeniden üretir
-  router.post("/admin/regenerate-fixtures", async (req, res) => {
+  router.post("/regenerate-fixtures", async (req, res) => {
     try {
       if (!requireAdmin(req, res)) return;
       let country = (req.body && req.body.country) || null;
@@ -203,7 +208,7 @@ function createAdminSeasonRouter() {
   // POST /api/admin/full-reset
   // Her şeyi sıfırlar: lig standings/fixtures, oyuncular baştan, milli kuralar otomatik.
   // Tüm kullanıcılar aynı DB durumunu görür.
-  router.post("/admin/full-reset", async (req, res) => {
+  router.post("/full-reset", async (req, res) => {
     try {
       if (!requireAdmin(req, res)) return;
       const { query, withTransaction } = require("./db");
@@ -341,4 +346,4 @@ function createAdminSeasonRouter() {
   return router;
 }
 
-module.exports = { createAdminSeasonRouter };
+module.exports = { createAdminSeasonRouter, createPublicAnnouncementsRouter };

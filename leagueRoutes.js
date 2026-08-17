@@ -8,11 +8,68 @@
 const express = require("express");
 const leagueRepo = require("./repos/leagueRepo");
 const clubsRepo = require("./repos/clubsRepo");
+const statsSystem = require("./statsSystem");
 const { enrichClubId } = require("./routes/authRoutes");
 const { isAdmin } = require("./nationalSystem");
 
 function createLeagueRouter() {
   const router = express.Router();
+
+  // GET /api/league/stats?country=&division=
+  // Sezon ödülleri (goal_king/assist_king/player_of_month vb.) + yıl/ay
+  // önizleme sıralamaları. Frontend: window.loadSeasonAwards()
+  router.get("/league/stats", async (req, res) => {
+    try {
+      const clubId = await enrichClubId(req);
+      let country = req.query.country;
+      let division = req.query.division
+        ? parseInt(req.query.division, 10)
+        : null;
+
+      if ((!country || !division) && clubId) {
+        const club = await clubsRepo.getClub(clubId);
+        if (club) {
+          country = country || club.country;
+          division = division || club.division;
+        }
+      }
+      country = country || "Türkiye";
+      division = division || 1;
+
+      const season = await leagueRepo.getCurrentSeason(country, division);
+      const now = new Date();
+      const year = now.getUTCFullYear();
+      const month = now.getUTCMonth() + 1;
+
+      const [awards, playerOfYearPreview, playerOfMonth] = await Promise.all([
+        statsSystem
+          .listAwards(season ? { seasonId: season.id } : {})
+          .catch(() => []),
+        season
+          ? statsSystem.topSeason(season.id, "goals", 10).catch(() => [])
+          : Promise.resolve([]),
+        statsSystem.topMonth(year, month, "goals", 10).catch(() => []),
+      ]);
+
+      res.json({
+        season: season
+          ? {
+              id: season.id,
+              country: season.country,
+              division: season.division,
+              yearLabel: season.year_label,
+            }
+          : null,
+        month: { year, month },
+        awards,
+        playerOfYearPreview,
+        playerOfMonth,
+      });
+    } catch (e) {
+      console.error("[league/stats]", e);
+      res.status(500).json({ error: "İstatistikler alınamadı" });
+    }
+  });
 
   // GET /api/league/standings?country=&division=
   router.get("/league/standings", async (req, res) => {
