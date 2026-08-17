@@ -183,6 +183,17 @@ async function tick(ctx) {
     await tickFriendly(ctx);
     await tickNational(ctx);
 
+    // Saati gelmiş maçları puan durumuna işle (motor başlatılamayanlar dahil)
+    try {
+      const { autoResolveDueMatches } = require("./seasonAutomation");
+      const ar = await autoResolveDueMatches();
+      if (ar && ar.resolved) {
+        console.log("[scheduler] autoResolve", ar.resolved);
+      }
+    } catch (eAr) {
+      console.warn("[scheduler] autoResolve", eAr.message);
+    }
+
     // Maç bildirimleri: her tick (hafif sorgu)
     try {
       const { runMatchNotify } = require("./matchNotify");

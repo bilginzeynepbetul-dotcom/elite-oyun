@@ -105,6 +105,18 @@ function createAdminSeasonRouter() {
     }
   });
 
+  // DELETE /api/admin/announcements — tüm duyuruları sil
+  router.delete("/announcements", async (req, res) => {
+    try {
+      if (!requireAdmin(req, res)) return;
+      await saveAnnouncements([]);
+      res.json({ ok: true, announcements: [] });
+    } catch (e) {
+      console.error("[announcements CLEAR]", e);
+      res.status(500).json({ error: "Duyurular silinemedi" });
+    }
+  });
+
   // GET /api/admin/season-config
   router.get("/season-config", async (req, res) => {
     try {

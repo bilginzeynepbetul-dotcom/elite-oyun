@@ -13,17 +13,195 @@ const { query, withTransaction } = require("./db");
 const leagueRepo = require("./repos/leagueRepo");
 const crypto = require("crypto");
 
-const BOT_FIRST = [
-  "Anadolu", "Ege", "Karadeniz", "Boğaz", "Akdeniz", "Trakya",
-  "Marmara", "İç Anadolu", "Doğu", "Batı", "Yıldız", "Kartal",
-  "Aslan", "Kurt", "Şimşek", "Fırtına", "Zafer", "Güneş",
-  "Toros", "Kaya", "Çelik", "Demir", "Gençlik", "Birlik",
-  "Yeşil", "Kızıl", "Boz", "Doğa", "Rüzgar", "Deniz",
-];
-const BOT_SECOND = [
-  "SK", "FK", "United", "Spor", "FC", "City", "Town", "Athletic",
-  "Gücü", "Gençlikspor", "Belediyespor", "Idmanyurdu", "Yıldızspor",
-];
+/** Ülkeye göre kulüp adı havuzu: cityWords + suffixes */
+const CLUB_NAME_BY_COUNTRY = {
+  Türkiye: {
+    cities: ["Ankara","İzmir","Bursa","Konya","Trabzon","Adana","Antalya","Gaziantep","Kayseri","Samsun","Eskişehir","Malatya","Sivas","Denizli","Muğla","Manisa","Balıkesir","Sakarya","Hatay","Ordu"],
+    suffixes: ["Spor","SK","FK","Belediyespor","Gençlikspor","Gücü","Idmanyurdu","Yıldızspor","Demirspor","Sanayispor"],
+  },
+  Almanya: {
+    cities: ["Bayern","Dortmund","Berlin","Hamburg","Köln","Stuttgart","Frankfurt","Leipzig","Bremen","Gladbach","Hoffenheim","Freiburg","Augsburg","Mainz","Wolfsburg","Schalke","Bochum","Heidenheim","Darmstadt","Kiel"],
+    suffixes: ["FC","SV","BV","SC","VfB","VfL","Sport-Club","United"],
+  },
+  İngiltere: {
+    cities: ["London","Manchester","Liverpool","Birmingham","Leeds","Newcastle","Sheffield","Bristol","Brighton","Leicester","Nottingham","Southampton","Norwich","Wolverhampton","Burnley","Watford","Reading","Ipswich","Hull","Derby"],
+    suffixes: ["FC","United","City","Town","Athletic","Rovers","Wanderers","Albion"],
+  },
+  İspanya: {
+    cities: ["Madrid","Barcelona","Sevilla","Valencia","Bilbao","Villarreal","Sociedad","Betis","Vigo","Gijón","Zaragoza","Mallorca","Girona","Cádiz","Granada","Osasuna","Almería","Valladolid","Elche","Leganés"],
+    suffixes: ["FC","CF","CD","UD","Atlético","Deportivo","Racing"],
+  },
+  İtalya: {
+    cities: ["Milano","Torino","Napoli","Roma","Firenze","Bologna","Genova","Palermo","Verona","Parma","Udine","Cagliari","Lecce","Sassuolo","Empoli","Salerno","Bergamo","Brescia","Pisa","Bari"],
+    suffixes: ["FC","AC","US","Calcio","Sportiva","United"],
+  },
+  Fransa: {
+    cities: ["Paris","Marseille","Lyon","Lille","Nice","Monaco","Rennes","Lens","Nantes","Strasbourg","Montpellier","Toulouse","Reims","Brest","Lorient","Angers","Metz","Clermont","Auxerre","Troyes"],
+    suffixes: ["FC","Olympique","Racing","Stade","Sporting","AS","US"],
+  },
+  Portekiz: {
+    cities: ["Lisboa","Porto","Braga","Guimarães","Coimbra","Setúbal","Faro","Aveiro","Funchal","Leiria","Viseu","Évora","Barcelos","Famalicão","Moreira","Chaves","Estoril","Arouca","Casa Pia","Nacional"],
+    suffixes: ["FC","SC","CF","Sporting","United"],
+  },
+  Hollanda: {
+    cities: ["Amsterdam","Rotterdam","Eindhoven","Utrecht","Alkmaar","Twente","Heerenveen","Groningen","Breda","Arnhem","Tilburg","Nijmegen","Zwolle","Den Haag","Emmen","Volendam","Sittard","Waalwijk","Almere","Kerkrade"],
+    suffixes: ["FC","SV","Ajax","VV","Sport"],
+  },
+  Belçika: {
+    cities: ["Anderlecht","Brugge","Liège","Gent","Charleroi","Genk","Antwerp","Mechelen","Kortrijk","Oostende","Seraing","Eupen","Westerlo","Leuven","Cercle","Standard","Union","Mouscron","Beerschot","Lierse"],
+    suffixes: ["FC","KV","Royal","Sporting","Union"],
+  },
+  Brezilya: {
+    cities: ["São Paulo","Rio","Bahia","Minas","Recife","Fortaleza","Curitiba","Porto Alegre","Salvador","Belém","Manaus","Goiânia","Campinas","Santos","Fluminense","Botafogo","Cruzeiro","Atlético","Palmeiras","Internacional"],
+    suffixes: ["EC","FC","Clube","Atlético","Esporte","Sport"],
+  },
+  Arjantin: {
+    cities: ["Boca","River","Rosario","Córdoba","La Plata","Mendoza","Santa Fe","Tucumán","Salta","Mar del Plata","Avellaneda","Lanús","Banfield","Quilmes","Huracán","Vélez","Racing","Independiente","Talleres","Belgrano"],
+    suffixes: ["CA","FC","Deportivo","Atlético","Club"],
+  },
+  Meksika: {
+    cities: ["América","Guadalajara","Monterrey","Tigres","Pachuca","Toluca","León","Cruz Azul","Santos","Puebla","Atlas","Necaxa","Querétaro","Tijuana","Juárez","Mazatlán","Pumas","Chivas","Xolos","Gallos"],
+    suffixes: ["FC","CF","Club","Deportivo","United"],
+  },
+  ABD: {
+    cities: ["New York","Los Angeles","Chicago","Miami","Seattle","Dallas","Atlanta","Houston","Philadelphia","Boston","Portland","Columbus","Kansas City","Salt Lake","Orlando","Austin","Nashville","Cincinnati","Minnesota","Colorado"],
+    suffixes: ["FC","SC","United","City","Athletic"],
+  },
+  Japonya: {
+    cities: ["Tokyo","Osaka","Yokohama","Nagoya","Sapporo","Kobe","Hiroshima","Fukuoka","Sendai","Kawasaki","Urawa","Kashima","Shimizu","Niigata","Kyoto","Oita","Tosu","Kashiwa","Gamba","Cerezo"],
+    suffixes: ["FC","SC","United","Albirex","Frontale"],
+  },
+  "Güney Kore": {
+    cities: ["Seoul","Busan","Incheon","Daegu","Ulsan","Jeonbuk","Suwon","Pohang","Jeju","Gwangju","Daejeon","Seongnam","Gangwon","Gimcheon","Anyang","Bucheon","Cheonan","Asan","Gyeongnam","Chungnam"],
+    suffixes: ["FC","United","City","SC"],
+  },
+  Avustralya: {
+    cities: ["Sydney","Melbourne","Brisbane","Perth","Adelaide","Newcastle","Wellington","Western","Central Coast","Macarthur","Canberra","Hobart","Gold Coast","Townsville","Geelong","Wollongong","Cairns","Darwin","Ballarat","Newcastle Jets"],
+    suffixes: ["FC","United","City","Wanderers","Roar"],
+  },
+  Mısır: {
+    cities: ["Cairo","Alexandria","Giza","Aswan","Luxor","Port Said","Suez","Mansoura","Tanta","Ismailia","Zagazig","Minya","Asyut","Hurghada","Sharm","Damietta","Beni Suef","Faiyum","Qena","Sohag"],
+    suffixes: ["SC","FC","Club","United"],
+  },
+  Fas: {
+    cities: ["Casablanca","Rabat","Fes","Marrakech","Tanger","Agadir","Meknes","Oujda","Kenitra","Tetouan","Safi","El Jadida","Mohammedia","Nador","Khouribga","Beni Mellal","Settat","Larache","Taza","Essaouira"],
+    suffixes: ["SC","FC","Club","Athletic"],
+  },
+  Nijerya: {
+    cities: ["Lagos","Kano","Ibadan","Enugu","Abuja","Port Harcourt","Kaduna","Benin City","Jos","Ilorin","Calabar","Warri","Abeokuta","Maiduguri","Owerri","Akure","Sokoto","Zaria","Uyo","Aba"],
+    suffixes: ["FC","United","Stars","Rangers","City"],
+  },
+  "Güney Afrika": {
+    cities: ["Johannesburg","Cape Town","Durban","Pretoria","Soweto","Port Elizabeth","Bloemfontein","Polokwane","Rustenburg","Kimberley","Nelspruit","East London","Pietermaritzburg","Mbombela","Tshwane","Kaizer","Orlando","Mamelodi","SuperSport","Stellenbosch"],
+    suffixes: ["FC","United","City","Stars","Athletic"],
+  },
+  Rusya: {
+    cities: ["Moskova","Sankt-Peterburg","Kazan","Sochi","Rostov","Krasnodar","Samara","Ekaterinburg","Nizhny","Ufa","Orenburg","Perm","Tula","Grozny","Makhachkala","Voronezh","Saratov","Tomsk","Omsk","Volgograd"],
+    suffixes: ["FK","FC","Dinamo","Lokomotiv","Spartak"],
+  },
+  Polonya: {
+    cities: ["Warszawa","Kraków","Poznań","Gdańsk","Wrocław","Łódź","Szczecin","Lublin","Białystok","Katowice","Gdynia","Bydgoszcz","Rzeszów","Radom","Kielce","Gliwice","Zabrze","Tychy","Opole","Elbląg"],
+    suffixes: ["KS","FC","United","Sportowa"],
+  },
+  Ukrayna: {
+    cities: ["Kyiv","Kharkiv","Donetsk","Odesa","Lviv","Dnipro","Zaporizhzhia","Poltava","Kryvyi Rih","Mariupol","Vinnytsia","Chernihiv","Sumy","Rivne","Ivano-Frankivsk","Ternopil","Lutsk","Uzhhorod","Cherkasy","Zhytomyr"],
+    suffixes: ["FK","FC","Dinamo","Shakhtar","United"],
+  },
+  Yunanistan: {
+    cities: ["Athina","Thessaloniki","Piraeus","Patras","Heraklion","Larissa","Volos","Ioannina","Kavala","Rhodes","Chania","Trikala","Kalamata","Serres","Xanthi","Komotini","Agrinio","Corfu","Mytilene","Chalkida"],
+    suffixes: ["FC","AEK","PAOK","Olympiacos","Aris"],
+  },
+  İsveç: {
+    cities: ["Stockholm","Göteborg","Malmö","Uppsala","Västerås","Örebro","Linköping","Helsingborg","Norrköping","Jönköping","Umeå","Lund","Borås","Sundsvall","Gävle","Eskilstuna","Halmstad","Karlstad","Växjö","Kalmar"],
+    suffixes: ["IF","FK","FF","United","BK"],
+  },
+  Norveç: {
+    cities: ["Oslo","Bergen","Trondheim","Stavanger","Kristiansand","Tromsø","Drammen","Fredrikstad","Bodø","Ålesund","Sandefjord","Haugesund","Molde","Lillestrøm","Sarpsborg","Strømsgodset","Vålerenga","Rosenborg","Brann","Odd"],
+    suffixes: ["FK","IF","United","BK"],
+  },
+  Danimarka: {
+    cities: ["København","Aarhus","Odense","Aalborg","Esbjerg","Randers","Viborg","Horsens","Silkeborg","Nordsjælland","Midtjylland","Brøndby","Lyngby","Vejle","SønderjyskE","Hobro","Fredericia","Hvidovre","Næstved","Kolding"],
+    suffixes: ["FC","IF","BK","United"],
+  },
+  İsviçre: {
+    cities: ["Zürich","Basel","Bern","Genève","Lausanne","Lugano","St. Gallen","Luzern","Thun","Sion","Young Boys","Grasshopper","Servette","Winterthur","Aarau","Schaffhausen","Vaduz","Chiasso","Yverdon","Neuchâtel"],
+    suffixes: ["FC","SC","United","Sport"],
+  },
+  Avusturya: {
+    cities: ["Wien","Salzburg","Graz","Innsbruck","Linz","Klagenfurt","Wolfsberg","Ried","Altach","Hartberg","LASK","Rapid","Austria","Sturm","Wacker","Admira","Mattersburg","St. Pölten","Kapfenberg","Blau-Weiß"],
+    suffixes: ["FC","SK","SC","United"],
+  },
+  Hırvatistan: {
+    cities: ["Zagreb","Split","Rijeka","Osijek","Zadar","Pula","Slavonski Brod","Varaždin","Šibenik","Dubrovnik","Vinkovci","Karlovac","Sisak","Koprivnica","Čakovec","Bjelovar","Vukovar","Đakovo","Samobor","Zaprešić"],
+    suffixes: ["NK","HNK","FC","United"],
+  },
+  Sırbistan: {
+    cities: ["Beograd","Novi Sad","Niš","Kragujevac","Subotica","Zrenjanin","Pančevo","Čačak","Kraljevo","Novi Pazar","Smederevo","Leskovac","Valjevo","Vranje","Šabac","Užice","Sombor","Požarevac","Pirot","Zaječar"],
+    suffixes: ["FK","FK Crvena","Partizan","United"],
+  },
+  Arnavutluk: {
+    cities: ["Tirana","Durrës","Vlorë","Shkodër","Elbasan","Fier","Korçë","Berat","Lushnjë","Kavajë","Gjirokastër","Sarandë","Pogradec","Laç","Kukës","Lezhë","Peqin","Gramsh","Tepelenë","Bilisht"],
+    suffixes: ["KF","FK","United","SC"],
+  },
+  Slovenya: {
+    cities: ["Ljubljana","Maribor","Celje","Koper","Domžale","Nova Gorica","Murska Sobota","Kranj","Velenje","Ptuj","Trbovlje","Kamnik","Jesenice","Novo Mesto","Izola","Ajdovščina","Sežana","Brežice","Krško","Rogaška"],
+    suffixes: ["NK","FC","United"],
+  },
+  Bulgaristan: {
+    cities: ["Sofia","Plovdiv","Varna","Burgas","Ruse","Stara Zagora","Pleven","Sliven","Dobrich","Shumen","Pernik","Haskovo","Yambol","Pazardzhik","Blagoevgrad","Veliko Tarnovo","Vidin","Montana","Lovech","Gabrovo"],
+    suffixes: ["FC","PFK","United","Sport"],
+  },
+  Romanya: {
+    cities: ["București","Cluj","Timișoara","Iași","Constanța","Craiova","Brașov","Galați","Ploiești","Oradea","Arad","Sibiu","Târgu Mureș","Baia Mare","Bacău","Pitești","Suceava","Botoșani","Satu Mare","Drobeta"],
+    suffixes: ["FC","CFR","United","Sport"],
+  },
+  Çin: {
+    cities: ["Beijing","Shanghai","Guangzhou","Shenzhen","Chengdu","Wuhan","Tianjin","Chongqing","Hangzhou","Nanjing","Qingdao","Dalian","Changchun","Shenyang","Xi'an","Suzhou","Zhengzhou","Xiamen","Fuzhou","Harbin"],
+    suffixes: ["FC","United","City","SC"],
+  },
+  Hindistan: {
+    cities: ["Mumbai","Kolkata","Delhi","Bengaluru","Chennai","Goa","Hyderabad","Pune","Kerala","Northeast","Jamshedpur","Odisha","Punjab","Rajasthan","Ahmedabad","Lucknow","Guwahati","Kochi","Indore","Nagpur"],
+    suffixes: ["FC","United","SC","City"],
+  },
+  Kolombiya: {
+    cities: ["Bogotá","Medellín","Cali","Barranquilla","Cartagena","Bucaramanga","Pereira","Manizales","Cúcuta","Ibagué","Santa Marta","Villavicencio","Pasto","Neiva","Armenia","Tunja","Popayán","Montería","Valledupar","Sincelejo"],
+    suffixes: ["FC","CD","Atlético","Deportivo","United"],
+  },
+  İskoçya: {
+    cities: ["Glasgow","Edinburgh","Aberdeen","Dundee","Motherwell","Kilmarnock","Hibernian","Hearts","St Johnstone","Livingston","Ross County","St Mirren","Inverness","Falkirk","Dunfermline","Partick","Hamilton","Ayr","Greenock","Paisley"],
+    suffixes: ["FC","United","Athletic","Rovers","City"],
+  },
+
+  Uruguay: { cities: ["Montevideo","Nacional","Peñarol","Salto","Paysandú","Maldonado","Canelones","Colonia","Cerro","Danubio"], suffixes: ["FC","CA","Club","Deportivo"] },
+  Şili: { cities: ["Santiago","Valparaíso","Concepción","Antofagasta","La Serena","Temuco","Iquique","Rancagua","Colo-Colo","Universidad"], suffixes: ["FC","CD","Deportes","United"] },
+  Ekvador: { cities: ["Quito","Guayaquil","Cuenca","Ambato","Machala","Manta","Loja","Barcelona","Emelec","LDU"], suffixes: ["FC","SC","Club","Deportivo"] },
+  Kanada: { cities: ["Toronto","Vancouver","Montreal","Calgary","Edmonton","Ottawa","Winnipeg","Halifax","Quebec","Hamilton"], suffixes: ["FC","United","City","SC"] },
+  Senegal: { cities: ["Dakar","Thiès","Saint-Louis","Kaolack","Ziguinchor","Touba","Rufisque","Mbour","Diourbel","Louga"], suffixes: ["FC","United","ASC","SC"] },
+  Gana: { cities: ["Accra","Kumasi","Tamale","Sekondi","Cape Coast","Tema","Obuasi","Sunyani","Hearts","Asante"], suffixes: ["FC","United","SC","Stars"] },
+  "Suudi Arabistan": { cities: ["Riyad","Jeddah","Dammam","Mecca","Medina","Khobar","Al-Hilal","Al-Nassr","Al-Ittihad","Al-Ahli"], suffixes: ["FC","SC","Club","United"] },
+  İran: { cities: ["Tahran","Isfahan","Mashhad","Tabriz","Shiraz","Ahvaz","Persepolis","Esteghlal","Sepahan","Tractor"], suffixes: ["FC","SC","Club","United"] },
+  Çekya: { cities: ["Praha","Brno","Ostrava","Plzeň","Liberec","Olomouc","Slavia","Sparta","Baník","Bohemians"], suffixes: ["FK","FC","SK","United"] },
+  Macaristan: { cities: ["Budapest","Debrecen","Szeged","Miskolc","Pécs","Győr","Ferencváros","Újpest","MTK","Honvéd"], suffixes: ["FC","TC","United","SC"] },
+  İrlanda: { cities: ["Dublin","Cork","Galway","Limerick","Waterford","Drogheda","Shamrock","Bohemians","Shelbourne","Dundalk"], suffixes: ["FC","United","Rovers","Athletic"] },
+
+  Galler: { cities: ["Cardiff","Swansea","Newport","Wrexham","Bangor","Llanelli","Barry","Pontypridd","Merthyr","Aberystwyth"], suffixes: ["FC","United","City","Athletic"] },
+  Slovakya: { cities: ["Bratislava","Košice","Žilina","Prešov","Nitra","Trnava","Banská Bystrica","Trenčín","Martin","Poprad"], suffixes: ["FC","ŠK","United","FK"] },
+  "Bosna-Hersek": { cities: ["Sarajevo","Banja Luka","Mostar","Tuzla","Zenica","Bijeljina","Prijedor","Bihać","Trebinje","Doboj"], suffixes: ["FK","FC","United"] },
+  Finlandiya: { cities: ["Helsinki","Espoo","Tampere","Turku","Oulu","Jyväskylä","Lahti","Kuopio","Pori","Kouvola"], suffixes: ["FC","United","JK","SC"] },
+  Peru: { cities: ["Lima","Arequipa","Trujillo","Cusco","Piura","Chiclayo","Iquitos","Huancayo","Tacna","Callao"], suffixes: ["FC","Club","Deportivo","United"] },
+  Paraguay: { cities: ["Asunción","Ciudad del Este","Encarnación","Pedro Juan","Luque","San Lorenzo","Capiatá","Lambaré","Fernando","Coronel"], suffixes: ["FC","Club","Deportivo","United"] },
+  Venezuela: { cities: ["Caracas","Maracaibo","Valencia","Barquisimeto","Maracay","Ciudad Guayana","Barcelona","Maturín","San Cristóbal","Mérida"], suffixes: ["FC","Club","Deportivo","United"] },
+  "Costa Rica": { cities: ["San José","Alajuela","Cartago","Heredia","Puntarenas","Limón","Liberia","Pérez Zeledón","Desamparados","Curridabat"], suffixes: ["FC","Deportivo","United"] },
+  Jamaika: { cities: ["Kingston","Montego Bay","Spanish Town","Portmore","May Pen","Mandeville","Ocho Rios","Negril","Half Way Tree","St Ann"], suffixes: ["FC","United","SC"] },
+  Kamerun: { cities: ["Yaoundé","Douala","Garoua","Bamenda","Bafoussam","Maroua","Ngaoundéré","Bertoua","Loum","Kumba"], suffixes: ["FC","United","SC"] },
+  "Fildişi Sahili": { cities: ["Abidjan","Bouaké","Yamoussoukro","San-Pédro","Daloa","Korhogo","Man","Gagnoa","Abengourou","Divo"], suffixes: ["FC","United","SC","ASEC"] },
+  Cezayir: { cities: ["Cezayir","Oran","Constantine","Annaba","Blida","Batna","Sétif","Tlemcen","Béjaïa","Skikda"], suffixes: ["FC","US","MC","United"] },
+  Tunus: { cities: ["Tunus","Sfax","Sousse","Kairouan","Bizerte","Gabès","Ariana","Gafsa","Monastir","Ben Arous"], suffixes: ["FC","ES","CA","United"] },
+  Katar: { cities: ["Doha","Al Rayyan","Al Wakrah","Al Khor","Umm Salal","Al Sailiya","Lusail","Al Gharafa","Qatar SC","Al Duhail"], suffixes: ["SC","FC","United","Club"] },
+
+};
+
+const DEFAULT_CLUB_POOL = CLUB_NAME_BY_COUNTRY["Türkiye"];
 
 const POSITIONS_18 = [
   "GK", "DL", "DC", "DC", "DR", "DM", "MC", "MC", "OMC", "FL", "FR",
@@ -35,38 +213,39 @@ function uid() {
 }
 
 /**
- * Bot ismi üret.
- * opts.index verilirse aynı index → aynı isim tercihi (deterministik);
- * böylece boş DB'de lig doldurma her ortamda benzer isimler üretir.
- * Yine de used set'inde varsa sıradaki kombinasyona geçer.
+ * Ülkeye uygun bot kulüp ismi üret.
+ * opts.country + opts.index → deterministik, ligler tutarlı isim alır.
  */
 function randomName(used, opts = {}) {
   const set = used instanceof Set ? used : new Set();
+  const country = opts.country || "Türkiye";
+  const pool = CLUB_NAME_BY_COUNTRY[country] || DEFAULT_CLUB_POOL;
+  const cities = pool.cities || DEFAULT_CLUB_POOL.cities;
+  const suffixes = pool.suffixes || DEFAULT_CLUB_POOL.suffixes;
   const idx =
     opts.index != null && Number.isFinite(Number(opts.index))
       ? Math.abs(Number(opts.index))
       : null;
 
   if (idx != null) {
-    // Deterministik tarama: first/second kombinasyonunu index ile dolaş
-    const total = BOT_FIRST.length * BOT_SECOND.length;
+    const total = cities.length * suffixes.length;
     for (let k = 0; k < total; k++) {
       const n =
-        BOT_FIRST[(idx + k) % BOT_FIRST.length] +
+        cities[(idx + k) % cities.length] +
         " " +
-        BOT_SECOND[Math.floor((idx + k) / BOT_FIRST.length) % BOT_SECOND.length];
+        suffixes[Math.floor((idx + k) / cities.length) % suffixes.length];
       if (!set.has(n.toLowerCase())) return n;
     }
   }
 
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 50; i++) {
     const n =
-      BOT_FIRST[Math.floor(Math.random() * BOT_FIRST.length)] +
+      cities[Math.floor(Math.random() * cities.length)] +
       " " +
-      BOT_SECOND[Math.floor(Math.random() * BOT_SECOND.length)];
+      suffixes[Math.floor(Math.random() * suffixes.length)];
     if (!set.has(n.toLowerCase())) return n;
   }
-  return "Bot FC " + Math.floor(Math.random() * 9000 + 1000);
+  return (cities[0] || "Bot") + " FC " + Math.floor(Math.random() * 900 + 100);
 }
 
 function skillBase(strength) {
@@ -79,7 +258,7 @@ function posSkillMods(pos) {
   const p = String(pos || "").toUpperCase();
   // sıra: pace,passing,finishing,tackle,vision,stamina,strength,technique,agility,positioning,reflex,handling
   const table = {
-    GK:  { pace: -2.2, passing: -0.8, finishing: -4.0, tackle: -2.0, vision: -0.6, stamina: -0.5, strength: 0.4, technique: -0.5, agility: 1.2, positioning: 2.2, reflex: 4.2, handling: 4.0 },
+    GK:  { pace: -2.2, passing: -0.8, finishing: -4.0, tackle: -2.0, vision: -0.6, stamina: -0.5, strength: 0.4, technique: -2.8, agility: 1.2, positioning: 2.2, reflex: 4.2, handling: 4.0 },
     DC:  { pace: -0.8, passing: -0.6, finishing: -2.8, tackle: 3.2, vision: -0.8, stamina: 1.0, strength: 2.4, technique: -0.6, agility: -0.6, positioning: 3.0, reflex: -3.0, handling: -4.0 },
     DL:  { pace: 1.4, passing: 0.2, finishing: -2.2, tackle: 2.2, vision: -0.4, stamina: 1.2, strength: 0.6, technique: 0.2, agility: 1.0, positioning: 1.8, reflex: -3.0, handling: -4.0 },
     DR:  { pace: 1.4, passing: 0.2, finishing: -2.2, tackle: 2.2, vision: -0.4, stamina: 1.2, strength: 0.6, technique: 0.2, agility: 1.0, positioning: 1.8, reflex: -3.0, handling: -4.0 },
@@ -158,7 +337,7 @@ function makePlayer(clubId, pos, idx, strength) {
     reflex: isGk,
     handling: isGk,
   };
-  return {
+  const player = {
     id: uid(),
     club_id: clubId,
     name:
@@ -179,8 +358,8 @@ function makePlayer(clubId, pos, idx, strength) {
     technique: sk(mods.technique, primary.technique),
     agility: sk(mods.agility, primary.agility),
     positioning: sk(mods.positioning, primary.positioning),
-    reflex: isGk ? sk(mods.reflex, true) : clampSkill(4 + Math.random() * 3),
-    handling: isGk ? sk(mods.handling, true) : clampSkill(3 + Math.random() * 2.5),
+    reflex: isGk ? sk(mods.reflex, true) : clampSkill(4 + Math.random() * 2.2),
+    handling: isGk ? sk(mods.handling, true) : clampSkill(3.5 + Math.random() * 2),
     condition: 85 + Math.floor(Math.random() * 15),
     form: 0,
     experience: 2 + Math.random() * 5,
@@ -190,6 +369,11 @@ function makePlayer(clubId, pos, idx, strength) {
     is_starter: idx < 11,
     bench_order: idx < 11 ? null : idx - 11,
   };
+  if (isGk) {
+    player.technique = clampSkill(Math.min(player.technique, 5.5 + strength * 0.25));
+    player.finishing = clampSkill(Math.min(player.finishing, 5.5));
+  }
+  return player;
 }
 
 /**
@@ -209,10 +393,11 @@ async function createBotClub(opts = {}) {
     const name =
       opts.name ||
       randomName(used, {
+        country,
         index:
           opts.nameIndex != null
             ? opts.nameIndex
-            : used.size + (opts.division || 1) * 17,
+            : used.size + (opts.division || 1) * 17 + country.length * 3,
       });
 
     const clubId = uid();
@@ -458,9 +643,60 @@ async function regenerateAllSquads() {
   return { clubs: out.length, details: out };
 }
 
+/**
+ * Tüm desteklenen ülkeler + 1. (ve varsa 2.) lig için bot + sezon + fikstür.
+ * Sunucu açılışında bir kez çağrılır; mevcut fikstüre dokunmaz (force yok).
+ */
+async function bootstrapAllLeagues(opts = {}) {
+  const { SUPPORTED_COUNTRIES } = require("./countries");
+  const targetSize = Math.max(4, opts.targetSize || 8);
+  const divisions = opts.divisions || [1, 2];
+  const countries = opts.countries || SUPPORTED_COUNTRIES;
+  const results = [];
+  for (const country of countries) {
+    for (const division of divisions) {
+      try {
+        // 2. lig: sadece o ülkede zaten 2. lig kulübü varsa veya forceDiv2
+        if (division > 1 && !opts.forceAllDivisions) {
+          const n = await countClubs(country, division);
+          if (n === 0 && !opts.createEmptyDivisions) {
+            // 2. lig boşsa atla (gereksiz 29x8 bot üretme)
+            continue;
+          }
+        }
+        const r = await ensureLeagueFilled({
+          country,
+          division,
+          targetSize,
+          generateFixtures: true,
+          forceFixtures: false,
+          intervalHours: opts.intervalHours,
+        });
+        results.push({ country, division, ...r });
+        if (r.created || (r.fixtures && r.fixtures.created)) {
+          console.log(
+            "[botClubs] bootstrap",
+            country,
+            "L" + division,
+            "bots+",
+            r.created,
+            "fx",
+            r.fixtures && (r.fixtures.created || r.fixtures.skipped),
+          );
+        }
+      } catch (e) {
+        console.warn("[botClubs] bootstrap", country, division, e.message);
+        results.push({ country, division, error: e.message });
+      }
+    }
+  }
+  return { ok: true, leagues: results.length, results };
+}
+
 module.exports = {
   createBotClub,
   ensureLeagueFilled,
+  bootstrapAllLeagues,
   countClubs,
   countHumanClubs,
   getBotTeam,
