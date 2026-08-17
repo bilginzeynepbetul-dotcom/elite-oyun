@@ -56,15 +56,29 @@ async function getState(clubId) {
     [clubId],
   );
 
-  const { rows } = await query(
-    `SELECT scout_level, academy_level, draws_this_season, max_draws_per_season,
-            last_draw_week_key, scout_upgrade_until, academy_upgrade_until,
-            pending_scout_level, pending_academy_level,
-            COALESCE(home_draws_this_season, 0) AS home_draws_this_season
-     FROM youth_academy WHERE club_id = $1`,
-    [clubId],
-  );
-  const r = rows[0] || {};
+  let r = {};
+  try {
+    const { rows } = await query(
+      `SELECT scout_level, academy_level, draws_this_season, max_draws_per_season,
+              last_draw_week_key, scout_upgrade_until, academy_upgrade_until,
+              pending_scout_level, pending_academy_level,
+              COALESCE(home_draws_this_season, 0) AS home_draws_this_season
+       FROM youth_academy WHERE club_id = $1`,
+      [clubId],
+    );
+    r = rows[0] || {};
+  } catch (e) {
+    // 037 migration öncesi: home_draws kolonu yok
+    const { rows } = await query(
+      `SELECT scout_level, academy_level, draws_this_season, max_draws_per_season,
+              last_draw_week_key, scout_upgrade_until, academy_upgrade_until,
+              pending_scout_level, pending_academy_level
+       FROM youth_academy WHERE club_id = $1`,
+      [clubId],
+    );
+    r = rows[0] || {};
+    r.home_draws_this_season = 0;
+  }
   const { rows: recent } = await query(
     `SELECT name, pos, age, created_at FROM youth_discoveries
      WHERE club_id = $1 ORDER BY created_at DESC LIMIT 12`,
@@ -617,16 +631,27 @@ async function drawPlayer(clubId, preferredSkill, country) {
        VALUES ($1, $2, $3, $4, $5)`,
       [clubId, id, playerData.name, playerData.pos, playerData.age],
     );
-    const isHome = drawCountry === home;
-    await client.query(
-      `UPDATE youth_academy SET
-         draws_this_season = draws_this_season + 1,
-         home_draws_this_season = COALESCE(home_draws_this_season, 0) + CASE WHEN $3 THEN 1 ELSE 0 END,
-         last_draw_week_key = $2,
-         updated_at = NOW()
-       WHERE club_id = $1`,
-      [clubId, wk, isHome],
-    );
+    const isHome = drawCountry === home ? 1 : 0;
+    try {
+      await client.query(
+        `UPDATE youth_academy SET
+           draws_this_season = draws_this_season + 1,
+           home_draws_this_season = COALESCE(home_draws_this_season, 0) + $3,
+           last_draw_week_key = $2,
+           updated_at = NOW()
+         WHERE club_id = $1`,
+        [clubId, wk, isHome],
+      );
+    } catch (e) {
+      await client.query(
+        `UPDATE youth_academy SET
+           draws_this_season = draws_this_season + 1,
+           last_draw_week_key = $2,
+           updated_at = NOW()
+         WHERE club_id = $1`,
+        [clubId, wk],
+      );
+    }
     return { ...playerData, id };
   });
 

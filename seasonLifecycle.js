@@ -253,6 +253,41 @@ async function finalizeSeason(seasonId, opts = {}) {
     console.warn("[seasonLifecycle] fixtures", e.message);
   }
 
+  // Yeni sezon: kupa + milli + dostluk (ülke bazlı)
+  try {
+    const cupRepo = require("./repos/cupRepo");
+    const nationalSystem = require("./nationalSystem");
+    const comp = require("./competitionBootstrap");
+    const yearLabel = nextSeason.yearLabel || comp.currentYearLabel();
+    const clubIds = await cupRepo.listClubIdsForCountry(season.country);
+    if (clubIds && clubIds.length >= 2) {
+      try {
+        let cupStart = new Date(Date.now() + 45 * 60 * 1000);
+        try {
+          const seasonConfig = require("./seasonConfig");
+          cupStart = await seasonConfig.getSeasonStartAt();
+        } catch (_) {}
+        await cupRepo.createEdition(season.country, yearLabel, clubIds, {
+          startAt: cupStart,
+        });
+      } catch (eCup) {
+        console.warn("[seasonLifecycle] cup", eCup.message);
+      }
+    }
+    try {
+      await nationalSystem.ensureAllNationalFixtures(season.country);
+    } catch (eNat) {
+      console.warn("[seasonLifecycle] national", eNat.message);
+    }
+    try {
+      await comp.scheduleWeeklyFriendlies({ maxPairsPerCountry: 12 });
+    } catch (eFr) {
+      console.warn("[seasonLifecycle] friendly", eFr.message);
+    }
+  } catch (eComp) {
+    console.warn("[seasonLifecycle] competitions", eComp.message);
+  }
+
   // Youth draws reset
   try {
     await query(
@@ -260,7 +295,15 @@ async function finalizeSeason(seasonId, opts = {}) {
        FROM clubs c WHERE c.id = ya.club_id AND c.country = $1 AND c.division = $2`,
       [season.country, division],
     );
-  } catch (_) {}
+  } catch (_) {
+    try {
+      await query(
+        `UPDATE youth_academy ya SET draws_this_season = 0
+         FROM clubs c WHERE c.id = ya.club_id AND c.country = $1 AND c.division = $2`,
+        [season.country, division],
+      );
+    } catch (__) {}
+  }
 
   // Bildirimler
   try {

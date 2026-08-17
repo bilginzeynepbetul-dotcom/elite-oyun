@@ -1609,14 +1609,35 @@ try {
   socialSystem.seedForumIfEmpty().catch(() => {});
   // Tüm ülkelerin 1. ligini bot + fikstür ile işlevsel tut (idempotent)
   try {
+    const seasonConfig = require("./seasonConfig");
     const botClubs = require("./botClubs");
-    botClubs
-      .bootstrapAllLeagues({ targetSize: 8, divisions: [1] })
+    seasonConfig
+      .ensureSeasonStartsTonight()
+      .then((startAt) => {
+        console.log(
+          "[boot] sezon başlangıcı",
+          startAt && startAt.toISOString
+            ? startAt.toISOString()
+            : startAt,
+          "(TR gecesi)",
+        );
+        return botClubs.bootstrapAllLeagues({
+          targetSize: 8,
+          divisions: [1],
+          startAt: startAt,
+        });
+      })
       .then((r) => {
         if (r && r.leagues)
           console.log("[boot] league bootstrap", r.leagues, "ülke/lig kontrol");
+        try {
+          const comp = require("./competitionBootstrap");
+          return comp.bootstrapAllCompetitions();
+        } catch (e2) {
+          console.warn("[boot] competitionBootstrap", e2.message);
+        }
       })
-      .catch((e) => console.warn("[boot] league bootstrap", e.message));
+      .catch((e) => console.warn("[boot] league/season bootstrap", e.message));
   } catch (eBoot) {
     console.warn("[boot] league bootstrap require", eBoot.message);
   }
