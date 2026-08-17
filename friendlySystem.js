@@ -210,6 +210,63 @@ async function getById(id) {
   return rows[0] || null;
 }
 
+/** Bu hafta (Pzt 00:00 UTC → +7g) pending/scheduled/live dostluk var mı? */
+async function hasFriendlyThisWeek(clubId) {
+  try {
+    const { rows } = await query(
+      `SELECT 1 FROM friendly_fixtures
+       WHERE (home_club_id = $1 OR away_club_id = $1)
+         AND status IN ('pending', 'scheduled', 'live')
+         AND kickoff_at >= date_trunc('week', NOW() AT TIME ZONE 'UTC')
+         AND kickoff_at < date_trunc('week', NOW() AT TIME ZONE 'UTC') + INTERVAL '7 days'
+       LIMIT 1`,
+      [clubId],
+    );
+    return rows.length > 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Otomatik dostluk planı (onay beklemez → scheduled).
+ * Kupa elenmiş / kupada olmayan takımlar için.
+ */
+async function autoSchedule(homeClubId, awayClubId, kickoffAt) {
+  if (!homeClubId || !awayClubId || homeClubId === awayClubId) {
+    return { ok: false, error: "Geçersiz takımlar" };
+  }
+  const a = await canPlayFriendly(homeClubId);
+  if (!a.ok) return a;
+  const b = await canPlayFriendly(awayClubId);
+  if (!b.ok) return { ok: false, error: b.error || "Rakip uygun değil" };
+
+  if (await hasFriendlyThisWeek(homeClubId) || await hasFriendlyThisWeek(awayClubId)) {
+    return { ok: false, error: "Bu hafta zaten dostluk var" };
+  }
+
+  const kick = kickoffAt instanceof Date ? kickoffAt : new Date(kickoffAt);
+  if (Number.isNaN(kick.getTime())) {
+    return { ok: false, error: "Geçersiz saat" };
+  }
+  if (kick.getTime() < Date.now() + 10 * 60 * 1000) {
+    kick.setTime(Date.now() + 2 * 60 * 60 * 1000);
+  }
+
+  try {
+    const { rows } = await query(
+      `INSERT INTO friendly_fixtures
+         (home_club_id, away_club_id, kickoff_at, status, proposed_by)
+       VALUES ($1, $2, $3, 'scheduled', NULL)
+       RETURNING id, kickoff_at AS "kickoffAt", status`,
+      [homeClubId, awayClubId, kick.toISOString()],
+    );
+    return { ok: true, fixture: rows[0] };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
 module.exports = {
   isStillInCup,
   canPlayFriendly,
@@ -221,4 +278,6 @@ module.exports = {
   setLive,
   finish,
   getById,
+  hasFriendlyThisWeek,
+  autoSchedule,
 };

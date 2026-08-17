@@ -1,3 +1,24 @@
+
+async function tickWeeklyFriendlies() {
+  try {
+    const comp = require("./competitionBootstrap");
+    // ISO hafta anahtarı — haftada bir kez otomatik dostluk planı
+    const now = new Date();
+    const onejan = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+    const week = Math.ceil(
+      ((now - onejan) / 86400000 + onejan.getUTCDay() + 1) / 7,
+    );
+    const weekKey = now.getUTCFullYear() + "-W" + String(week).padStart(2, "0");
+    if (tickWeeklyFriendlies._lastWeek === weekKey) return;
+    tickWeeklyFriendlies._lastWeek = weekKey;
+    const r = await comp.scheduleWeeklyFriendlies();
+    if (r && r.scheduled)
+      console.log("[scheduler] weekly friendlies +", r.scheduled);
+  } catch (e) {
+    console.warn("[scheduler] weekly friendlies", e.message);
+  }
+}
+
 // ============================================================
 // matchScheduler.js — Zamanı gelen fikstürleri otomatik başlatır
 // ------------------------------------------------------------
@@ -182,6 +203,7 @@ async function tick(ctx) {
     await tickContinental(ctx);
     await tickFriendly(ctx);
     await tickNational(ctx);
+    await tickWeeklyFriendlies();
 
     // Saati gelmiş maçları puan durumuna işle (motor başlatılamayanlar dahil)
     try {

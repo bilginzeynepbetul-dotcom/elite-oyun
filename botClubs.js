@@ -541,15 +541,28 @@ async function ensureLeagueFilled(opts = {}) {
       await leagueRepo.ensureClubInStandings(season.id, c.id);
     }
 
-    if (generateFixtures && (need > 0 || removed.length > 0 || forceFixtures)) {
-      // forceFixtures yalnızca açıkça true ise fikstürü siler/yeniler.
-      // need > 0 (yeni bot) → force YOK: fikstür yoksa üretir, varsa dokunmaz.
+    // Fikstür: yeni bot / force / veya hiç fikstür yoksa üret
+    let shouldFx = generateFixtures && (need > 0 || removed.length > 0 || forceFixtures);
+    if (generateFixtures && !shouldFx && season) {
+      try {
+        const { rows: fc } = await query(
+          `SELECT COUNT(*)::int AS c FROM fixtures WHERE season_id = $1`,
+          [season.id],
+        );
+        if (!fc[0] || Number(fc[0].c) === 0) shouldFx = true;
+      } catch (_) {
+        shouldFx = true;
+      }
+    }
+    if (shouldFx) {
+      // forceFixtures yalnızca açıkça true ise scheduled maçları siler/yeniler.
+      // need > 0 veya boş fikstür → force YOK: yoksa üretir, varsa dokunmaz.
       const fx = await leagueRepo.generateFixturesForSeason(season.id, {
         force: !!forceFixtures,
         intervalHours: opts.intervalHours,
         intervalMinutes: opts.intervalMinutes,
         doubleRound: opts.doubleRound !== false,
-        startAt: opts.startAt, // yoksa seasonConfig (10.08.2026)
+        startAt: opts.startAt,
         bumpPast: opts.bumpPast === true,
       });
       return {
@@ -664,13 +677,18 @@ async function bootstrapAllLeagues(opts = {}) {
             continue;
           }
         }
+        const liveLaunch =
+          opts.forceFixtures === true ||
+          String(process.env.LIVE_LAUNCH || "") === "1";
         const r = await ensureLeagueFilled({
           country,
           division,
           targetSize,
           generateFixtures: true,
-          forceFixtures: false,
+          forceFixtures: liveLaunch,
           intervalHours: opts.intervalHours,
+          startAt: opts.startAt,
+          bumpPast: opts.bumpPast === true || liveLaunch,
         });
         results.push({ country, division, ...r });
         if (r.created || (r.fixtures && r.fixtures.created)) {
