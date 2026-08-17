@@ -101,7 +101,8 @@ async function listMessages(userId) {
             fu.username AS "fromUsername",
             tu.username AS "toUsername",
             to_char(m.created_at, 'DD.MM HH24:MI') AS time,
-            EXTRACT(EPOCH FROM m.created_at)*1000 AS ts
+            EXTRACT(EPOCH FROM m.created_at)*1000 AS ts,
+            COALESCE(m.is_read, FALSE) AS "isRead"
      FROM messages m
      JOIN users fu ON fu.id = m.from_user_id
      JOIN users tu ON tu.id = m.to_user_id
@@ -122,6 +123,8 @@ async function listMessages(userId) {
       text: r.text,
       time: r.time,
       ts: Number(r.ts),
+      // Giden mesajlar her zaman "okundu" sayılır; gelenlerde DB is_read kullanılır
+      read: isOut ? true : !!r.isRead,
     };
   });
 }
@@ -213,6 +216,27 @@ async function unreadCount(userId) {
   return rows[0].c;
 }
 
+
+async function markMessagesRead(userId) {
+  if (!userId) return { ok: true, updated: 0 };
+  const { rowCount } = await query(
+    `UPDATE messages SET is_read = TRUE
+     WHERE to_user_id = $1 AND COALESCE(is_read, FALSE) = FALSE`,
+    [userId],
+  );
+  return { ok: true, updated: rowCount || 0 };
+}
+
+async function messagesUnreadCount(userId) {
+  if (!userId) return 0;
+  const { rows } = await query(
+    `SELECT COUNT(*)::int AS c FROM messages
+     WHERE to_user_id = $1 AND COALESCE(is_read, FALSE) = FALSE`,
+    [userId],
+  );
+  return rows[0] ? rows[0].c : 0;
+}
+
 module.exports = {
   deleteForumPost,
   listUsernames,
@@ -221,8 +245,11 @@ module.exports = {
   seedForumIfEmpty,
   listMessages,
   sendMessage,
+  markMessagesRead,
+  messagesUnreadCount,
   listNotifications,
   pushNotification,
   markNotificationsRead,
   unreadCount,
 };
+
