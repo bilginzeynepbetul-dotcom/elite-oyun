@@ -579,12 +579,14 @@
     try {
       const next = await apiFetch("/api/fixtures/next");
       if (next && next.fixture) return next.fixture;
+      // forceFixtures ASLA istemeyiz — mevcut fikstürü silip her girişte
+      // farklı maç üretmesin. Yoksa üret, varsa dokunma.
       await apiFetch("/api/league/fill-bots", {
         method: "POST",
         body: JSON.stringify({
           targetSize: 8,
-          forceFixtures: true,
-          intervalHours: 3,
+          forceFixtures: false,
+          intervalHours: 24,
         }),
       });
       await refreshNextMatchFromServer();
@@ -626,8 +628,26 @@
       console.warn("[em] fixture sync", e);
     }
     try {
+      // Tam fikstür listesini çek — yerel rastgele maç listesi kalmasın
+      const fxData = await apiFetch("/api/fixtures");
+      if (fxData && Array.isArray(fxData.fixtures)) {
+        fxData.fixtures.forEach(function (f) {
+          try {
+            if (typeof cacheFixture === "function") cacheFixture(f);
+          } catch (eC) {}
+        });
+        window.__emServerFixtures = fxData.fixtures;
+        window.__emServerSeason = fxData.season || null;
+      }
+    } catch (eFx) {
+      console.warn("[em] fixtures list sync", eFx);
+    }
+    try {
       await ensureLeagueReady();
     } catch (e) {}
+    // Yerel worldLeagues standings zaten applyServerStandingsToClient ile güncellendi.
+    // Online'da yerel kadro/oyuncu üretimi YOK — sunucu otorite.
+    window.__emServerAuthoritative = true;
     try {
       const st = document.getElementById("menuSaveStatus");
       if (st && teamOk)
@@ -3367,6 +3387,10 @@ function renderServerMatchState(state) {
     if (state.pendingAcademyLevel !== undefined)
       youthAcademy.pendingAcademyLevel = state.pendingAcademyLevel;
     try {
+      if (typeof applyYouthBranchState === "function")
+        applyYouthBranchState(state);
+    } catch (e) {}
+    try {
       if (typeof updateYouthAcademyUI === "function") updateYouthAcademyUI();
       if (typeof updateYouthUI === "function") updateYouthUI("home");
     } catch (e) {}
@@ -3423,12 +3447,20 @@ function renderServerMatchState(state) {
       const note = document.getElementById("youthScoutNote");
       if (note) note.innerText = "Altyapı yükleniyor...";
       const st = await fetchYouthFromServer();
+      try {
+        if (typeof fillYouthCountrySelects === "function")
+          fillYouthCountrySelects();
+        if (typeof renderYouthBranchList === "function")
+          renderYouthBranchList();
+      } catch (e) {}
       if (!st) {
         // offline fallback
         try {
           if (typeof updateYouthUI === "function") updateYouthUI("home");
           if (typeof renderYouthRoster === "function") renderYouthRoster("home");
           if (typeof updateYouthAcademyUI === "function") updateYouthAcademyUI();
+          if (typeof fillYouthCountrySelects === "function")
+            fillYouthCountrySelects();
         } catch (e) {}
       }
       if (note && st) {
@@ -3456,12 +3488,17 @@ function renderServerMatchState(state) {
       }
       const skillSel = document.getElementById("youthPreferredSkill");
       const preferredSkill = skillSel ? skillSel.value : "";
+      const countrySel = document.getElementById("youthDrawCountry");
+      const drawCountry = countrySel && countrySel.value ? countrySel.value : null;
       const note = document.getElementById("youthScoutNote");
       try {
         if (note) note.innerText = "Keşfediliyor...";
         const res = await apiFetch("/api/youth/draw", {
           method: "POST",
-          body: JSON.stringify({ preferredSkill: preferredSkill || null }),
+          body: JSON.stringify({
+            preferredSkill: preferredSkill || null,
+            country: drawCountry,
+          }),
         });
         if (res.state) applyYouthStateToClient(res.state);
         if (res.player) {
@@ -4607,37 +4644,45 @@ function renderServerMatchState(state) {
               }
             }
           }
-          // Yeni mesaj geldiyse mesaj kutusuna kırmızı uyarı için globali güncelle
-          if (typeof userMessages !== "undefined" && unread > 0) {
+          // Gerçekten YENİ (daha önce listede olmayan) mesaj varsa bildirim at
+          if (typeof userMessages !== "undefined") {
             const prevIds = {};
             userMessages.forEach(function (x) {
+              const idKey = x.id != null ? "id:" + x.id : null;
+              if (idKey) prevIds[idKey] = true;
               prevIds[(x.from || "") + "|" + (x.text || "") + "|" + (x.time || "")] = true;
             });
             let hasNew = false;
             msgs.forEach(function (m) {
               if (m.from === "me" || m.read) return;
+              const idKey = m.id != null ? "id:" + m.id : null;
               const k = (m.from || "") + "|" + (m.text || "") + "|" + (m.time || "");
-              if (!prevIds[k]) hasNew = true;
+              if ((idKey && prevIds[idKey]) || prevIds[k]) return;
+              hasNew = true;
             });
-            if (hasNew) {
-              userMessages.length = 0;
-              msgs.forEach(function (m) {
-                userMessages.push({
-                  from: m.from,
-                  to: m.to,
-                  text: m.text,
-                  time: m.time,
-                  read: !!m.read || m.from === "me",
-                });
+            // Listeyi her zaman sunucu ile senkron tut
+            userMessages.length = 0;
+            msgs.forEach(function (m) {
+              userMessages.push({
+                id: m.id,
+                from: m.from,
+                to: m.to,
+                text: m.text,
+                time: m.time,
+                read: !!m.read || m.from === "me",
+                fromUserId: m.fromUserId || m.userId || null,
+                toUserId: m.toUserId || null,
               });
+            });
+            if (hasNew && unread > 0) {
               try {
                 if (typeof pushNotification === "function")
                   pushNotification("💬", "Yeni mesajın var", "Mesaj");
               } catch (e2) {}
-              const modal = document.getElementById("messagesModal");
-              if (modal && modal.classList.contains("active") && typeof renderUserMessages === "function")
-                renderUserMessages();
             }
+            const modal = document.getElementById("messagesModal");
+            if (modal && modal.classList.contains("active") && typeof renderUserMessages === "function")
+              renderUserMessages();
           }
         } catch (e) {}
       }, 30000);

@@ -3923,33 +3923,68 @@
           <select id="regCountry">
             <option value="Türkiye" selected>Türkiye</option>
             <option value="Almanya">Almanya</option>
+            <option value="İngiltere">İngiltere</option>
+            <option value="İspanya">İspanya</option>
+            <option value="İtalya">İtalya</option>
             <option value="Fransa">Fransa</option>
             <option value="Portekiz">Portekiz</option>
             <option value="Hollanda">Hollanda</option>
             <option value="Belçika">Belçika</option>
+            <option value="İskoçya">İskoçya</option>
+            <option value="İrlanda">İrlanda</option>
+            <option value="Galler">Galler</option>
+            <option value="İsveç">İsveç</option>
+            <option value="Norveç">Norveç</option>
+            <option value="Danimarka">Danimarka</option>
+            <option value="İsviçre">İsviçre</option>
+            <option value="Avusturya">Avusturya</option>
+            <option value="Polonya">Polonya</option>
+            <option value="Ukrayna">Ukrayna</option>
+            <option value="Çekya">Çekya</option>
+            <option value="Slovakya">Slovakya</option>
+            <option value="Macaristan">Macaristan</option>
+            <option value="Romanya">Romanya</option>
+            <option value="Bulgaristan">Bulgaristan</option>
+            <option value="Yunanistan">Yunanistan</option>
+            <option value="Hırvatistan">Hırvatistan</option>
+            <option value="Sırbistan">Sırbistan</option>
+            <option value="Bosna-Hersek">Bosna-Hersek</option>
+            <option value="Arnavutluk">Arnavutluk</option>
+            <option value="Slovenya">Slovenya</option>
+            <option value="Rusya">Rusya</option>
+            <option value="Finlandiya">Finlandiya</option>
             <option value="Brezilya">Brezilya</option>
             <option value="Arjantin">Arjantin</option>
+            <option value="Uruguay">Uruguay</option>
+            <option value="Şili">Şili</option>
+            <option value="Kolombiya">Kolombiya</option>
+            <option value="Ekvador">Ekvador</option>
+            <option value="Peru">Peru</option>
+            <option value="Paraguay">Paraguay</option>
+            <option value="Venezuela">Venezuela</option>
             <option value="Meksika">Meksika</option>
+            <option value="ABD">ABD</option>
+            <option value="Kanada">Kanada</option>
+            <option value="Costa Rica">Costa Rica</option>
+            <option value="Jamaika">Jamaika</option>
             <option value="Japonya">Japonya</option>
+            <option value="Güney Kore">Güney Kore</option>
+            <option value="Çin">Çin</option>
             <option value="Avustralya">Avustralya</option>
+            <option value="Suudi Arabistan">Suudi Arabistan</option>
+            <option value="İran">İran</option>
+            <option value="Katar">Katar</option>
+            <option value="Hindistan">Hindistan</option>
             <option value="Mısır">Mısır</option>
             <option value="Fas">Fas</option>
             <option value="Nijerya">Nijerya</option>
+            <option value="Senegal">Senegal</option>
+            <option value="Gana">Gana</option>
+            <option value="Kamerun">Kamerun</option>
+            <option value="Fildişi Sahili">Fildişi Sahili</option>
+            <option value="Cezayir">Cezayir</option>
+            <option value="Tunus">Tunus</option>
             <option value="Güney Afrika">Güney Afrika</option>
-            <option value="Rusya">Rusya</option>
-            <option value="Polonya">Polonya</option>
-            <option value="Ukrayna">Ukrayna</option>
-            <option value="Yunanistan">Yunanistan</option>
-            <option value="Norveç">Norveç</option>
-            <option value="Danimarka">Danimarka</option>
-            <option value="Avusturya">Avusturya</option>
-            <option value="Hırvatistan">Hırvatistan</option>
-            <option value="Sırbistan">Sırbistan</option>
-            <option value="Arnavutluk">Arnavutluk</option>
-            <option value="Slovenya">Slovenya</option>
-            <option value="Bulgaristan">Bulgaristan</option>
-            <option value="Romanya">Romanya</option>
-            <option value="Hindistan">Hindistan</option>
           </select>
           <p style="font-size:11px;color:#64748b;margin:4px 0 10px;line-height:1.4;">
             Seçtiğin ülkenin 1. liginde (10 takım) boş bir bot kulübü sana verilir.
@@ -4166,9 +4201,12 @@
           </button>
         </div>
         <div class="announcements" id="announcementsBox">
-          <div class="title" style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="title" style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
             <span>📢 Duyurular</span>
-            <button type="button" id="announcementAdminBtn" style="display:none;font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid #94a3b8;background:#e2e8f0;color:#0f172a;cursor:pointer;font-weight:700;" onclick="openAnnouncementAdmin()">+ Ekle</button>
+            <span style="display:flex;gap:4px;align-items:center;">
+              <button type="button" id="announcementAdminBtn" style="display:none;font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid #94a3b8;background:#e2e8f0;color:#0f172a;cursor:pointer;font-weight:700;" onclick="openAnnouncementAdmin()">+ Ekle</button>
+              <button type="button" id="announcementClearBtn" style="display:none;font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid #f87171;background:#450a0a;color:#fecaca;cursor:pointer;font-weight:700;" onclick="clearAllAnnouncements()">Duyuruları Sil</button>
+            </span>
           </div>
           <div id="announcementList">
             <div class="announcement-item"><span class="icon">📢</span><span class="text">Duyurular yükleniyor…</span><span class="time"></span></div>
@@ -6163,6 +6201,26 @@
           </div>
         </div>
 
+        <div class="youth-section-title">🌍 Yabancı Altyapı Şubeleri</div>
+        <div class="formation-hint" style="margin-bottom:10px;">
+          Başka ülkelerde şube kurarak o ülkenin gençlerini çekebilirsin.
+          Her şube aynı ücretle kurulur. Çekim ücretsizdir.
+          Sezonda en az <b>6 oyuncu kendi ülkenizden</b> çekilmelidir.
+          Her kurulan şube sezonluk çekim hakkına <b>+1</b> ekler (temel 12).
+          En fazla 6 yabancı şube.
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:flex-end;margin-bottom:12px;">
+          <div style="min-width:180px;flex:1;max-width:260px;">
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;text-align:center;">Ülke seç</div>
+            <select id="youthBranchCountry" style="width:100%;padding:8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;"></select>
+          </div>
+          <button class="youth-btn" id="youthBuildBranchBtn" onclick="buildYouthBranch()" style="background:#0ea5e9;">
+            🏗️ İnşa et
+          </button>
+          <div id="youthBranchCostHint" style="font-size:12px;color:#fbbf24;min-width:120px;">Ücret: —</div>
+        </div>
+        <div id="youthBranchList" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:14px;"></div>
+
         <div
           style="
             display: flex;
@@ -6173,6 +6231,10 @@
             margin-bottom: 14px;
           "
         >
+          <div style="min-width: 160px">
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;text-align:center;">Keşif ülkesi</div>
+            <select id="youthDrawCountry" style="width:100%;padding:8px;border-radius:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;font-size:12px;"></select>
+          </div>
           <div style="min-width: 160px">
             <div
               style="
@@ -7668,8 +7730,6 @@
         Hindistan: "🇮🇳",
         Sırbistan: "🇷🇸",
         Romanya: "🇷🇴",
-        İsrail: "🇮🇱",
-        BosnaHersek: "🇧🇦",
         Arnavutluk: "🇦🇱",
         Slovenya: "🇸🇮",
         Bulgaristan: "🇧🇬",
@@ -7683,6 +7743,24 @@
         Uruguay: "🇺🇾",
         "Güney Kore": "🇰🇷",
         "Suudi Arabistan": "🇸🇦",
+        Ekvador: "🇪🇨",
+        Kanada: "🇨🇦",
+        Senegal: "🇸🇳",
+        Gana: "🇬🇭",
+        İran: "🇮🇷",
+        Slovakya: "🇸🇰",
+        "Bosna-Hersek": "🇧🇦",
+        Finlandiya: "🇫🇮",
+        Peru: "🇵🇪",
+        Paraguay: "🇵🇾",
+        Venezuela: "🇻🇪",
+        "Costa Rica": "🇨🇷",
+        Jamaika: "🇯🇲",
+        Kamerun: "🇨🇲",
+        "Fildişi Sahili": "🇨🇮",
+        Cezayir: "🇩🇿",
+        Tunus: "🇹🇳",
+        Katar: "🇶🇦",
       };
       function countryFlag(c) {
         if (!c) return "🏳️";
@@ -8673,6 +8751,17 @@
 
       /** Kadro/lig boşsa yeniden üret — bozuk kayıt sonrası kurtarma */
       function repairCareerIfEmpty() {
+        // Online/sunucu otoritesinde yerel rastgele oyuncu ÜRETME —
+        // her girişte farklı kadro oluşmasın; sunucu sync doldurur.
+        try {
+          if (
+            window.__emServerAuthoritative ||
+            localStorage.getItem("em_jwt_token") ||
+            localStorage.getItem("em_token")
+          ) {
+            return;
+          }
+        } catch (eOn) {}
         const country =
           typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "Türkiye";
 
@@ -9957,21 +10046,23 @@
           const sorted = rows.slice().sort(function (a, b) {
             return (b.pts || 0) - (a.pts || 0);
           });
-          const groupCount = 4;
-          const perGroup = Math.max(
+          // 64 ülke → 16 grup × 4; 4 torba serpme
+          const groupCount = Math.max(
             4,
-            Math.ceil(sorted.length / groupCount),
+            Math.min(16, Math.ceil(sorted.length / 4)),
           );
+          const perGroup = Math.max(3, Math.ceil(sorted.length / groupCount));
           html +=
-            '<div class="formation-hint" style="margin-bottom:8px;">Torba sistemi: sıralamaya göre 4 torba · her gruba yaklaşık ' +
+            '<div class="formation-hint" style="margin-bottom:8px;">Torba sistemi: 4 torba · ' +
+            groupCount +
+            " grup · ~" +
             perGroup +
-            " takım (toplam " +
+            " takım/grup (toplam " +
             sorted.length +
             " ülke).</div>";
-          // Torbalar: her torbada groupCount kadar (veya kalan)
           const pots = [[], [], [], []];
           sorted.forEach(function (r, idx) {
-            const potIdx = Math.min(3, Math.floor(idx / perGroup));
+            const potIdx = Math.min(3, Math.floor(idx / Math.max(1, groupCount)));
             pots[potIdx].push(r);
           });
           html +=
@@ -9999,11 +10090,11 @@
             if (typeof getNationalGroupDraw === "function")
               drawn = getNationalGroupDraw(rows);
           } catch (e) {}
-          const groups = ["A", "B", "C", "D"];
+          const groups = "ABCDEFGHIJKLMNOP".split("");
           for (let g = 0; g < groupCount; g++) {
             html +=
               '<div style="font-size:12px;font-weight:700;color:#38bdf8;margin:10px 0 4px;">Grup ' +
-              groups[g] +
+              (groups[g] || g + 1) +
               "</div>";
             const slice = drawn
               ? drawn[g] || []
@@ -13812,33 +13903,68 @@
       const COUNTRY_UTC_OFFSET_UI = {
         Türkiye: 3,
         Almanya: 1,
+        İngiltere: 0,
+        İspanya: 1,
+        İtalya: 1,
         Fransa: 1,
         Portekiz: 0,
         Hollanda: 1,
         Belçika: 1,
+        İskoçya: 0,
+        İrlanda: 0,
+        Galler: 0,
+        İsveç: 1,
+        Norveç: 1,
+        Danimarka: 1,
+        İsviçre: 1,
+        Avusturya: 1,
+        Polonya: 1,
+        Ukrayna: 2,
+        Çekya: 1,
+        Slovakya: 1,
+        Macaristan: 1,
+        Romanya: 2,
+        Bulgaristan: 2,
+        Yunanistan: 2,
+        Hırvatistan: 1,
+        Sırbistan: 1,
+        "Bosna-Hersek": 1,
+        Arnavutluk: 1,
+        Slovenya: 1,
+        Rusya: 3,
+        Finlandiya: 2,
         Brezilya: -3,
         Arjantin: -3,
+        Uruguay: -3,
+        Şili: -4,
+        Kolombiya: -5,
+        Ekvador: -5,
+        Peru: -5,
+        Paraguay: -4,
+        Venezuela: -4,
         Meksika: -6,
+        ABD: -5,
+        Kanada: -5,
+        "Costa Rica": -6,
+        Jamaika: -5,
         Japonya: 9,
+        "Güney Kore": 9,
+        Çin: 8,
         Avustralya: 10,
+        "Suudi Arabistan": 3,
+        İran: 3.5,
+        Katar: 3,
+        Hindistan: 5.5,
         Mısır: 2,
         Fas: 1,
         Nijerya: 1,
+        Senegal: 0,
+        Gana: 0,
+        Kamerun: 1,
+        "Fildişi Sahili": 0,
+        Cezayir: 1,
+        Tunus: 1,
         "Güney Afrika": 2,
-        Rusya: 3,
-        Polonya: 1,
-        Ukrayna: 2,
-        Yunanistan: 2,
-        Norveç: 1,
-        Danimarka: 1,
-        Avusturya: 1,
-        Hırvatistan: 1,
-        Sırbistan: 1,
-        Arnavutluk: 1,
-        Slovenya: 1,
-        Bulgaristan: 2,
-        Romanya: 2,
-        Hindistan: 5.5,
       };
       const TR_UTC_OFFSET_UI = 3;
       const PREFERRED_LOCAL_HOURS_UI = [15, 16, 17, 18, 19, 20, 14, 21, 13, 12];
@@ -20493,8 +20619,35 @@ function addForumPost() {
           icon: "🎉",
           text: "Hoş geldin! Oyuncu gelişim sistemi aktif.",
           time: "Şimdi",
+          at: Date.now(),
+          read: true,
         },
       ];
+      // Kayıtlı bildirimleri yükle (okundu durumu korunsun — sahte "yeni" işareti olmasın)
+      (function loadStoredNotifications() {
+        try {
+          const key =
+            "em_notifications_" +
+            (typeof managerName !== "undefined" && managerName
+              ? managerName
+              : localStorage.getItem("em_last_user") || "guest");
+          const raw = localStorage.getItem(key);
+          if (!raw) return;
+          const arr = JSON.parse(raw);
+          if (!Array.isArray(arr) || !arr.length) return;
+          gameNotifications.length = 0;
+          arr.forEach(function (n) {
+            if (!n || !n.text) return;
+            gameNotifications.push({
+              icon: n.icon || "🔔",
+              text: n.text,
+              time: n.time || "",
+              at: Number(n.at) || 0,
+              read: !!n.read,
+            });
+          });
+        } catch (eL) {}
+      })();
       // ---- Elite: Oyuncu Takip Listesi ----
       // Takip edilen oyuncu transfer listesine kondugunda bildirim gönderilir.
       // followedPlayers üstte (saveCareer öncesi) tanımlandı
@@ -20703,11 +20856,31 @@ function addForumPost() {
         ) {
           return;
         }
+        // Aynı metin+kategori son 2 dk içinde varsa tekrar ekleme (sahte "yeni" işaretini engelle)
+        const nowTs = Date.now();
+        const sameRecent = (gameNotifications || []).some(function (n) {
+          if (!n) return false;
+          if (String(n.text || "") !== String(text || "")) return false;
+          if (String(n.time || "") !== String(cat || "")) return false;
+          const at = Number(n.at) || 0;
+          return at && nowTs - at < 120000;
+        });
+        if (sameRecent) {
+          // Sadece badge'i mevcut okunmamışlara göre güncelle, yeni kayıt ekleme
+          if (typeof setHeaderBadge === "function") {
+            const unread0 = (gameNotifications || []).filter(function (n) {
+              return n && !n.read;
+            }).length;
+            setHeaderBadge("notifDot", unread0);
+          }
+          return;
+        }
         gameNotifications.unshift({
           icon: icon || "🔔",
           text: text,
           time: cat,
-          at: Date.now(),
+          at: nowTs,
+          read: false,
         });
         if (gameNotifications.length > 50) gameNotifications.pop();
         try {
@@ -20718,16 +20891,22 @@ function addForumPost() {
         } catch (e) {}
         if (typeof setHeaderBadge === "function") {
           const unread = (gameNotifications || []).filter(function (n) {
-            return !n.read;
+            return n && !n.read;
           }).length;
-          setHeaderBadge("notifDot", unread || gameNotifications.length);
+          setHeaderBadge("notifDot", unread);
         } else {
           const dot = document.getElementById("notifDot");
           if (dot) {
-            dot.classList.add("active");
-            dot.textContent = String(
-              Math.min(99, (gameNotifications || []).length || 1),
-            );
+            const unread2 = (gameNotifications || []).filter(function (n) {
+              return n && !n.read;
+            }).length;
+            if (unread2 > 0) {
+              dot.classList.add("active");
+              dot.textContent = String(Math.min(99, unread2));
+            } else {
+              dot.classList.remove("active");
+              dot.textContent = "";
+            }
           }
         }
       }
@@ -20763,6 +20942,10 @@ function addForumPost() {
           (gameNotifications || []).forEach(function (n) {
             n.read = true;
           });
+          localStorage.setItem(
+            "em_notifications_" + (managerName || "guest"),
+            JSON.stringify((gameNotifications || []).slice(0, 50)),
+          );
         } catch (eR) {}
         if (typeof setHeaderBadge === "function") setHeaderBadge("notifDot", 0);
         else {
@@ -20772,6 +20955,15 @@ function addForumPost() {
             dot.textContent = "";
           }
         }
+        // Sunucu bildirimlerini de okundu işaretle
+        try {
+          if (typeof window.apiFetch === "function") {
+            window.apiFetch("/api/notifications/read", {
+              method: "POST",
+              body: "{}",
+            }).catch(function () {});
+          }
+        } catch (eSrv) {}
         const modal = document.getElementById("notificationsModal");
         if (modal) {
           modal.style.zIndex = "100050";
@@ -23503,16 +23695,31 @@ function addForumPost() {
             '<div class="announcement-item"><span class="icon">📢</span><span class="text">Henüz duyuru yok.</span><span class="time"></span></div>';
           return;
         }
+        let isAd = false;
+        try {
+          isAd =
+            !!(window.__emServerAdmin) ||
+            String(managerName || "").toLowerCase() === "murat";
+        } catch (eIs) {}
         el.innerHTML = items
           .map(function (a) {
+            const delBtn =
+              isAd && a && a.id
+                ? '<button type="button" title="Bu duyuruyu sil" onclick="event.stopPropagation();deleteAnnouncementById(\'' +
+                  String(a.id).replace(/'/g, "") +
+                  '\')" style="margin-left:6px;font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid #f87171;background:#450a0a;color:#fecaca;cursor:pointer;font-weight:700;flex-shrink:0;">Sil</button>'
+                : "";
             return (
-              '<div class="announcement-item"><span class="icon">' +
+              '<div class="announcement-item" style="display:flex;align-items:center;gap:6px;">' +
+              '<span class="icon">' +
               escapeAnnHtml(a.icon || "📢") +
-              '</span><span class="text">' +
+              '</span><span class="text" style="flex:1;">' +
               escapeAnnHtml(a.text || "") +
               '</span><span class="time">' +
               escapeAnnHtml(a.time || "") +
-              "</span></div>"
+              "</span>" +
+              delBtn +
+              "</div>"
             );
           })
           .join("");
@@ -23522,13 +23729,13 @@ function addForumPost() {
         if (!list) return;
         // Admin butonu
         try {
+          const isAd =
+            !!(window.__emServerAdmin) ||
+            String(managerName || "").toLowerCase() === "murat";
           const btn = document.getElementById("announcementAdminBtn");
-          if (btn) {
-            const isAd =
-              !!(window.__emServerAdmin) ||
-              String(managerName || "").toLowerCase() === "murat";
-            btn.style.display = isAd ? "" : "none";
-          }
+          if (btn) btn.style.display = isAd ? "" : "none";
+          const clr = document.getElementById("announcementClearBtn");
+          if (clr) clr.style.display = isAd ? "" : "none";
         } catch (eA) {}
         try {
           let data = null;
@@ -23599,6 +23806,70 @@ function addForumPost() {
       }
       window.openAnnouncementAdmin = openAnnouncementAdmin;
 
+      async function emDeleteAnnouncement(id) {
+        if (!id) return;
+        if (typeof window.apiFetch === "function") {
+          return window.apiFetch("/api/admin/announcements/" + encodeURIComponent(id), {
+            method: "DELETE",
+          });
+        }
+        const token = localStorage.getItem("em_jwt_token");
+        if (!token) throw new Error("Giriş gerekli");
+        const res = await fetch(
+          (window.EM_API_BASE || "") + "/api/admin/announcements/" + encodeURIComponent(id),
+          {
+            method: "DELETE",
+            headers: { Authorization: "Bearer " + token },
+          },
+        );
+        let data = null;
+        try { data = await res.json(); } catch (eJ) {}
+        if (!res.ok) throw new Error((data && data.error) || "Silinemedi");
+        return data;
+      }
+      async function emClearAllAnnouncements() {
+        if (typeof window.apiFetch === "function") {
+          return window.apiFetch("/api/admin/announcements", { method: "DELETE" });
+        }
+        const token = localStorage.getItem("em_jwt_token");
+        if (!token) throw new Error("Giriş gerekli");
+        const res = await fetch(
+          (window.EM_API_BASE || "") + "/api/admin/announcements",
+          {
+            method: "DELETE",
+            headers: { Authorization: "Bearer " + token },
+          },
+        );
+        let data = null;
+        try { data = await res.json(); } catch (eJ) {}
+        if (!res.ok) throw new Error((data && data.error) || "Silinemedi");
+        return data;
+      }
+      function deleteAnnouncementById(id) {
+        if (!id) return;
+        if (!confirm("Bu duyuru silinsin mi?")) return;
+        (async function () {
+          try {
+            await emDeleteAnnouncement(id);
+            await renderGlobalAnnouncements();
+          } catch (e) {
+            alert((e && e.message) || "Duyuru silinemedi");
+          }
+        })();
+      }
+      function clearAllAnnouncements() {
+        if (!confirm("Tüm duyurular silinsin mi? Bu işlem geri alınamaz.")) return;
+        (async function () {
+          try {
+            await emClearAllAnnouncements();
+            await renderGlobalAnnouncements();
+          } catch (e) {
+            alert((e && e.message) || "Duyurular silinemedi");
+          }
+        })();
+      }
+      window.deleteAnnouncementById = deleteAnnouncementById;
+      window.clearAllAnnouncements = clearAllAnnouncements;
 
       function logoutUser() {
         try {
@@ -24268,23 +24539,11 @@ function addForumPost() {
           firstNames: ["Ivan", "Marko", "Luka", "Ante", "Josip", "Filip", "Petar", "Karlo", "Mateo", "Tomislav", "Dario", "Domagoj", "Bruno", "Nikola", "Ivica", "Toni", "Goran", "Zvonimir", "Mario", "Kristijan"],
           lastNames: ["Horvat", "Kovačić", "Babić", "Marić", "Jurić", "Novak", "Kovačević", "Knežević", "Marković", "Petrović", "Vuković", "Perić", "Šimić", "Radić", "Blažević", "Matić", "Kolar", "Grgić", "Barišić", "Vidović"],
         },
-        İsrail: {
-          cityWords: ["Tel Aviv", "Hayfa", "Kudüs", "Beerşeba", "Netanya"],
-          suffixes: ["FC", "Maccabi", "Hapoel", "Beitar", "Sport"],
-          firstNames: ["David", "Yossi", "Eyal", "Omer", "Lior", "Noam", "Itai", "Amit", "Tal", "Roi", "Dan", "Guy", "Ron", "Nadav", "Ariel", "Yonatan", "Uri", "Shahar", "Idan", "Yair"],
-          lastNames: ["Cohen", "Levi", "Mizrahi", "Peretz", "Biton", "Avraham", "Katz", "Friedman", "Azulay", "Dahan", "Malka", "Amar", "Gabay", "Sasson", "Hazan", "Ben David", "Barak", "Shapira", "Golan", "Ohana"],
-        },
         Sırbistan: {
           cityWords: ["Belgrad", "Novi Sad", "Niš", "Kragujevac", "Subotica"],
           suffixes: ["FK", "Partizan", "Crvena Zvezda", "OFK", "Sport"],
           firstNames: ["Nikola", "Stefan", "Luka", "Marko", "Aleksandar", "Nemanja", "Miloš", "Đorđe", "Vladimir", "Filip", "Dušan", "Uroš", "Petar", "Ognjen", "Bogdan", "Lazar", "Vuk", "Danilo", "Andrija", "Slobodan"],
           lastNames: ["Jovanović", "Nikolić", "Petrović", "Đorđević", "Ilić", "Stojanović", "Marković", "Pavlović", "Popović", "Kostić", "Todorović", "Simić", "Ristić", "Filipović", "Živković", "Radovanović", "Milošević", "Vasić", "Stanković", "Milić"],
-        },
-        BosnaHersek: {
-          cityWords: ["Sarajevo", "Zenica", "Mostar", "Tuzla", "Banja Luka"],
-          suffixes: ["FK", "NK", "Željezničar", "Velež", "Sport"],
-          firstNames: ["Emir", "Haris", "Amar", "Edin", "Adnan", "Mirza", "Kenan", "Nedim", "Amir", "Denis", "Tarik", "Faruk", "Adis", "Muhamed", "Sead", "Damir", "Almir", "Elvir", "Zlatan", "Semir"],
-          lastNames: ["Hadžić", "Dedić", "Kovačević", "Halilović", "Begić", "Mujić", "Delić", "Hodžić", "Karić", "Mehić", "Alić", "Softić", "Bajramović", "Zukić", "Osmić", "Duraković", "Ramić", "Pašić", "Šabanović", "Kurtović"],
         },
         Arnavutluk: {
           cityWords: ["Tiran", "Dıraç", "İşkodra", "Vlorë", "Elbasan"],
@@ -24334,6 +24593,45 @@ function addForumPost() {
           firstNames: ["Thabo", "Sipho", "Bongani", "Mandla", "Lucky", "Sibusiso", "Themba", "Kagiso", "Lerato", "Tebogo", "Andile", "Nkosi", "Jabu", "Musa", "Sello", "Tshepo", "Vusi", "Xolani", "Zanele", "Dumisani"],
           lastNames: ["Dlamini", "Ndlovu", "Mokoena", "Khumalo", "Nkosi", "Zulu", "Molefe", "Sithole", "Mahlangu", "Radebe", "Mbeki", "Botha", "van der Berg", "Pretorius", "Naidoo", "Govender", "Pillay", "Jacobs", "Williams", "Adams"],
         },
+        Kolombiya: {
+          cityWords: ["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Bucaramanga", "Pereira", "Manizales", "Cúcuta", "Ibagué"],
+          suffixes: ["FC", "CD", "Atlético", "Deportivo", "United"],
+          firstNames: ["Juan", "Carlos", "Andrés", "Felipe", "Santiago", "Sebastián", "Mateo", "Daniel", "Camilo", "Nicolás", "Diego", "Luis", "Miguel", "James", "Radamel", "Falcao", "Juan Pablo", "Óscar", "Iván", "Cristian"],
+          lastNames: ["Rodríguez", "García", "Martínez", "López", "González", "Pérez", "Sánchez", "Ramírez", "Torres", "Flores", "Rivera", "Gómez", "Díaz", "Hernández", "Morales", "Ortiz", "Castillo", "Vargas", "Rojas", "Jiménez"],
+        },
+        İskoçya: {
+          cityWords: ["Glasgow", "Edinburgh", "Aberdeen", "Dundee", "Motherwell", "Kilmarnock", "Hibernian", "Hearts", "Livingston", "Paisley"],
+          suffixes: ["FC", "United", "Athletic", "Rovers", "City"],
+          firstNames: ["James", "Callum", "Ryan", "Andrew", "Scott", "Craig", "Stuart", "Gordon", "Ian", "Fraser", "Hamish", "Euan", "Alistair", "Duncan", "Angus", "Ross", "Lewis", "Kieran", "Connor", "Blair"],
+          lastNames: ["MacDonald", "Campbell", "Stewart", "Robertson", "Thomson", "Anderson", "Murray", "Reid", "Taylor", "Clark", "Ross", "Watson", "Morrison", "Paterson", "Young", "Mitchell", "Grant", "Bell", "Hamilton", "Scott"],
+        },
+
+        Uruguay: { cityWords: ["Montevideo","Salto","Paysandú","Maldonado","Canelones","Colonia"], suffixes: ["FC","CA","Club","Deportivo"], firstNames: ["Luis","Diego","Carlos","Federico","Nicolás","Matías","Sebastián","Martín","Gastón","Rodrigo"], lastNames: ["Rodríguez","González","Fernández","López","Martínez","Pérez","García","Sosa","Silva","Suárez"] },
+        Şili: { cityWords: ["Santiago","Valparaíso","Concepción","Antofagasta","La Serena","Temuco"], suffixes: ["FC","CD","Deportes","United"], firstNames: ["Matías","Nicolás","Sebastián","Diego","Felipe","Carlos","Andrés","Tomás","Ignacio","Vicente"], lastNames: ["González","Muñoz","Rojas","Díaz","Pérez","Soto","Contreras","Silva","Martínez","Sepúlveda"] },
+        Ekvador: { cityWords: ["Quito","Guayaquil","Cuenca","Ambato","Machala","Manta"], suffixes: ["FC","SC","Club","Deportivo"], firstNames: ["Carlos","José","Luis","Juan","Andrés","Diego","Felipe","Miguel","Sebastián","Enner"], lastNames: ["García","Rodríguez","Martínez","López","González","Pérez","Sánchez","Ramírez","Torres","Flores"] },
+        Kanada: { cityWords: ["Toronto","Vancouver","Montreal","Calgary","Edmonton","Ottawa"], suffixes: ["FC","United","City","SC"], firstNames: ["Liam","Noah","William","James","Oliver","Benjamin","Lucas","Henry","Ethan","Jacob"], lastNames: ["Smith","Brown","Tremblay","Martin","Roy","Gagnon","Wilson","MacDonald","Taylor","Campbell"] },
+        Senegal: { cityWords: ["Dakar","Thiès","Saint-Louis","Kaolack","Ziguinchor","Touba"], suffixes: ["FC","United","ASC","SC"], firstNames: ["Moussa","Ibrahima","Ousmane","Cheikh","Abdoulaye","Mamadou","Pape","Sadio","Kalidou","Ismaïla"], lastNames: ["Diop","Ndiaye","Fall","Sarr","Ba","Gueye","Diallo","Sow","Cissé","Mané"] },
+        Gana: { cityWords: ["Accra","Kumasi","Tamale","Sekondi","Cape Coast","Tema"], suffixes: ["FC","United","SC","Stars"], firstNames: ["Kwame","Kofi","Kwesi","Yaw","Kojo","Michael","Samuel","Emmanuel","Daniel","Joseph"], lastNames: ["Mensah","Owusu","Boateng","Asante","Osei","Agyemang","Appiah","Adjei","Frimpong","Yeboah"] },
+        "Suudi Arabistan": { cityWords: ["Riyad","Jeddah","Dammam","Mecca","Medina","Khobar"], suffixes: ["FC","SC","Club","United"], firstNames: ["Mohammed","Ahmed","Abdullah","Ali","Omar","Sultan","Fahad","Khalid","Faisal","Salman"], lastNames: ["Al-Qahtani","Al-Harbi","Al-Dosari","Al-Ghamdi","Al-Shehri","Al-Otaibi","Al-Zahrani","Al-Shammari","Al-Saud","Al-Faraj"] },
+        İran: { cityWords: ["Tahran","Isfahan","Mashhad","Tabriz","Shiraz","Ahvaz"], suffixes: ["FC","SC","Club","United"], firstNames: ["Ali","Mohammad","Hossein","Reza","Mehdi","Amir","Saeed","Sardar","Alireza","Karim"], lastNames: ["Hosseini","Mohammadi","Ahmadi","Karimi","Rahimi","Moradi","Jafari","Mousavi","Rezaei","Hashemi"] },
+        Çekya: { cityWords: ["Praha","Brno","Ostrava","Plzeň","Liberec","Olomouc"], suffixes: ["FK","FC","SK","United"], firstNames: ["Jan","Petr","Tomáš","Martin","Jakub","Lukáš","David","Michal","Adam","Ondřej"], lastNames: ["Novák","Svoboda","Novotný","Dvořák","Černý","Procházka","Kučera","Veselý","Horák","Němec"] },
+        Macaristan: { cityWords: ["Budapest","Debrecen","Szeged","Miskolc","Pécs","Győr"], suffixes: ["FC","TC","United","SC"], firstNames: ["László","István","József","Zoltán","Gábor","Sándor","Tamás","Péter","Attila","Balázs"], lastNames: ["Nagy","Kovács","Tóth","Szabó","Horváth","Varga","Kiss","Molnár","Németh","Farkas"] },
+        İrlanda: { cityWords: ["Dublin","Cork","Galway","Limerick","Waterford","Drogheda"], suffixes: ["FC","United","Rovers","Athletic","City"], firstNames: ["James","John","Michael","David","Patrick","Sean","Conor","Cian","Liam","Aaron"], lastNames: ["Murphy","Kelly","O'Sullivan","Walsh","Smith","O'Brien","Byrne","Ryan","O'Connor","O'Neill"] },
+
+        Galler: { cityWords: ["Cardiff","Swansea","Newport","Wrexham"], suffixes: ["FC","United","City"], firstNames: ["Gareth","Ryan","Aaron","Joe","Daniel"], lastNames: ["Jones","Williams","Davies","Evans","Thomas"] },
+        Slovakya: { cityWords: ["Bratislava","Košice","Žilina","Trnava"], suffixes: ["FC","ŠK","FK"], firstNames: ["Martin","Peter","Tomáš","Ján","Marek"], lastNames: ["Horváth","Novák","Kováč","Varga","Tóth"] },
+        "Bosna-Hersek": { cityWords: ["Sarajevo","Banja Luka","Mostar","Tuzla"], suffixes: ["FK","FC"], firstNames: ["Edin","Miralem","Asmir","Vedad","Senad"], lastNames: ["Hodzić","Delić","Hadzić","Begić","Softić"] },
+        Finlandiya: { cityWords: ["Helsinki","Tampere","Turku","Oulu"], suffixes: ["FC","JK","United"], firstNames: ["Jari","Teemu","Mika","Sami","Jussi"], lastNames: ["Virtanen","Korhonen","Nieminen","Mäkinen","Laine"] },
+        Peru: { cityWords: ["Lima","Arequipa","Cusco","Trujillo"], suffixes: ["FC","Club","Deportivo"], firstNames: ["Paolo","Jefferson","André","Renato","Christian"], lastNames: ["Guerrero","Farfán","Cueva","Advíncula","Yotún"] },
+        Paraguay: { cityWords: ["Asunción","Ciudad del Este","Encarnación","Luque"], suffixes: ["FC","Club"], firstNames: ["Miguel","Roque","Oscar","Carlos","José"], lastNames: ["Almirón","Santa Cruz","Haedo","Valdez","Romero"] },
+        Venezuela: { cityWords: ["Caracas","Maracaibo","Valencia","Barquisimeto"], suffixes: ["FC","Club","Deportivo"], firstNames: ["Salomón","Tomás","Josef","Roberto","Yangel"], lastNames: ["Rondón","Rincón","Martínez","Rosales","Herrera"] },
+        "Costa Rica": { cityWords: ["San José","Alajuela","Cartago","Heredia"], suffixes: ["FC","Deportivo"], firstNames: ["Keylor","Bryan","Joel","Celso","Óscar"], lastNames: ["Navas","Ruiz","Campbell","Borges","Duarte"] },
+        Jamaika: { cityWords: ["Kingston","Montego Bay","Portmore","Spanish Town"], suffixes: ["FC","United","SC"], firstNames: ["Leon","Michail","Andre","Adrian","Kemar"], lastNames: ["Bailey","Antonio","Blake","Mariappa","Lawrence"] },
+        Kamerun: { cityWords: ["Yaoundé","Douala","Garoua","Bamenda"], suffixes: ["FC","United"], firstNames: ["Samuel","Pierre","André","Eric","Vincent"], lastNames: ["Eto'o","Womé","Onana","Maxim","Aboubakar"] },
+        "Fildişi Sahili": { cityWords: ["Abidjan","Bouaké","Yamoussoukro","San-Pédro"], suffixes: ["FC","United","ASEC"], firstNames: ["Didier","Yaya","Kolo","Wilfried","Nicolas"], lastNames: ["Drogba","Touré","Kalou","Zaha","Pépé"] },
+        Cezayir: { cityWords: ["Cezayir","Oran","Constantine","Sétif"], suffixes: ["FC","US","MC"], firstNames: ["Riyad","Islam","Sofiane","Youcef","Ismaël"], lastNames: ["Mahrez","Slimani","Feghouli","Belaïli","Bennacer"] },
+        Tunus: { cityWords: ["Tunus","Sfax","Sousse","Monastir"], suffixes: ["FC","ES","CA"], firstNames: ["Wahbi","Youssef","Ferjani","Ellyes","Aymen"], lastNames: ["Khazri","Msakni","Sassi","Skhiri","Mathlouthi"] },
+        Katar: { cityWords: ["Doha","Al Rayyan","Al Wakrah","Lusail"], suffixes: ["SC","FC","United"], firstNames: ["Akram","Almoez","Hassan","Boualem","Abdelkarim"], lastNames: ["Afif","Ali","Al-Haydos","Khoukhi","Hassan"] },
       };
 
       // ---- İsim / takım havuzu genişletmesi ----
@@ -26166,22 +26464,10 @@ function addForumPost() {
           FW: ["FL", "FC", "FR"],
         };
         let positions = [
-          "GK",
-          "DL",
-          "DR",
-          "DC",
-          "DM",
-          "MC",
-          "ML",
-          "MR",
-          "OMC",
-          "FL",
-          "FC",
-          "FR",
+          "GK", "DL", "DR", "DC", "DM", "MC", "ML", "MR", "OMC", "FL", "FC", "FR",
         ];
         if (preferredFamily && byFam[preferredFamily])
           positions = byFam[preferredFamily];
-        // Skill tercihine göre mevkı ağırlığı
         if (preferredSkill && !preferredFamily) {
           if (preferredSkill === "reflex" || preferredSkill === "handling")
             positions = ["GK"];
@@ -26195,58 +26481,196 @@ function addForumPost() {
         const pos = positions[Math.floor(Math.random() * positions.length)];
         const scoutLv = Math.max(1, Number(youthAcademy.scoutLevel) || 1);
         const acadLv = Math.max(1, Math.min(5, Number(youthAcademy.academyLevel) || 1));
-        const scoutBonus = (scoutLv - 1) * 0.6;
-        let quality = Math.round(1 + Math.random() * 3.5 + scoutBonus * 0.4);
-        quality = Math.max(1, Math.min(5, quality));
-        // Potansiyel: 9–10 nadir; 10 yalnız akademi 5
-        let potential = rollYouthPotential(acadLv, scoutLv);
-        potential = Math.max(quality, potential);
-        const age = 16; // altyapı yalnızca 16 yaş
-        const cur = 3 + quality * 1.1 + Math.random() * 2;
-        const stat = (b) =>
-          Math.round(Math.max(1, Math.min(18, b + (Math.random() * 4 - 2))));
-        const fam = posFamily(pos);
-        const natural = generateNaturalPos(pos);
-        const player = {
+        // Yaş 15–18 (çoğunluk 16–17)
+        const ageRoll = Math.random();
+        const age =
+          ageRoll < 0.2 ? 15 : ageRoll < 0.55 ? 16 : ageRoll < 0.85 ? 17 : 18;
+
+        // Kalite: 16 yaş üst düzey olmaz (max ~7); potansiyel 9–10 nadir
+        let qRoll = Math.random();
+        let quality;
+        if (qRoll < 0.55) quality = 2 + Math.random() * 1.8;
+        else if (qRoll < 0.85) quality = 3.8 + Math.random() * 1.4;
+        else if (qRoll < 0.97) quality = 5.2 + Math.random() * 1.2;
+        else quality = 6.4 + Math.random() * 0.8;
+        quality += Math.min(0.9, scoutLv * 0.08 + acadLv * 0.06);
+        quality = Math.max(1.5, Math.min(7.2, quality));
+
+        let potential = quality + 0.8 + Math.random() * 2 + scoutLv * 0.12 + acadLv * 0.15;
+        const eliteChance = 0.02 + scoutLv * 0.008 + acadLv * 0.01;
+        if (Math.random() < eliteChance) potential = 9 + Math.random();
+        else if (Math.random() < 0.12 + scoutLv * 0.02)
+          potential = Math.max(potential, 7.5 + Math.random() * 1.3);
+        potential = Math.max(quality + 0.5, Math.min(10, potential));
+        // rollYouthPotential varsa uyumlu tut
+        try {
+          if (typeof rollYouthPotential === "function") {
+            const rp = rollYouthPotential(acadLv, scoutLv);
+            if (rp > potential) potential = Math.min(10, rp);
+          }
+        } catch (eR) {}
+
+        const q = quality;
+        const ageFactor = 0.88 + (age - 15) * 0.04;
+        const center = (4.5 + q * 0.75) * ageFactor;
+        const potHint = (potential - q) * 0.15;
+        const hardCap = age <= 16 ? 12.5 : age <= 17 ? 13.5 : 14.5;
+        function tierSkill(tier) {
+          let lo, hi;
+          if (tier === "primary") {
+            lo = center + potHint + 0.8;
+            hi = center + potHint + 2.8;
+          } else if (tier === "secondary") {
+            lo = center - 0.6;
+            hi = center + 1.2;
+          } else {
+            lo = 4.0 + q * 0.15;
+            hi = 5.5 + q * 0.35;
+          }
+          return Math.round(
+            Math.max(4, Math.min(hardCap, lo + Math.random() * (hi - lo))) * 10,
+          ) / 10;
+        }
+        const profiles = {
+          GK: {
+            pace: "weak", passing: "weak", finishing: "weak", tackle: "weak",
+            vision: "secondary", stamina: "secondary", strength: "secondary",
+            technique: "weak", agility: "primary", positioning: "primary",
+            reflex: "primary", handling: "primary",
+          },
+          DC: {
+            pace: "secondary", passing: "secondary", finishing: "weak",
+            tackle: "primary", vision: "secondary", stamina: "primary",
+            strength: "primary", technique: "secondary", agility: "weak",
+            positioning: "primary", reflex: "weak", handling: "weak",
+          },
+          DL: {
+            pace: "primary", passing: "secondary", finishing: "weak",
+            tackle: "primary", vision: "secondary", stamina: "primary",
+            strength: "secondary", technique: "secondary", agility: "secondary",
+            positioning: "primary", reflex: "weak", handling: "weak",
+          },
+          DR: {
+            pace: "primary", passing: "secondary", finishing: "weak",
+            tackle: "primary", vision: "secondary", stamina: "primary",
+            strength: "secondary", technique: "secondary", agility: "secondary",
+            positioning: "primary", reflex: "weak", handling: "weak",
+          },
+          DM: {
+            pace: "secondary", passing: "primary", finishing: "weak",
+            tackle: "primary", vision: "primary", stamina: "primary",
+            strength: "primary", technique: "secondary", agility: "secondary",
+            positioning: "primary", reflex: "weak", handling: "weak",
+          },
+          MC: {
+            pace: "secondary", passing: "primary", finishing: "secondary",
+            tackle: "secondary", vision: "primary", stamina: "primary",
+            strength: "secondary", technique: "primary", agility: "secondary",
+            positioning: "secondary", reflex: "weak", handling: "weak",
+          },
+          ML: {
+            pace: "primary", passing: "primary", finishing: "secondary",
+            tackle: "secondary", vision: "primary", stamina: "primary",
+            strength: "secondary", technique: "primary", agility: "primary",
+            positioning: "secondary", reflex: "weak", handling: "weak",
+          },
+          MR: {
+            pace: "primary", passing: "primary", finishing: "secondary",
+            tackle: "secondary", vision: "primary", stamina: "primary",
+            strength: "secondary", technique: "primary", agility: "primary",
+            positioning: "secondary", reflex: "weak", handling: "weak",
+          },
+          OMC: {
+            pace: "secondary", passing: "primary", finishing: "primary",
+            tackle: "weak", vision: "primary", stamina: "secondary",
+            strength: "weak", technique: "primary", agility: "primary",
+            positioning: "secondary", reflex: "weak", handling: "weak",
+          },
+          FL: {
+            pace: "primary", passing: "secondary", finishing: "primary",
+            tackle: "weak", vision: "secondary", stamina: "secondary",
+            strength: "secondary", technique: "primary", agility: "primary",
+            positioning: "primary", reflex: "weak", handling: "weak",
+          },
+          FR: {
+            pace: "primary", passing: "secondary", finishing: "primary",
+            tackle: "weak", vision: "secondary", stamina: "secondary",
+            strength: "secondary", technique: "primary", agility: "primary",
+            positioning: "primary", reflex: "weak", handling: "weak",
+          },
+          FC: {
+            pace: "secondary", passing: "secondary", finishing: "primary",
+            tackle: "weak", vision: "secondary", stamina: "secondary",
+            strength: "primary", technique: "primary", agility: "secondary",
+            positioning: "primary", reflex: "weak", handling: "weak",
+          },
+        };
+        const profile = profiles[pos] || profiles.MC;
+        const skills = {};
+        Object.keys(profile).forEach(function (k) {
+          skills[k] = tierSkill(profile[k]);
+        });
+        if (preferredSkill && skills[preferredSkill] != null) {
+          const t = profile[preferredSkill];
+          if (t === "primary" || t === "secondary") {
+            skills[preferredSkill] = Math.min(
+              hardCap,
+              skills[preferredSkill] + 0.6 + Math.random() * 0.8,
+            );
+          }
+        }
+        if (pos === "GK") {
+          skills.technique = Math.min(skills.technique, 5.5 + quality * 0.25);
+          skills.finishing = Math.min(skills.finishing, 5.5);
+          skills.pace = Math.min(skills.pace, 6 + quality * 0.3);
+        } else {
+          skills.reflex = 4 + Math.random() * 2.2;
+          skills.handling = 3.5 + Math.random() * 2;
+        }
+        Object.keys(skills).forEach(function (k) {
+          skills[k] = Math.round(Math.max(4, Math.min(16, skills[k])) * 10) / 10;
+        });
+        const natural =
+          typeof generateNaturalPos === "function"
+            ? generateNaturalPos(pos)
+            : pos;
+        return {
           id: 9000 + Math.floor(Math.random() * 100000),
-          playerNo: nextPlayerNo(),
+          playerNo: typeof nextPlayerNo === "function" ? nextPlayerNo() : undefined,
           name: generateRandomPlayerName(country),
           number: 30 + Math.floor(Math.random() * 60),
           age: age,
           pos: pos,
           naturalPos: natural,
-          baseQuality: quality,
-          basePotential: potential,
-          reflex: pos === "GK" ? stat(cur + 4) : Math.max(1, stat(cur - 4)),
-          handling: pos === "GK" ? stat(cur + 3) : Math.max(1, stat(cur - 6)),
-          positioning: stat(cur),
-          passing: stat(cur),
-          finishing:
-            fam === "FW" || fam === "AM" ? stat(cur + 3) : stat(cur - 2),
-          tackle: fam === "DF" || fam === "DM" ? stat(cur + 3) : stat(cur - 2),
-          vision: stat(cur),
-          pace: stat(cur + 1),
-          stamina: stat(cur + 2),
-          strength: stat(cur),
-          technique: stat(cur),
-          agility: stat(cur + 1),
+          baseQuality: Math.max(1, Math.min(10, Math.round(quality))),
+          basePotential: Math.max(1, Math.min(10, Math.round(potential))),
+          reflex: skills.reflex,
+          handling: skills.handling,
+          positioning: skills.positioning,
+          passing: skills.passing,
+          finishing: skills.finishing,
+          tackle: skills.tackle,
+          vision: skills.vision,
+          pace: skills.pace,
+          stamina: skills.stamina,
+          strength: skills.strength,
+          technique: skills.technique,
+          agility: skills.agility,
           fromAcademy: true,
         };
-        if (preferredSkill && player[preferredSkill] !== undefined) {
-          // Seçilen skill belirgin şekilde yüksek
-          const boost =
-            4 + Math.random() * 3 + (youthAcademy.scoutLevel || 1) * 0.5;
-          player[preferredSkill] = Math.min(
-            18,
-            Math.max(Number(player[preferredSkill]) || 8, cur + boost),
-          );
-        }
-        return player;
       }
 
       const youthPool = { home: [], away: [] };
 
       function initYouthPools() {
+        try {
+          var raw = localStorage.getItem("elite_youth_branches");
+          if (raw) {
+            youthBranches = JSON.parse(raw) || [];
+            youthNextBranchCost = youthBranchCostAt(youthBranches.length);
+          }
+        } catch (e) {}
+
         youthPool.home = [];
         youthPool.away = [];
         for (let i = 0; i < 16; i++) {
@@ -27538,6 +27962,229 @@ function renderTransferPage() {
       }
 
 
+
+      // --- Yabancı altyapı şubeleri ---
+      var youthBranches = [];
+      var youthMaxBranches = 6;
+      var youthNextBranchCost = 400000;
+      var youthForeignDrawFee = 0;
+      var youthMinHomeDraws = 6;
+      var youthHomeDrawsThisSeason = 0;
+      var youthBaseDraws = 12;
+
+      function youthBranchCostAt(n) {
+        return 400000; // tüm ülkeler aynı ücret
+      }
+
+      function fillYouthCountrySelects() {
+        var home =
+          typeof USER_COUNTRY !== "undefined" && USER_COUNTRY
+            ? USER_COUNTRY
+            : "Türkiye";
+        var all =
+          typeof COUNTRY_NAMES !== "undefined" && COUNTRY_NAMES.length
+            ? COUNTRY_NAMES.slice()
+            : [home];
+        var branchSel = document.getElementById("youthBranchCountry");
+        var drawSel = document.getElementById("youthDrawCountry");
+        var owned = {};
+        (youthBranches || []).forEach(function (b) {
+          owned[b.country] = true;
+        });
+        if (branchSel) {
+          var prev = branchSel.value;
+          branchSel.innerHTML = "";
+          all.forEach(function (c) {
+            if (c === home) return;
+            if (owned[c]) return;
+            var o = document.createElement("option");
+            o.value = c;
+            o.textContent =
+              (typeof countryFlag === "function" ? countryFlag(c) + " " : "") + c;
+            branchSel.appendChild(o);
+          });
+          if (!branchSel.options.length) {
+            var o2 = document.createElement("option");
+            o2.value = "";
+            o2.textContent = "— Tüm şubeler dolu / yok —";
+            branchSel.appendChild(o2);
+          }
+          if (prev) branchSel.value = prev;
+          updateYouthBranchCostHint();
+        }
+        if (drawSel) {
+          var prevD = drawSel.value;
+          drawSel.innerHTML = "";
+          var oHome = document.createElement("option");
+          oHome.value = home;
+          oHome.textContent =
+            (typeof countryFlag === "function" ? countryFlag(home) + " " : "") +
+            home +
+            " (yerel)";
+          drawSel.appendChild(oHome);
+          (youthBranches || []).forEach(function (b) {
+            var o = document.createElement("option");
+            o.value = b.country;
+            o.textContent =
+              (typeof countryFlag === "function"
+                ? countryFlag(b.country) + " "
+                : "") +
+              b.country;
+            drawSel.appendChild(o);
+          });
+          if (prevD) drawSel.value = prevD;
+        }
+      }
+
+      function updateYouthBranchCostHint() {
+        var el = document.getElementById("youthBranchCostHint");
+        if (!el) return;
+        var cost =
+          youthNextBranchCost != null
+            ? youthNextBranchCost
+            : youthBranchCostAt((youthBranches || []).length);
+        el.textContent =
+          "Ücret: " +
+          (typeof formatMoney === "function"
+            ? formatMoney(cost)
+            : cost.toLocaleString("tr-TR") + " €");
+      }
+
+      function renderYouthBranchList() {
+        var box = document.getElementById("youthBranchList");
+        if (!box) return;
+        if (!youthBranches || !youthBranches.length) {
+          box.innerHTML =
+            '<div style="font-size:12px;color:#64748b;">Henüz yabancı şube yok. Ülke seçip İnşa et.</div>';
+          return;
+        }
+        box.innerHTML = youthBranches
+          .map(function (b) {
+            return (
+              '<div style="background:#0f172a;border:1px solid #2c3a52;border-radius:10px;padding:8px 12px;font-size:12px;color:#e2e8f0;">' +
+              (typeof countryFlag === "function"
+                ? countryFlag(b.country) + " "
+                : "") +
+              "<b>" +
+              b.country +
+              "</b></div>"
+            );
+          })
+          .join("");
+      }
+
+      async function buildYouthBranch() {
+        var sel = document.getElementById("youthBranchCountry");
+        var country = sel && sel.value;
+        if (!country) {
+          setYouthNote("Şube kurulacak ülke seç.");
+          return;
+        }
+        var cost =
+          youthNextBranchCost != null
+            ? youthNextBranchCost
+            : youthBranchCostAt((youthBranches || []).length);
+        if (
+          typeof budget !== "undefined" &&
+          budget.balance != null &&
+          budget.balance < cost
+        ) {
+          setYouthNote("Yetersiz bakiye. Şube ücreti: " + cost.toLocaleString("tr-TR") + " €");
+          return;
+        }
+        try {
+          if (typeof apiFetch === "function") {
+            var r = await apiFetch("/api/youth/branch", {
+              method: "POST",
+              body: JSON.stringify({ country: country }),
+            });
+            if (r && r.error) {
+              setYouthNote(r.error);
+              return;
+            }
+            if (r && r.state) {
+              if (r.state.branches) youthBranches = r.state.branches;
+              if (r.state.nextBranchCost != null)
+                youthNextBranchCost = r.state.nextBranchCost;
+              if (r.state.maxBranches != null)
+                youthMaxBranches = r.state.maxBranches;
+            } else {
+              youthBranches = youthBranches || [];
+              youthBranches.push({ country: country, buildCost: cost });
+              youthNextBranchCost = youthBranchCostAt(youthBranches.length);
+            }
+            if (typeof budget !== "undefined" && r && r.cost) {
+              budget.balance = (budget.balance || 0) - Number(r.cost);
+              if (typeof updateBudgetUI === "function") updateBudgetUI();
+            }
+            fillYouthCountrySelects();
+            renderYouthBranchList();
+            setYouthNote(
+              (typeof countryFlag === "function"
+                ? countryFlag(country) + " "
+                : "") +
+                country +
+                " altyapı şubesi kuruldu!",
+            );
+            if (typeof pushNotification === "function")
+              pushNotification(
+                "🌍",
+                country + " altyapı şubesi inşa edildi",
+                "Altyapı",
+              );
+            return;
+          }
+        } catch (e) {
+          console.warn("buildYouthBranch", e);
+        }
+        // Offline / local fallback
+        if (typeof budget !== "undefined") {
+          if ((budget.balance || 0) < cost) {
+            setYouthNote("Yetersiz bakiye");
+            return;
+          }
+          budget.balance -= cost;
+          if (typeof updateBudgetUI === "function") updateBudgetUI();
+        }
+        youthBranches = youthBranches || [];
+        youthBranches.push({ country: country, buildCost: cost });
+        youthNextBranchCost = 400000;
+        if (typeof youthAcademy !== "undefined") {
+          youthAcademy.maxDrawsPerSeason =
+            (youthBaseDraws || 12) + youthBranches.length;
+        }
+        try {
+          localStorage.setItem(
+            "elite_youth_branches",
+            JSON.stringify(youthBranches),
+          );
+        } catch (e) {}
+        fillYouthCountrySelects();
+        renderYouthBranchList();
+        setYouthNote(
+          country +
+            " şubesi kuruldu. Çekim hakkı: " +
+            ((youthBaseDraws || 12) + youthBranches.length),
+        );
+      }
+
+      function applyYouthBranchState(state) {
+        if (!state) return;
+        if (Array.isArray(state.branches)) youthBranches = state.branches;
+        youthNextBranchCost = 400000;
+        if (state.maxBranches != null) youthMaxBranches = state.maxBranches;
+        if (state.homeDrawsThisSeason != null)
+          youthHomeDrawsThisSeason = Number(state.homeDrawsThisSeason) || 0;
+        if (state.minHomeDraws != null)
+          youthMinHomeDraws = Number(state.minHomeDraws) || 6;
+        if (state.maxDrawsPerSeason != null && typeof youthAcademy !== "undefined")
+          youthAcademy.maxDrawsPerSeason = Number(state.maxDrawsPerSeason);
+        if (state.drawsThisSeason != null && typeof youthAcademy !== "undefined")
+          youthAcademy.drawsThisSeason = Number(state.drawsThisSeason) || 0;
+        fillYouthCountrySelects();
+        renderYouthBranchList();
+      }
+
       function drawYouthPlayer(side) {
         if (matchStarted) {
           setYouthNote("Maç sırasında keşif yapılamaz.");
@@ -27556,13 +28203,42 @@ function renderTransferPage() {
         side = side || "home";
         const skillSel = document.getElementById("youthPreferredSkill");
         const preferredSkill = skillSel ? skillSel.value : "";
+        const countrySel = document.getElementById("youthDrawCountry");
+        let drawCountry =
+          (countrySel && countrySel.value) ||
+          (typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "Türkiye");
+        // Yabancı şube kontrolü (offline)
+        const homeC =
+          typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "Türkiye";
+        if (drawCountry !== homeC) {
+          const homeN = youthHomeDrawsThisSeason || 0;
+          const need = youthMinHomeDraws || 6;
+          if (homeN < need) {
+            setYouthNote(
+              "Önce kendi ülkenizden " + need + " oyuncu çekin (" + homeN + "/" + need + ")",
+            );
+            return;
+          }
+          const has = (youthBranches || []).some(function (b) {
+            return b.country === drawCountry;
+          });
+          if (!has) {
+            setYouthNote("Bu ülkede şuben yok — önce İnşa et.");
+            return;
+          }
+        }
         // Her tıklamada 1 yeni oyuncu üret (havuzdan değil, skill tercihiyle)
         const player = generateYouthPlayer(
-          USER_COUNTRY,
+          drawCountry,
           null,
           preferredSkill || null,
         );
         youthAcademy.drawsThisSeason = (youthAcademy.drawsThisSeason || 0) + 1;
+        if (drawCountry === homeC) {
+          youthHomeDrawsThisSeason = (youthHomeDrawsThisSeason || 0) + 1;
+        }
+        youthAcademy.maxDrawsPerSeason =
+          (youthBaseDraws || 12) + ((youthBranches && youthBranches.length) || 0);
         youthAcademy.lastDrawWeekKey = weekKeyNow();
         promoteYouthPlayer(player, side);
         if (typeof pushNotification === "function")
@@ -27580,6 +28256,10 @@ function renderTransferPage() {
             youthAcademy.drawsThisSeason +
             "/" +
             youthAcademy.maxDrawsPerSeason +
+            " · yerel " +
+            (youthHomeDrawsThisSeason || 0) +
+            "/" +
+            (youthMinHomeDraws || 6) +
             ")",
         );
         updateYouthUI(side);
@@ -27804,6 +28484,12 @@ function renderTransferPage() {
       }
 
       function updateYouthAcademyUI() {
+        try {
+          if (typeof fillYouthCountrySelects === "function")
+            fillYouthCountrySelects();
+          if (typeof renderYouthBranchList === "function")
+            renderYouthBranchList();
+        } catch (eYB) {}
         const s = document.getElementById("youthScoutLevel");
         const a = document.getElementById("youthAcademyLevel");
         const sc = Math.max(
@@ -33583,22 +34269,26 @@ function renderTransferPage() {
         emptyZones.forEach((z, zi) => {
           const zone = document.createElement("div");
           zone.className = "formation-token";
+          // Seçim varken bölgeler oyuncu jetonlarının ÜSTÜNDE olmalı (yoksa 4-5
+          // oyuncudan sonra tıklanamıyor — jetonlar üstünü kapatıyor).
           zone.style.cssText =
             "left:" +
-            (z.x * 0.5 - 11) +
+            (z.x * 0.5 - 14) +
             "px;top:" +
-            (z.y * 0.5 - 11) +
-            "px;" +
-            "background:rgba(15,23,42,0.55);border:1.5px dashed rgba(148,163,184,0.7);color:#94a3b8;font-size:8px;font-weight:700;";
+            (z.y * 0.5 - 14) +
+            "px;width:28px;height:28px;border-radius:50%;" +
+            "background:rgba(15,23,42,0.72);border:2px dashed rgba(148,163,184,0.85);color:#94a3b8;font-size:8px;font-weight:700;" +
+            "display:flex;align-items:center;justify-content:center;";
           if (selectedFormationToken) {
             zone.style.borderColor = "#facc15";
             zone.style.color = "#facc15";
-            zone.style.boxShadow = "0 0 10px rgba(250,204,21,0.35)";
+            zone.style.boxShadow = "0 0 12px rgba(250,204,21,0.55)";
+            zone.style.background = "rgba(250,204,21,0.18)";
           }
           zone.innerText = z.pos;
           zone.title = "Hedef bölge: " + z.pos;
           zone.style.cursor = (matchStarted && !matchEnded) ? "default" : "pointer";
-          zone.style.zIndex = "15";
+          zone.style.zIndex = selectedFormationToken ? "120" : "15";
           zone.style.pointerEvents = "auto";
           zone.style.touchAction = "manipulation";
           zone.addEventListener("click", (e) => {
