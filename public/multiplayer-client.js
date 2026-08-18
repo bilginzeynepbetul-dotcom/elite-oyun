@@ -952,6 +952,34 @@
       }
     } catch (e) {}
   }
+
+  function persistWatchingIds(fixtureId, matchId) {
+    try {
+      if (fixtureId) {
+        window._emWatchingFixtureId = fixtureId;
+        if (typeof sessionStorage !== "undefined") {
+          sessionStorage.setItem("em_watching_fixture", String(fixtureId));
+        }
+      }
+      if (matchId) {
+        window._emWatchingMatchId = matchId;
+        if (typeof sessionStorage !== "undefined") {
+          sessionStorage.setItem("em_watching_match", String(matchId));
+        }
+      }
+    } catch (e) {}
+  }
+  function clearWatchingIds() {
+    try {
+      window._emWatchingFixtureId = null;
+      window._emWatchingMatchId = null;
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem("em_watching_fixture");
+        sessionStorage.removeItem("em_watching_match");
+      }
+    } catch (e) {}
+  }
+
   function rewatchLiveMatch(reason) {
     try {
       if (!socket || !socket.connected) return false;
@@ -1018,27 +1046,55 @@
       try {
         startEmSyncHeartbeat();
       } catch (e) {}
-      // Bağlantı yenilenince maç odasına zorla girme → ana menü
-      try {
-        window._emWatchingFixtureId = null;
-        window._emWatchingMatchId = null;
-      } catch (eW) {}
       setConnBanner(false);
+
+      // Kaldığı sayfadan devam et — maç odasını SİLME, yeniden izle
       try {
+        // sessionStorage'dan son izlenen maçı geri yükle (tam yenileme sonrası)
+        try {
+          if (!window._emWatchingFixtureId && typeof sessionStorage !== "undefined") {
+            const sf = sessionStorage.getItem("em_watching_fixture");
+            const sm = sessionStorage.getItem("em_watching_match");
+            if (sf) window._emWatchingFixtureId = sf;
+            if (sm) window._emWatchingMatchId = sm;
+          }
+        } catch (eSs) {}
+
         const onMatch =
           typeof currentPageId !== "undefined" && currentPageId === "page-match";
         const matchPage = document.getElementById("page-match");
         const matchActive =
           matchPage && matchPage.classList.contains("active");
-        if (onMatch || matchActive) {
-          if (typeof showMainMenu === "function") showMainMenu();
-          else if (typeof switchPage === "function") {
-            try {
-              document.querySelectorAll(".page.active").forEach(function (el) {
-                el.classList.remove("active");
-              });
-            } catch (eP) {}
+
+        if (onMatch || matchActive || window._emWatchingFixtureId || window._emWatchingMatchId) {
+          // Maç sayfasındaysa ana menüye ATMA — odaya yeniden katıl
+          const rejoined = typeof rewatchLiveMatch === "function"
+            ? rewatchLiveMatch("reconnect")
+            : false;
+          if (!rejoined && (onMatch || matchActive)) {
+            setConnBanner(true, "🔄 Bağlantı yenilendi — maç senkron bekleniyor…");
+            setTimeout(function () {
+              try {
+                if (socket && socket.connected) setConnBanner(false);
+              } catch (eT) {}
+            }, 3000);
           }
+        } else {
+          // Maçta değilse mevcut sayfada kal, sadece sunucu senkronu yenile
+          try {
+            if (typeof syncAllFromServer === "function") {
+              syncAllFromServer().catch(function () {});
+            }
+          } catch (eSync) {}
+          try {
+            const pid =
+              (typeof currentPageId !== "undefined" && currentPageId) ||
+              (typeof sessionStorage !== "undefined" &&
+                sessionStorage.getItem("em_last_page"));
+            if (pid && typeof ensureServerAuthorityOnPage === "function") {
+              ensureServerAuthorityOnPage(pid);
+            }
+          } catch (eAuth) {}
         }
       } catch (eMenu) {}
     });
@@ -1571,8 +1627,7 @@
         try {
           clearPersistedMatchSide(window._emWatchingFixtureId);
         } catch (eClr) {}
-        window._emWatchingFixtureId = null;
-        window._emWatchingMatchId = null;
+        clearWatchingIds();
         _emMySide = null;
         _emMyMatchSide = null;
         try {
@@ -1858,7 +1913,7 @@ function renderServerMatchState(state) {
         circulationInterval = null;
       }
     } catch (eI) {}
-    window._emWatchingFixtureId = fixtureId;
+    persistWatchingIds(fixtureId, null);
     window._emServerMatchActive = true;
     // Önceki maçtan kalan matchId'yi temizle (lig/kupa izleme)
     try {
@@ -1923,7 +1978,7 @@ function renderServerMatchState(state) {
     } else if (socket) {
       socket.emit("fixture:watch", { fixtureId: fixtureId });
     }
-    window._emWatchingFixtureId = fixtureId;
+    persistWatchingIds(fixtureId, null);
 
     // Saat gelene kadar yeniden abone + geri sayım (1 sn)
     if (window._emWatchPoll) clearInterval(window._emWatchPoll);

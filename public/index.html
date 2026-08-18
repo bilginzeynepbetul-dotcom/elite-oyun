@@ -1181,15 +1181,21 @@
       /* Ayarlar: taşmayı önle, temaya uyumlu okunaklı kartlar (agresif * seçici YOK) */
       #page-settings {
         overflow-x: hidden !important;
+        overflow-y: visible !important;
         max-width: 100% !important;
+        width: 100% !important;
         box-sizing: border-box !important;
-        padding-left: 10px !important;
-        padding-right: 10px !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
       }
       #page-settings .report-container {
         max-width: 100% !important;
+        width: min(624px, 100%) !important;
         overflow-x: hidden !important;
+        overflow-y: visible !important;
         box-sizing: border-box !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
       }
       #page-settings .settings-card {
         padding: 14px;
@@ -1202,6 +1208,35 @@
         box-sizing: border-box;
         max-width: 100%;
         width: 100%;
+        min-width: 0;
+      }
+      #page-settings .settings-card > div {
+        min-width: 0;
+        flex: 1 1 auto;
+        max-width: 100%;
+      }
+      #page-settings .settings-card button,
+      #page-settings .settings-card select {
+        flex: 0 1 auto;
+        max-width: 100%;
+      }
+      #page-settings [style*="display:flex"],
+      #page-settings [style*="display: flex"] {
+        flex-wrap: wrap !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+      }
+      #page-settings input,
+      #page-settings select,
+      #page-settings textarea,
+      #page-settings button {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      #page-settings code {
+        word-break: break-all;
+        white-space: pre-wrap;
       }
       body.theme-dark #page-settings .settings-card {
         background: #1e293b;
@@ -9879,7 +9914,13 @@
           if (typeof refreshManagerProfile === "function") refreshManagerProfile();
         } catch (e) {}
         loginOverlay.classList.add("hidden");
-        showMainMenu();
+        // Bağlantı/oturum yenilenince kaldığı sayfadan devam
+        try {
+          if (typeof restoreLastPage === "function") restoreLastPage(true);
+          else showMainMenu();
+        } catch (eMenu) {
+          try { showMainMenu(); } catch (e2) {}
+        }
         try {
           if (typeof ensureEliteTrial === "function") ensureEliteTrial();
         } catch (e) {}
@@ -9963,6 +10004,38 @@
         });
       })();
 
+
+      function restoreLastPage(fallbackToMenu) {
+        try {
+          var pid = null;
+          try {
+            pid = sessionStorage.getItem("em_last_page") || localStorage.getItem("em_last_page");
+          } catch (eR) {}
+          // Güvenli sayfalar: login/overlay değil, mevcut DOM id
+          var blocked = {
+            "page-match": true // maç odası socket ile ayrıca restore edilir
+          };
+          if (pid && !blocked[pid] && document.getElementById(pid)) {
+            if (typeof switchPage === "function") {
+              switchPage(pid);
+              try {
+                if (typeof ensureServerAuthorityOnPage === "function") {
+                  ensureServerAuthorityOnPage(pid);
+                }
+              } catch (eA) {}
+              return true;
+            }
+          }
+        } catch (e) {}
+        if (fallbackToMenu !== false) {
+          try {
+            if (typeof showMainMenu === "function") showMainMenu();
+          } catch (e2) {}
+        }
+        return false;
+      }
+      window.restoreLastPage = restoreLastPage;
+
       function switchPage(pageId) {
         // Menü açıksa kapat (inline display kalmasın)
         try {
@@ -9976,6 +10049,15 @@
           if (pageHistory.length > 15) pageHistory.shift();
         }
         currentPageId = pageId;
+        // Bağlantı yenilenince / sayfa yenilenince kaldığı yerden devam
+        try {
+          if (pageId && typeof sessionStorage !== "undefined") {
+            sessionStorage.setItem("em_last_page", pageId);
+          }
+          if (pageId && typeof localStorage !== "undefined") {
+            localStorage.setItem("em_last_page", pageId);
+          }
+        } catch (ePersist) {}
         // Tüm aktif sayfaları kapat, sadece hedefi aç
         try {
           document.querySelectorAll(".page.active").forEach(function (el) {
@@ -13346,8 +13428,12 @@
         const elite =
           typeof isEliteMember === "function" ? isEliteMember() : false;
         try {
-          window._emWatchingFixtureId = r.fixtureId;
-          if (r.matchId) window._emWatchingMatchId = r.matchId;
+          if (typeof persistWatchingIds === "function") {
+            persistWatchingIds(r.fixtureId, r.matchId || null);
+          } else {
+            window._emWatchingFixtureId = r.fixtureId;
+            if (r.matchId) window._emWatchingMatchId = r.matchId;
+          }
           // Side cache (bot maçında home varsayımı istemci tarafında yok; sunucu your-side yollar)
           try {
             if (typeof restoreMatchSide === "function") restoreMatchSide(r.fixtureId);
