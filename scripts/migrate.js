@@ -50,6 +50,8 @@ const files = [
   "035_messages_is_read.sql",
   "036_youth_branches.sql",
   "037_youth_home_draws.sql",
+  "038_elite_cup.sql",
+  "039_country_coefficients.sql",
 ];
 
 async function ensureMigrationsTable() {
