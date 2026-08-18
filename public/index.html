@@ -1178,7 +1178,7 @@
         touch-action: pan-y;
       }
 
-      /* Ayarlar: taşma yok, açık zemin, okunaklı yazı */
+      /* Ayarlar: taşmayı önle, temaya uyumlu okunaklı kartlar (agresif * seçici YOK) */
       #page-settings {
         overflow-x: hidden !important;
         max-width: 100% !important;
@@ -1191,43 +1191,81 @@
         overflow-x: hidden !important;
         box-sizing: border-box !important;
       }
-      #page-settings .settings-card,
-      #page-settings [style*="background:#0f172a"],
-      #page-settings [style*="background: #0f172a"] {
-        background: #f1f5f9 !important;
-        border: 1px solid #cbd5e1 !important;
-        color: #0f172a !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
-        flex-wrap: wrap !important;
+      #page-settings .settings-card {
+        padding: 14px;
+        border-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        box-sizing: border-box;
+        max-width: 100%;
+        width: 100%;
       }
-      #page-settings [style*="font-weight:700"],
-      #page-settings [style*="font-weight:800"],
-      #page-settings [style*="color:#e2e8f0"],
-      #page-settings [style*="color: #e2e8f0"] {
-        color: #0f172a !important;
+      body.theme-dark #page-settings .settings-card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #e2e8f0;
       }
-      #page-settings [style*="color:#94a3b8"],
-      #page-settings [style*="color: #94a3b8"],
-      #page-settings .formation-hint {
-        color: #475569 !important;
+      body.theme-light #page-settings .settings-card {
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #0f172a;
       }
-      #page-settings .tactics-title {
-        color: #0f172a !important;
+      #page-settings .settings-card .settings-card-title {
+        font-weight: 700;
+        font-size: 14px;
       }
+      body.theme-dark #page-settings .settings-card .settings-card-title { color: #f8fafc; }
+      body.theme-light #page-settings .settings-card .settings-card-title { color: #0f172a; }
+      #page-settings .settings-card .settings-card-sub {
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      body.theme-dark #page-settings .settings-card .settings-card-sub { color: #94a3b8; }
+      body.theme-light #page-settings .settings-card .settings-card-sub { color: #475569; }
       #page-settings select,
-      #page-settings input,
+      #page-settings input[type="text"],
+      #page-settings input[type="password"],
+      #page-settings input[type="email"],
       #page-settings textarea {
         max-width: 100% !important;
         box-sizing: border-box !important;
+      }
+      body.theme-dark #page-settings select,
+      body.theme-dark #page-settings input[type="text"],
+      body.theme-dark #page-settings input[type="password"],
+      body.theme-dark #page-settings input[type="email"],
+      body.theme-dark #page-settings textarea {
+        background: #0f172a !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #334155 !important;
+      }
+      body.theme-light #page-settings select,
+      body.theme-light #page-settings input[type="text"],
+      body.theme-light #page-settings input[type="password"],
+      body.theme-light #page-settings input[type="email"],
+      body.theme-light #page-settings textarea {
         background: #ffffff !important;
         color: #0f172a !important;
         border: 1px solid #94a3b8 !important;
       }
-      #page-settings .sub-btn {
-        flex-shrink: 0;
+      body.theme-dark #page-settings .tactics-title { color: #f8fafc !important; }
+      body.theme-light #page-settings .tactics-title { color: #0f172a !important; }
+      body.theme-dark #page-settings .formation-hint { color: #94a3b8 !important; }
+      body.theme-light #page-settings .formation-hint { color: #475569 !important; }
+      /* Admin panelleri kendi stillerini korur — zorla açık renk yok */
+      /* Admin panelleri: koyu temada açık yazı (önceki forced #0f172a düzeltmesi) */
+      body.theme-dark #page-settings [style*="color:#0f172a"],
+      body.theme-dark #page-settings [style*="color: #0f172a"] {
+        color: #e2e8f0 !important;
       }
+      body.theme-dark #page-settings code[style*="color:#38bdf8"] {
+        color: #38bdf8 !important;
+      }
+
+
       /* Taktik tıklama: saha ve listeler her zaman tıklanabilir */
       #page-tactics,
       #page-tactics .report-container,
@@ -4320,6 +4358,13 @@
               <div class="subtitle">Forum · Destek · Yardım</div>
             </div>
           </div>
+          <div class="menu-item" onclick="goToPolls()">
+            <div class="icon-badge">📊</div>
+            <div class="text-wrap">
+              <div class="title">Anket</div>
+              <div class="subtitle">Oy ver · Görüş bildir</div>
+            </div>
+          </div>
           <div class="menu-item" onclick="logoutUser()">
             <div class="icon-badge">🚪</div>
             <div class="text-wrap">
@@ -4408,26 +4453,26 @@
         <div class="tactics-title">⚙️ Ayarlar</div>
         <div class="formation-hint">Ses, bildirim ve görünüm tercihleri</div>
         <div style="display:grid;gap:12px;margin-top:12px;">
-          <div style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+          <div class="settings-card">
             <div>
-              <div style="font-weight:700;color:#0f172a;">Ses efektleri</div>
-              <div style="font-size:12px;color:#94a3b8;">Maç ve menü sesleri</div>
+              <div class="settings-card-title">Ses efektleri</div>
+              <div class="settings-card-sub">Maç ve menü sesleri</div>
             </div>
             <button type="button" class="sub-btn" id="settingsSoundBtn" style="width:auto;padding:8px 14px;" onclick="toggleSoundFromSettings()">Açık</button>
           </div>
-          <div style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+          <div class="settings-card">
             <div>
-              <div style="font-weight:700;color:#0f172a;">Bildirimler</div>
-              <div style="font-size:12px;color:#94a3b8;">Maç ve transfer uyarıları</div>
+              <div class="settings-card-title">Bildirimler</div>
+              <div class="settings-card-sub">Maç ve transfer uyarıları</div>
             </div>
             <button type="button" class="sub-btn" id="settingsNotifBtn" style="width:auto;padding:8px 14px;" onclick="toggleNotifFromSettings()">Açık</button>
           </div>
-          <div style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <div class="settings-card">
             <div>
-              <div style="font-weight:700;color:#0f172a;">Dil / Language</div>
-              <div style="font-size:12px;color:#94a3b8;">Arayüz dili</div>
+              <div class="settings-card-title">Dil / Language</div>
+              <div class="settings-card-sub">Arayüz dili</div>
             </div>
-            <select id="settingsLangSelect" onchange="setGameLanguage(this.value)" style="padding:8px 12px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;min-width:130px;">
+            <select id="settingsLangSelect" onchange="setGameLanguage(this.value)" style="padding:8px 12px;border-radius:8px;background:#ffffff;color:#0f172a;border:1px solid #94a3b8;font-size:13px;min-width:120px;max-width:100%;">
               <option value="tr">Türkçe</option>
               <option value="en">English</option>
               <option value="de">Deutsch</option>
@@ -4443,24 +4488,24 @@
               <option value="zh">中文</option>
             </select>
           </div>
-          <div style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+          <div class="settings-card">
             <div>
-              <div style="font-weight:700;color:#0f172a;">Tema</div>
-              <div style="font-size:12px;color:#94a3b8;">Açık / koyu arayüz</div>
+              <div class="settings-card-title">Tema</div>
+              <div class="settings-card-sub">Açık / koyu arayüz</div>
             </div>
             <button type="button" class="sub-btn" id="settingsThemeBtn" style="width:auto;padding:8px 14px;" onclick="toggleTheme()">Koyu</button>
           </div>
           
           
           
-          <div id="emailVerifyPanel" style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;">
+          <div id="emailVerifyPanel" class="settings-card" style="display:block;">
             <div style="font-weight:700;color:#0f172a;">E-posta doğrulama</div>
             <div id="emailVerifyStatus" style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
               Durum kontrol ediliyor…
             </div>
             <button type="button" class="sub-btn" style="width:100%;background:#1e3a5f;font-weight:700;" onclick="resendEmailVerification()">✉️ Doğrulama bağlantısı gönder</button>
           </div>
-<div id="changePasswordPanel" style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;">
+<div id="changePasswordPanel" class="settings-card" style="display:block;">
             <div style="font-weight:700;color:#0f172a;">Şifre değiştir</div>
             <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
               Yeni şifre en az 8 karakter. Değişiklikten sonra tüm cihazlarda tekrar giriş gerekir.
@@ -4470,7 +4515,7 @@
             <input id="chgPwNew2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
             <button type="button" class="sub-btn" style="width:100%;background:#1e3a5f;font-weight:700;" onclick="changeOwnPassword()">🔐 Şifreyi güncelle</button>
           </div>
-          <div id="logoutAllPanel" style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;">
+          <div id="logoutAllPanel" class="settings-card" style="display:block;">
             <div style="font-weight:700;color:#0f172a;">Oturumlar</div>
             <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
               Tüm cihazlardaki oturumları sonlandır. Bu cihaz dahil her yerde tekrar giriş gerekir.
@@ -4478,7 +4523,7 @@
             <div id="lastLoginInfo" style="font-size:12px;color:#64748b;margin-bottom:8px;min-height:14px;"></div>
             <button type="button" class="sub-btn" style="width:100%;background:#4c1d95;font-weight:700;" onclick="logoutAllSessions()">🚪 Tüm cihazlardan çıkış</button>
           </div>
-<div id="legalInfoPanel" style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;">
+<div id="legalInfoPanel" class="settings-card" style="display:block;">
             <div style="font-weight:700;color:#0f172a;">Gizlilik ve yasal</div>
             <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
               KVKK aydınlatma metni, kullanım koşulları ve çerez politikası.
@@ -4489,7 +4534,7 @@
               <a href="/cookies.html" target="_blank" rel="noopener" class="sub-btn" style="width:auto;padding:8px 12px;text-decoration:none;display:inline-block;">Çerezler</a>
             </div>
           </div>
-<div id="selfExportDataPanel" style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;">
+<div id="selfExportDataPanel" class="settings-card" style="display:block;">
             <div style="font-weight:700;color:#0f172a;">Verilerimi indir</div>
             <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
               KVKK kapsamında hesabına ait kişisel verilerin JSON özetini indirebilirsin
@@ -4608,8 +4653,8 @@
             </div>
             <div style="margin-top:16px;padding-top:12px;border-top:1px solid #334155;">
               <div class="youth-section-title">📋 Anket düzenle</div>
-              <input id="adminPollQuestion" type="text" placeholder="Anket sorusu" maxlength="200" style="width:100%;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;margin-bottom:8px;box-sizing:border-box;" />
-              <input id="adminPollOptions" type="text" placeholder="Seçenekler (virgülle): Evet, Hayır, Kararsız" style="width:100%;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;margin-bottom:8px;box-sizing:border-box;" />
+              <input id="adminPollQuestion" type="text" placeholder="Anket sorusu" maxlength="200" style="width:100%;padding:8px 10px;border-radius:8px;background:#ffffff;color:#0f172a;border:1px solid #94a3b8;font-size:13px;margin-bottom:8px;box-sizing:border-box;" />
+              <input id="adminPollOptions" type="text" placeholder="Seçenekler (virgülle): Evet, Hayır, Kararsız" style="width:100%;padding:8px 10px;border-radius:8px;background:#ffffff;color:#0f172a;border:1px solid #94a3b8;font-size:13px;margin-bottom:8px;box-sizing:border-box;" />
               <button type="button" class="sub-btn" style="width:auto;padding:8px 14px;background:linear-gradient(90deg,#6366f1,#38bdf8);font-weight:700;" onclick="adminCreatePoll()">Anket yayınla</button>
               <div id="adminPollNote" style="font-size:12px;color:#94a3b8;margin-top:8px;"></div>
             </div>
@@ -4767,7 +4812,7 @@
     <div id="page-friendly-hub" class="page">
       <div class="report-container">
         <div class="tactics-title">🤝 Dostluk Maçları</div>
-        <div class="formation-hint" id="friendlyEligibilityHint">Kupada elenen veya kupaya hiç girmemiş kulüpler dostluk maçı ayarlayabilir.</div>
+        <div class="formation-hint" id="friendlyEligibilityHint">Lig kupası ile aynı slot: Perşembe 13:00 TR · Kupadan elenenler (tüm ligler) · Sezon öncesi 2 hafta haftada 2 maç</div>
         <div style="display:flex;gap:8px;margin:12px 0;">
           <button type="button" class="sub-btn" style="width:auto;padding:8px 14px;font-size:12px;" onclick="refreshFriendlyHub()">🔄 Yenile</button>
         </div>
@@ -5665,7 +5710,22 @@
             "
             onclick="showCompSub('cl','torba')"
           >
-            🌍 Ülke Torbası
+            📊 Ülke Puanı
+          </button>
+          <button
+            class="sub-btn comp-subtab"
+            data-sub="elite"
+            id="eliteCupTabBtn"
+            style="
+              width: auto;
+              padding: 6px 12px;
+              font-size: 11px;
+              background: #334155;
+              display: none;
+            "
+            onclick="showCompSub('cl','elite')"
+          >
+            ⭐ Elite Kupa
           </button>
         </div>
         <div id="fixturesHubList"></div>
@@ -7141,7 +7201,10 @@
           <button type="button" class="sub-btn" id="teamModalFriendlyBtn" style="width:100%;padding:10px;font-weight:800;background:linear-gradient(90deg,#059669,#10b981);" onclick="offerFriendlyVsModalTeam()">🤝 Dostluk Maçı Teklif Et</button>
         </div>
         <div class="team-modal-tabs" id="teamModalTabs">
-          <button class="team-modal-tab active" data-teamtab="team-squad">
+          <button class="team-modal-tab active" data-teamtab="team-overview">
+            📋 Profil
+          </button>
+          <button class="team-modal-tab" data-teamtab="team-squad">
             👥 Kadro
           </button>
           <button class="team-modal-tab" data-teamtab="team-fixture">
@@ -7151,7 +7214,10 @@
             🏆 Kupalar
           </button>
         </div>
-        <div id="team-squad" class="team-modal-tab-content active">
+        <div id="team-overview" class="team-modal-tab-content active">
+          <div id="teamOverviewBody"></div>
+        </div>
+        <div id="team-squad" class="team-modal-tab-content">
           <div id="teamSquadList"></div>
         </div>
         <div id="team-fixture" class="team-modal-tab-content">
@@ -10443,21 +10509,25 @@
             country +
             catLabel +
             "</div>" +
-            '<div style="text-align:center;margin-bottom:12px;">' +
-            '<button type="button" class="sub-btn" style="width:auto;padding:6px 12px;font-size:11px;margin:2px;background:' +
+            '<div style="text-align:center;margin-bottom:8px;font-size:11px;color:#64748b;">A Milli ve U21 ayrı kadro, stadyum ve maç geçmişine sahiptir</div>' +
+            '<div style="text-align:center;margin-bottom:12px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">' +
+            '<button type="button" class="sub-btn" style="width:auto;padding:8px 16px;font-size:12px;font-weight:800;margin:2px;background:' +
             (category === "A" ? "linear-gradient(90deg,#38bdf8,#6366f1)" : "#e2e8f0") +
             ';color:' +
             (category === "A" ? "#fff" : "#0f172a") +
             ';" onclick="openCountryProfileLocal(' +
             JSON.stringify(country) +
-            ",'A')\">A Milli</button>" +
-            '<button type="button" class="sub-btn" style="width:auto;padding:6px 12px;font-size:11px;margin:2px;background:' +
+            ",'A')\">🏳️ A Milli</button>" +
+            '<button type="button" class="sub-btn" style="width:auto;padding:8px 16px;font-size:12px;font-weight:800;margin:2px;background:' +
             (category === "U21" ? "linear-gradient(90deg,#38bdf8,#6366f1)" : "#e2e8f0") +
             ';color:' +
             (category === "U21" ? "#fff" : "#0f172a") +
             ';" onclick="openCountryProfileLocal(' +
             JSON.stringify(country) +
-            ",'U21')\">U21</button>" +
+            ",'U21')\">🌱 U21</button>" +
+            "</div>" +
+            '<div style="text-align:center;font-size:12px;font-weight:700;color:#0369a1;margin-bottom:10px;">Şu an: ' +
+            (category === "U21" ? "U21 Milli Takım" : "A Milli Takım") +
             "</div>" +
             '<div class="modal-stats" style="background:transparent;">' +
             '<div class="modal-stat" style="background:#f1f5f9;border:1px solid #e2e8f0;"><span class="label">Milli stadyum</span><span class="value">' +
@@ -11452,13 +11522,26 @@
         if (!info || !_natTacState) return;
         const team = _natTacState.team;
         const suffix = team.category === "U21" ? " U21" : "";
-        const managerLine = team.isMeManager
+        const myApp = _natTacState.myApplication;
+        let managerLine = team.isMeManager
           ? '<span style="color:#4ade80;">Teknik direktörsün</span>'
           : team.isManagerVacant
             ? '<span style="color:#facc15;">Koltuk boş</span>'
             : '<span style="color:#94a3b8;">TD: ' +
               (team.managerClubName || "Başka yönetici") +
               "</span>";
+        let applyBtns = "";
+        if (team.isMeManager) {
+          applyBtns =
+            '<button class="sub-btn" style="width:auto;padding:5px 10px;font-size:11px;background:#7f1d1d;" onclick="resignNationalTd()">İstifa et</button>';
+        } else if (myApp && (myApp.status === "pending" || myApp.id)) {
+          applyBtns =
+            '<span style="color:#facc15;font-size:11px;margin-right:6px;">Başvurun beklemede</span>' +
+            '<button class="sub-btn" style="width:auto;padding:5px 10px;font-size:11px;background:#334155;" onclick="withdrawNationalTd()">Başvuruyu geri çek</button>';
+        } else {
+          applyBtns =
+            '<button class="sub-btn" style="width:auto;padding:5px 12px;font-size:11px;font-weight:700;background:linear-gradient(90deg,#059669,#10b981);" onclick="applyNationalTd()">📋 TD Başvurusu</button>';
+        }
         info.innerHTML =
           '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
           '<div style="display:flex;gap:6px;">' +
@@ -11478,13 +11561,130 @@
           '<div style="font-size:12px;">' +
           managerLine +
           "</div>" +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
+          applyBtns +
+          "</div>" +
           "</div>" +
           '<div style="font-size:11px;color:#94a3b8;margin-top:4px;">Kadro: ' +
           _natTacState.squadSize +
           "/" +
           _natTacState.maxSquad +
-          "</div>";
+          " · Herkes TD başvurusu yapabilir (atama yönetici onaylıdır).</div>";
       }
+
+      window.applyNationalTd = async function () {
+        try {
+          const cat = _natTacCat || "A";
+          const msg = prompt(
+            "TD başvuru notu (isteğe bağlı):",
+            "Ülkem için milli takımı yönetmek istiyorum.",
+          );
+          if (msg === null) return;
+          const hasToken = !!(localStorage.getItem("em_jwt_token"));
+          if (!hasToken || (_natTacState && _natTacState.offline)) {
+            if (_natTacState) {
+              _natTacState.myApplication = {
+                id: "local_" + Date.now(),
+                status: "pending",
+              };
+            }
+            alert(
+              "Başvuru kaydedildi (yerel). Sunucuya bağlıyken yönetici onayına gider.",
+            );
+            try {
+              renderNatInfoPanel();
+            } catch (e) {}
+            return;
+          }
+          await natApi(
+            "/apply?category=" + encodeURIComponent(cat),
+            "POST",
+            { message: (msg || "").slice(0, 300) },
+          );
+          alert("TD başvurun gönderildi. Yönetici onayından sonra koltuğu alırsın.");
+          try {
+            await loadNationalTacticsState(true);
+            renderNatInfoPanel();
+          } catch (e2) {}
+        } catch (e) {
+          alert(
+            "Başvuru gönderilemedi: " +
+              (typeof e === "string" ? e : (e && e.message) || "hata"),
+          );
+        }
+      };
+
+      window.withdrawNationalTd = async function () {
+        try {
+          const cat = _natTacCat || "A";
+          const hasToken = !!(localStorage.getItem("em_jwt_token"));
+          if (!hasToken || (_natTacState && _natTacState.offline)) {
+            if (_natTacState) _natTacState.myApplication = null;
+            alert("Başvuru geri çekildi.");
+            try {
+              renderNatInfoPanel();
+            } catch (e) {}
+            return;
+          }
+          await natApi(
+            "/apply/withdraw?category=" + encodeURIComponent(cat),
+            "POST",
+            {},
+          );
+          alert("Başvuru geri çekildi.");
+          try {
+            await loadNationalTacticsState(true);
+            renderNatInfoPanel();
+          } catch (e2) {}
+        } catch (e) {
+          alert(
+            "İşlem başarısız: " +
+              (typeof e === "string" ? e : (e && e.message) || "hata"),
+          );
+        }
+      };
+
+      window.resignNationalTd = async function () {
+        if (
+          !confirm(
+            "Milli takım teknik direktörlüğünden istifa etmek istiyor musun?",
+          )
+        )
+          return;
+        try {
+          const cat = _natTacCat || "A";
+          const hasToken = !!(localStorage.getItem("em_jwt_token"));
+          if (!hasToken || (_natTacState && _natTacState.offline)) {
+            if (_natTacState && _natTacState.team) {
+              _natTacState.team.isMeManager = false;
+              _natTacState.team.isManagerVacant = true;
+              _natTacState.team.managerClubName = null;
+            }
+            alert("İstifa edildi (yerel).");
+            try {
+              renderNatInfoPanel();
+            } catch (e) {}
+            return;
+          }
+          await natApi(
+            "/resign?category=" + encodeURIComponent(cat),
+            "POST",
+            {},
+          );
+          alert("İstifa edildi.");
+          try {
+            await loadNationalTacticsState(true);
+            renderNatInfoPanel();
+            if (typeof syncNatFormationTeam === "function")
+              syncNatFormationTeam();
+          } catch (e2) {}
+        } catch (e) {
+          alert(
+            "İstifa başarısız: " +
+              (typeof e === "string" ? e : (e && e.message) || "hata"),
+          );
+        }
+      };
 
       function natCleanPlayerName(name) {
         return String(name || "Oyuncu")
@@ -12728,7 +12928,7 @@
         } catch (e) {}
       }
 
-      window.submitContactFromCommunity = function () {
+      window.submitContactFromCommunity = async function () {
         const subEl = document.getElementById("contactSubjectCommunity");
         const msgEl = document.getElementById("contactMessageCommunity");
         const note = document.getElementById("contactNoteCommunity");
@@ -12740,6 +12940,39 @@
               '<span style="color:#f87171;">En az 5 karakter yaz.</span>';
           return;
         }
+        if (note) note.innerHTML = '<span style="color:#94a3b8;">Gönderiliyor…</span>';
+        // Yöneticinin mesaj kutusuna gerçekten ulaşsın diye sunucuya gönder
+        // (localStorage'a yazmak yöneticiye ulaştırmaz — sadece gönderenin
+        // kendi cihazında kalır).
+        try {
+          if (typeof apiFetch === "function") {
+            await apiFetch("/api/contact", {
+              method: "POST",
+              body: JSON.stringify({ subject: sub, text: msg }),
+            });
+            if (msgEl) msgEl.value = "";
+            if (note)
+              note.innerHTML =
+                '<span style="color:#4ade80;">Mesajın yöneticiye iletildi.</span>';
+            return;
+          }
+        } catch (e) {
+          const isConnectivityError =
+            e instanceof TypeError ||
+            /sunucuya ulaşılamadı|fetch|network|failed to fetch/i.test(
+              (e && e.message) || "",
+            );
+          if (!isConnectivityError) {
+            if (note)
+              note.innerHTML =
+                '<span style="color:#f87171;">' +
+                ((e && e.message) || "Mesaj gönderilemedi") +
+                "</span>";
+            return;
+          }
+          // Bağlantı yoksa yerelde sakla (aşağı düşer), diğer hatalarda burada dur.
+        }
+        // Sunucuya ulaşılamadı: yerelde sakla, ama bunu açıkça belirt.
         const entry = {
           id: "c_" + Date.now(),
           from: typeof managerName !== "undefined" ? managerName || "Misafir" : "Misafir",
@@ -12758,7 +12991,7 @@
         if (msgEl) msgEl.value = "";
         if (note)
           note.innerHTML =
-            '<span style="color:#4ade80;">Mesajın alındı. Yönetici en kısa sürede inceleyecek.</span>';
+            '<span style="color:#fbbf24;">Sunucuya ulaşılamadı — mesaj yalnızca bu cihazda saklandı.</span>';
         try {
           if (typeof renderContactAdminInbox === "function")
             renderContactAdminInbox();
@@ -12806,11 +13039,152 @@
         }
       };
 
-      window.saveNationalLineup = async function () {
-        if (typeof window.saveNationalLineupClick === "function") {
-          return window.saveNationalLineupClick();
+      window.saveNationalLineupClick = async function () {
+        try {
+          if (!_natTacState) {
+            alert("Önce milli takım kadrosunu yükle.");
+            return;
+          }
+          // Saha / draft senkron
+          try {
+            if (typeof pullNatDraftFromFormationTeam === "function")
+              pullNatDraftFromFormationTeam();
+          } catch (ePull) {}
+          const draft =
+            _natTacDraft ||
+            (_natTacDraft = typeof natFreshDraft === "function"
+              ? natFreshDraft(_natTacState)
+              : { starters: new Set(), posMap: {}, formation: "4-4-2", passStyle: "kisa", gameStyle: "normal" });
+
+          // Shared UI selects → draft (milli modda kulübe yazılmasın)
+          try {
+            if (window._tacticsMode === "A" || window._tacticsMode === "U21") {
+              const passEl = document.getElementById("passStyleSelect");
+              const gameEl = document.getElementById("gameStyleSelect");
+              if (passEl && passEl.value) draft.passStyle = passEl.value;
+              if (gameEl && gameEl.value) draft.gameStyle = gameEl.value;
+              if (teamConfig && teamConfig._natTeam) {
+                teamConfig._natTeam.passStyle = draft.passStyle;
+                teamConfig._natTeam.gameStyle = draft.gameStyle;
+                teamConfig._natTeam.formation =
+                  draft.formation || teamConfig._natTeam.formation;
+                teamConfig._natTeam.currentFormation =
+                  teamConfig._natTeam.formation;
+              }
+            }
+          } catch (eUi) {}
+
+          const starters = Array.from(draft.starters || []).filter(Boolean);
+          if (starters.length === 0) {
+            alert("İlk 11 boş. Sahaya oyuncu yerleştir veya kutuları işaretle.");
+            return;
+          }
+          if (starters.length > 11) {
+            alert("İlk 11 en fazla 11 oyuncu olmalı (şu an: " + starters.length + ").");
+            return;
+          }
+
+          const assignments = starters.map(function (pid) {
+            const pos =
+              (draft.posMap && draft.posMap[pid]) ||
+              (draft.coordsMap && draft.coordsMap[pid] && draft.coordsMap[pid].pos) ||
+              null;
+            return { playerId: pid, pos: pos };
+          });
+
+          const cat = _natTacCat || "A";
+          const hasToken = !!(localStorage.getItem("em_jwt_token"));
+          const isOffline = !hasToken || (_natTacState && _natTacState.offline);
+
+          if (isOffline) {
+            // Yerel kayıt
+            const squad = _natTacState.squad || [];
+            const starterSet = new Set(starters.map(String));
+            squad.forEach(function (p) {
+              if (!p) return;
+              const id = String(p.playerId || p.id || "");
+              p.isStarter = starterSet.has(id);
+              if (draft.posMap && draft.posMap[p.playerId])
+                p.pos = draft.posMap[p.playerId];
+            });
+            if (_natTacState.team) {
+              _natTacState.team.formation = draft.formation || "4-4-2";
+              _natTacState.team.passStyle = draft.passStyle || "kisa";
+              _natTacState.team.gameStyle = draft.gameStyle || "normal";
+            }
+            try {
+              if (typeof persistNatSquadLocal === "function") persistNatSquadLocal();
+              if (typeof persistNatDraftLocal === "function") persistNatDraftLocal();
+            } catch (eLoc) {}
+            try {
+              if (typeof syncNatFormationTeam === "function") syncNatFormationTeam();
+            } catch (eSync) {}
+            const note = document.getElementById("clubTacticsSaveNote");
+            if (note) {
+              note.style.color = "#4ade80";
+              note.innerText =
+                "✓ Milli ilk 11 kaydedildi (yerel) · " +
+                starters.length +
+                " oyuncu · " +
+                (draft.formation || "");
+            }
+            try {
+              if (typeof pushNotification === "function")
+                pushNotification("💾", "Milli takım ilk 11 kaydedildi", "Milli");
+            } catch (eN) {}
+            return;
+          }
+
+          // Sunucu
+          await natApi(
+            "/squad/lineup?category=" + encodeURIComponent(cat),
+            "POST",
+            {
+              starterPlayerIds: starters,
+              formation: draft.formation || "4-4-2",
+              assignments: assignments,
+              passStyle: draft.passStyle || "kisa",
+              gameStyle: draft.gameStyle || "normal",
+            },
+          );
+          if (_natTacState) _natTacState.offline = false;
+          try {
+            if (typeof persistNatDraftLocal === "function") persistNatDraftLocal();
+          } catch (eP) {}
+          try {
+            await loadNationalTacticsState(true);
+            if (typeof syncNatFormationTeam === "function") syncNatFormationTeam();
+            if (typeof renderFormationPitch === "function")
+              renderFormationPitch("home");
+            if (typeof renderFormationBench === "function")
+              renderFormationBench("home");
+          } catch (eReload) {}
+          const note2 = document.getElementById("clubTacticsSaveNote");
+          if (note2) {
+            note2.style.color = "#4ade80";
+            note2.innerText =
+              "✓ Milli ilk 11 kaydedildi · " +
+              starters.length +
+              " oyuncu · " +
+              (draft.formation || "");
+          }
+          try {
+            if (typeof pushNotification === "function")
+              pushNotification("💾", "Milli takım ilk 11 sunucuya kaydedildi", "Milli");
+          } catch (eN2) {}
+        } catch (e) {
+          const msg =
+            typeof e === "string"
+              ? e
+              : e && e.message
+                ? e.message
+                : "Kayıt başarısız";
+          alert("İlk 11 kaydedilemedi: " + msg);
         }
-        alert("Milli takım kaydı için sunucu bağlantısı gerekli.");
+      };
+
+      window.saveNationalLineup = async function () {
+        return window.saveNationalLineupClick();
       };
 
       window.submitContactMessage = function () {
@@ -13017,14 +13391,20 @@
           try {
             if (typeof scheduleRender === "function") scheduleRender();
           } catch (e) {}
+          // Yerel startMatch YOK — çift motor desync önlemi
           try {
-            if (
-              typeof startMatch === "function" &&
-              typeof matchStarted !== "undefined" &&
-              !matchStarted
-            )
-              startMatch();
-          } catch (e) {}
+            matchStarted = true;
+            matchEnded = false;
+            matchPaused = false;
+            window._emServerMatchActive = true;
+            matchWallStartMs = 0;
+            if (typeof matchInterval !== "undefined" && matchInterval) {
+              clearInterval(matchInterval);
+              matchInterval = null;
+            }
+            if (r.home) window._emLiveHomeName = r.home;
+            if (r.away) window._emLiveAwayName = r.away;
+          } catch (eSm) {}
           if (typeof addLog === "function") {
             addLog(
               "⚡ Anlık maç: " +
@@ -13179,11 +13559,17 @@
             const p = await apiFetch("/api/instant/pending");
             const pending = (p && p.pending) || [];
             if (pend) {
+              // Sadece bana gelen teklifler (toUserId = ben)
+              const myId =
+                (window._emUser && window._emUser.id) ||
+                (window.EM_USER && window.EM_USER.id) ||
+                null;
               const incoming = pending.filter(function (c) {
-                return (
-                  c.status === "pending" &&
-                  String(c.toUserId) !== String(c.fromUserId)
-                );
+                if (c.status !== "pending") return false;
+                if (myId && c.toUserId)
+                  return String(c.toUserId) === String(myId);
+                // myId yoksa: from/to farklı olanları göster (eski davranış)
+                return String(c.toUserId) !== String(c.fromUserId);
               });
               if (!incoming.length) {
                 pend.innerHTML = "";
@@ -13693,6 +14079,8 @@
       function setClPotTabVisible(visible) {
         const b = document.getElementById("clPotTabBtn");
         if (b) b.style.display = visible ? "inline-block" : "none";
+        const e = document.getElementById("eliteCupTabBtn");
+        if (e) e.style.display = visible ? "inline-block" : "none";
       }
       function goToFixturesHub() {
         hideMainMenuAndShowBack();
@@ -13805,7 +14193,7 @@
         hideMainMenuAndShowBack();
         switchPage("page-fixtures-hub");
         const t = document.getElementById("fixturesHubTitle");
-        if (t) t.innerText = "🌟 Kıtalar Ligi";
+        if (t) t.innerText = "🌟 Kıtasal Lig";
         _currentComp = "cl";
         setClPotTabVisible(true);
         showCompSub("cl", "played");
@@ -13824,15 +14212,30 @@
         const histList = document.getElementById("friendlyHistoryList");
         if (!oppList || !pendList || !histList) return;
 
+        let myClubId = null;
+        let myClubName =
+          (teamConfig && teamConfig.home && teamConfig.home.name) || "";
+
         try {
           const el = await apiFetch("/api/friendly/eligibility");
+          if (el && el.myClubId) myClubId = el.myClubId;
+          if (el && el.myClubName) myClubName = el.myClubName;
+          window._emFriendlyMyClubId = myClubId;
           if (hint) {
             hint.textContent = el.ok
-              ? "Şu an dostluk maçı ayarlayabilirsin."
+              ? (el.hint ||
+                (el.preSeason
+                  ? "Sezon öncesi: haftada 2 dostluk (Perşembe + Pazar 13:00 TR)."
+                  : "Şu an dostluk ayarlayabilirsin (Perşembe 13:00 TR · lig fark etmez)."))
               : el.error || "Şu an dostluk maçı ayarlayamazsın.";
             hint.style.color = el.ok ? "#4ade80" : "#facc15";
           }
-        } catch (e) {}
+        } catch (e) {
+          if (hint) {
+            hint.textContent = "Uygunluk kontrol edilemedi.";
+            hint.style.color = "#f87171";
+          }
+        }
 
         oppList.innerHTML =
           '<div style="color:#64748b;text-align:center;padding:10px;">Yükleniyor…</div>';
@@ -13841,23 +14244,44 @@
 
         try {
           const data = await apiFetch("/api/friendly/opponents");
+          if (data && data.myClubId) myClubId = data.myClubId;
+          if (data && data.myClubName) myClubName = data.myClubName;
           const opps = (data && data.opponents) || [];
-          if (!opps.length) {
+          if (data && data.eligible === false) {
             oppList.innerHTML =
-              '<div style="color:#64748b;text-align:center;padding:10px;">Şu an uygun rakip yok.</div>';
+              '<div style="color:#facc15;text-align:center;padding:10px;">' +
+              escapeHtmlLocal(data.reason || "Kupadayken dostluk ayarlanamaz.") +
+              "</div>";
+          } else if (!opps.length) {
+            oppList.innerHTML =
+              '<div style="color:#64748b;text-align:center;padding:10px;">Şu an uygun rakip yok (hepsi kupada veya meşgul).</div>';
           } else {
             oppList.innerHTML = opps
               .map(function (o) {
                 const safeId = String(o.id).replace(/'/g, "");
+                const safeName = String(o.name || "")
+                  .replace(/\\/g, "\\\\")
+                  .replace(/'/g, "\\'");
+                const tag = o.isBot
+                  ? ' <span style="color:#64748b;font-size:10px;">(bot)</span>'
+                  : "";
+                const div =
+                  o.division != null
+                    ? ' <span style="color:#64748b;font-size:10px;">' +
+                      o.division +
+                      ". Lig</span>"
+                    : "";
                 return (
                   '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;">' +
                   '<span style="font-size:13px;color:#e2e8f0;font-weight:700;">' +
                   escapeHtmlLocal(o.name) +
+                  tag +
+                  div +
                   "</span>" +
                   '<button type="button" class="sub-btn" style="width:auto;padding:6px 12px;font-size:11px;background:#059669;" onclick="proposeFriendlyMatch(\'' +
                   safeId +
                   "', '" +
-                  escapeHtmlLocal(o.name).replace(/'/g, "\\'") +
+                  safeName +
                   "')\">🤝 Teklif Et</button></div>"
                 );
               })
@@ -13872,8 +14296,9 @@
 
         try {
           const data = await apiFetch("/api/friendly");
-          const myClubName =
-            (teamConfig && teamConfig.home && teamConfig.home.name) || "";
+          if (data && data.myClubId) myClubId = data.myClubId;
+          if (data && data.myClubName) myClubName = data.myClubName;
+          window._emFriendlyMyClubId = myClubId;
           const fixtures = (data && data.fixtures) || [];
           const pending = fixtures.filter(function (f) {
             return f.status === "pending";
@@ -13885,7 +14310,7 @@
           pendList.innerHTML = pending.length
             ? pending
                 .map(function (f) {
-                  return friendlyFixtureRow(f, myClubName, true);
+                  return friendlyFixtureRow(f, myClubId, myClubName, true);
                 })
                 .join("")
             : '<div style="color:#64748b;text-align:center;padding:10px;">Bekleyen teklif yok.</div>';
@@ -13893,7 +14318,7 @@
           histList.innerHTML = others.length
             ? others
                 .map(function (f) {
-                  return friendlyFixtureRow(f, myClubName, false);
+                  return friendlyFixtureRow(f, myClubId, myClubName, false);
                 })
                 .join("")
             : '<div style="color:#64748b;text-align:center;padding:10px;">Henüz dostluk maçı yok.</div>';
@@ -13912,41 +14337,73 @@
         });
       }
 
-      function friendlyFixtureRow(f, myClubName, isPending) {
-        const iAmHome = f.homeName === myClubName;
+      function friendlyFixtureRow(f, myClubId, myClubName, isPending) {
+        const homeId = f.homeClubId != null ? String(f.homeClubId) : "";
+        const awayId = f.awayClubId != null ? String(f.awayClubId) : "";
+        const me = myClubId != null ? String(myClubId) : "";
+        let iAmHome = me && homeId && me === homeId;
+        let iAmAway = me && awayId && me === awayId;
+        if (!me) {
+          // yedek: isim karşılaştırması
+          iAmHome = f.homeName === myClubName;
+          iAmAway = f.awayName === myClubName;
+        }
         const dt = f.kickoffAt ? new Date(f.kickoffAt) : null;
         const dtStr = dt
-          ? dt.toLocaleDateString("tr-TR") + " " + dt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })
+          ? dt.toLocaleDateString("tr-TR") +
+            " " +
+            dt.toLocaleTimeString("tr-TR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
           : "—";
-        const statusLabel = {
-          pending: "Bekliyor",
-          scheduled: "Planlandı",
-          live: "Canlı",
-          finished: "Bitti",
-          declined: "Reddedildi",
-          cancelled: "İptal",
-        }[f.status] || f.status;
-        const score =
-          f.status === "finished"
-            ? " · " + (f.homeGoals != null ? f.homeGoals : "-") + "-" + (f.awayGoals != null ? f.awayGoals : "-")
-            : "";
+        const statusLabel =
+          {
+            pending: "Bekliyor",
+            scheduled: "Planlandı",
+            live: "● Canlı",
+            finished: "Bitti",
+            declined: "Reddedildi",
+            cancelled: "İptal",
+          }[f.status] || f.status;
+        let score = "";
+        if (f.status === "finished" || f.status === "live") {
+          if (f.homeGoals != null && f.awayGoals != null) {
+            score = " · " + f.homeGoals + "-" + f.awayGoals;
+          }
+        }
+        const fid = String(f.id || "").replace(/'/g, "");
         let actions = "";
-        if (isPending && !iAmHome) {
+        // Kabul/red: sadece deplasman (teklif alan)
+        if (f.status === "pending" && iAmAway) {
           actions =
             '<button type="button" class="sub-btn" style="width:auto;padding:5px 10px;font-size:11px;background:#059669;margin-right:6px;" onclick="respondFriendlyMatch(\'' +
-            f.id +
-            '\', true)">Kabul Et</button>' +
+            fid +
+            "', true)\">Kabul Et</button>" +
             '<button type="button" class="sub-btn" style="width:auto;padding:5px 10px;font-size:11px;background:#7f1d1d;" onclick="respondFriendlyMatch(\'' +
-            f.id +
-            '\', false)">Reddet</button>';
+            fid +
+            "', false)\">Reddet</button>";
         } else if (
           (f.status === "pending" || f.status === "scheduled") &&
-          (iAmHome || isPending)
+          (iAmHome || iAmAway)
         ) {
           actions =
             '<button type="button" class="sub-btn" style="width:auto;padding:5px 10px;font-size:11px;background:#334155;" onclick="cancelFriendlyMatch(\'' +
-            f.id +
-            '\')">İptal</button>';
+            fid +
+            "')\">İptal</button>";
+        }
+        if (
+          (f.status === "live" || f.status === "scheduled") &&
+          fid &&
+          typeof watchFixture === "function"
+        ) {
+          actions +=
+            (actions ? " " : "") +
+            '<button type="button" class="sub-btn" style="width:auto;padding:5px 10px;font-size:11px;background:#1d4ed8;" onclick="watchFixture(\'' +
+            fid +
+            "')\">" +
+            (f.status === "live" ? "📡 İzle" : "▶ İzle") +
+            "</button>";
         }
         return (
           '<div style="padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;">' +
@@ -13956,7 +14413,7 @@
           " vs " +
           escapeHtmlLocal(f.awayName) +
           score +
-          "</span><span style=\"color:#94a3b8;font-size:11px;\">" +
+          '</span><span style="color:#94a3b8;font-size:11px;">' +
           statusLabel +
           "</span></div>" +
           '<div style="display:flex;justify-content:space-between;align-items:center;">' +
@@ -13969,21 +14426,56 @@
       }
 
       async function proposeFriendlyMatch(clubId, clubName) {
-        const mins = prompt(
-          clubName + " ile kaç dakika sonrasına dostluk maçı teklif edilsin? (en az 5 dk)",
-          "15",
+        // Varsayılan: bir sonraki Perşembe 13:00 TR (Lig Kupası saati)
+        function nextThu1300() {
+          const now = new Date();
+          let k = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 10, 0, 0, 0));
+          while (k.getUTCDay() !== 4) k = new Date(k.getTime() + 86400000);
+          if (k.getTime() <= Date.now() + 5 * 60 * 1000) k = new Date(k.getTime() + 7 * 86400000);
+          return k;
+        }
+        const defKick = nextThu1300();
+        const defLabel =
+          defKick.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "short" }) +
+          " 13:00";
+        const choice = prompt(
+          clubName +
+            " ile dostluk\n\nVarsayılan: Perşembe 13:00 TR (Lig Kupası saati)\n\n• Enter = " +
+            defLabel +
+            "\n• Veya kaç dakika sonra (en az 5)",
+          "",
         );
-        if (mins == null) return;
-        const m = Math.max(5, Math.floor(Number(mins) || 15));
-        const kickoffAt = new Date(Date.now() + m * 60 * 1000).toISOString();
+        if (choice == null) return;
+        let kickoffAt;
+        const trimmed = String(choice).trim();
+        if (!trimmed) {
+          kickoffAt = defKick.toISOString();
+        } else {
+          const m = Math.max(5, Math.floor(Number(trimmed) || 0));
+          if (!m) {
+            kickoffAt = defKick.toISOString();
+          } else {
+            kickoffAt = new Date(Date.now() + m * 60 * 1000).toISOString();
+          }
+        }
         try {
           const res = await apiFetch("/api/friendly/propose", {
             method: "POST",
             body: JSON.stringify({ awayClubId: clubId, kickoffAt: kickoffAt }),
           });
           if (typeof pushNotification === "function")
-            pushNotification("🤝", clubName + " kulübüne dostluk teklifi gönderildi.", "Dostluk");
-          alert("Teklif gönderildi. Rakip kabul ederse maç fikstüre eklenir.");
+            pushNotification(
+              "🤝",
+              res && res.autoAccepted
+                ? clubName + " (bot) kabul etti — maç planlandı."
+                : clubName + " kulübüne dostluk teklifi gönderildi.",
+              "Dostluk",
+            );
+          alert(
+            res && res.autoAccepted
+              ? "Bot hemen kabul etti. Dostluk maçı oluşturuldu — saatinde otomatik oynanır."
+              : "Teklif gönderildi. Rakip kabul edince sıradaki dostluk maçı oluşur.",
+          );
         } catch (e) {
           alert("Teklif gönderilemedi: " + (e && e.message ? e.message : "hata"));
         }
@@ -13993,16 +14485,26 @@
 
       async function respondFriendlyMatch(fixtureId, accept) {
         try {
-          await apiFetch("/api/friendly/respond", {
+          const res = await apiFetch("/api/friendly/respond", {
             method: "POST",
             body: JSON.stringify({ fixtureId: fixtureId, accept: accept }),
           });
           if (typeof pushNotification === "function")
             pushNotification(
               accept ? "🤝" : "📄",
-              accept ? "Dostluk maçı kabul edildi." : "Dostluk teklifi reddedildi.",
+              accept
+                ? res && res.message
+                  ? res.message
+                  : "Kabul edildi — dostluk maçı oluşturuldu."
+                : "Dostluk teklifi reddedildi.",
               "Dostluk",
             );
+          if (accept) {
+            alert(
+              (res && res.message) ||
+                "Kabul edildi. Dostluk maçı planlandı; saatinde otomatik oynanır.",
+            );
+          }
         } catch (e) {
           alert("İşlem başarısız: " + (e && e.message ? e.message : "hata"));
         }
@@ -15123,10 +15625,13 @@
       // takım alınır, sıralama düştükçe kontenjan kademeli azalır.
       function buildCLGroupStandingsHTML() {
         let html =
-          '<div class="youth-section-title">Kıtalar Ligi — Gruplar</div>' +
-          '<div id="realClGroupsBox" style="color:#64748b;font-size:12px;padding:10px;text-align:center;">Yükleniyor...</div>';
+          '<div class="youth-section-title">Kıtasal Lig — Gruplar</div>' +
+          '<div id="realClGroupsBox" style="color:#64748b;font-size:12px;padding:10px;text-align:center;">Yükleniyor...</div>' +
+          '<div class="youth-section-title" style="margin-top:16px;">Ülke Puanı / Kontenjan</div>' +
+          '<div id="realClCoeffBox" style="color:#64748b;font-size:12px;padding:10px;text-align:center;">Yükleniyor…</div>';
         setTimeout(function () {
           fillRealClGroups();
+          fillCountryCoefficientListInto("realClCoeffBox");
         }, 0);
         return html;
       }
@@ -15395,6 +15900,8 @@
             list.innerHTML = buildHistoryHTML(comp);
           else if (_compSub === "torba" && comp === "cl")
             list.innerHTML = buildCountryPotHTML();
+          else if (_compSub === "elite" && comp === "cl")
+            list.innerHTML = buildEliteCupHubHTML();
         }
       }
 
@@ -17480,6 +17987,7 @@ function addForumPost() {
       window.backToNationalFormationUI = backToNationalFormationUI;
 
       function setTacticsMode(mode) {
+        window._tacticsMode = mode === "U21" ? "U21" : mode === "A" ? "A" : "club";
 
         mode = mode || "club";
         try {
@@ -17494,8 +18002,16 @@ function addForumPost() {
         const clubView = document.getElementById("tacticsClubView");
         const natView = document.getElementById("tacticsNationalView");
         if (mode === "club") {
+          window._tacticsMode = "club";
           if (clubView) clubView.style.display = "";
           if (natView) natView.style.display = "none";
+          try {
+            // Milli moddan dönüşte kulüp kadrosunu tekrar çiz (silinmesin)
+            if (typeof renderFormationPitch === "function")
+              renderFormationPitch("home");
+            if (typeof renderFormationBench === "function")
+              renderFormationBench("home");
+          } catch (eR) {}
           try {
             buildTacticsPanel();
           } catch (e) {}
@@ -17509,13 +18025,6 @@ function addForumPost() {
                 "Önce listedeki isme tıkla, sonra sahadaki bölgeye tıkla. Diziliş butonuna basmana gerek yok. Yerleşen oyuncunun mevki ismi isminin başında görünür; skill isimleri tablonun üstünde bir kez yazılır.";
             }
           } catch (eH) {}
-          try {
-            // Milli moddan dönüşte kulüp kadrosunu tekrar çiz (silinmesin)
-            if (typeof renderFormationPitch === "function")
-              renderFormationPitch("home");
-            if (typeof renderFormationBench === "function")
-              renderFormationBench("home");
-          } catch (eR) {}
         } else {
           // A Milli ve U21 = kulüp taktiği UI birebir (saha + çağrı + yedeğe alma)
           try {
@@ -17558,12 +18067,28 @@ function addForumPost() {
                     _natTacState && _natTacState.squad
                       ? _natTacState.squad.length
                       : 0;
+                  var tdBtn = "";
+                  try {
+                    var team = _natTacState && _natTacState.team;
+                    var myApp = _natTacState && _natTacState.myApplication;
+                    if (team && team.isMeManager) {
+                      tdBtn =
+                        ' <button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;background:#7f1d1d;display:inline-block;" onclick="resignNationalTd()">İstifa</button>';
+                    } else if (myApp && (myApp.status === "pending" || myApp.id)) {
+                      tdBtn =
+                        ' <span style="color:#facc15;">Başvuru beklemede</span> <button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;display:inline-block;" onclick="withdrawNationalTd()">Geri çek</button>';
+                    } else {
+                      tdBtn =
+                        ' <button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;font-weight:700;background:linear-gradient(90deg,#059669,#10b981);display:inline-block;" onclick="applyNationalTd()">📋 TD Başvurusu</button>';
+                    }
+                  } catch (eTd) {}
                   hint.innerHTML =
                     label +
-                    " diziliş (kulüp ile aynı saha) · Kadro: " +
+                    " diziliş (kulüpten ayrı kadro/taktik) · Kadro: " +
                     n +
-                    ". Çağırmak için " +
+                    ". " +
                     '<button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;display:inline-block;" onclick="openNationalKadroPage()">👥 Kadro / Aday</button>' +
+                    tdBtn +
                     " · Sahada çift dokun / × ile yedeğe al.";
                 }
               } catch (e3) {}
@@ -17605,7 +18130,13 @@ function addForumPost() {
             matchEnded = true;
           }
         } catch (eMs) {}
-        // Kulüp kadrosunu boşsa onar, asla silme
+        // Milli mod takılı kalmasın — her girişte kulüp moduna zorla
+        try {
+          window._tacticsMode = "club";
+          selectedFormationToken = null;
+          selectedBenchIndex = null;
+        } catch (eMode) {}
+        // Kulüp kadrosunu boşsa onar, asla silme; milli takım kadrosuyla karıştırma
         try {
           if (
             !teamConfig.home.players ||
@@ -17614,11 +18145,23 @@ function addForumPost() {
             if (typeof repairCareerIfEmpty === "function") repairCareerIfEmpty();
           }
         } catch (eRep) {}
-        setTacticsMode("club");
+        // Görünüm: kulüp sahası, milli panel gizli
         try {
+          var clubView = document.getElementById("tacticsClubView");
+          var natView = document.getElementById("tacticsNationalView");
+          if (clubView) clubView.style.display = "";
+          if (natView) natView.style.display = "none";
           var cb = document.getElementById("tacticsModeClub");
-          if (cb) cb.style.display = "";
-        } catch (e) {}
+          var ca = document.getElementById("tacticsModeA");
+          var cu = document.getElementById("tacticsModeU21");
+          if (cb) {
+            cb.style.display = "";
+            cb.classList.add("active");
+          }
+          if (ca) ca.classList.remove("active");
+          if (cu) cu.classList.remove("active");
+        } catch (eView) {}
+        setTacticsMode("club");
         setFormationSide("home");
         populatePlanSubSelects();
         updatePlanFormUI();
@@ -17710,16 +18253,31 @@ function addForumPost() {
       window.saveClubLineupAndTactics = saveClubLineupAndTactics;
       const _origSaveClub = saveClubLineupAndTactics;
       window.saveClubLineupAndTactics = function () {
-        if (window._tacticsMode === "A" || window._tacticsMode === "U21") {
+        var mode = window._tacticsMode || "club";
+        if (mode === "A" || mode === "U21") {
           try {
-            pullNatDraftFromFormationTeam();
-            if (typeof saveNationalLineup === "function") saveNationalLineup();
-            else _origSaveClub();
+            if (typeof pullNatDraftFromFormationTeam === "function")
+              pullNatDraftFromFormationTeam();
+            if (typeof saveNationalLineup === "function") {
+              return saveNationalLineup();
+            }
           } catch (e) {
-            _origSaveClub();
+            alert(
+              "Milli ilk 11 kaydı başarısız: " +
+                ((e && e.message) || e || "bilinmeyen hata"),
+            );
           }
           return;
         }
+        // Kulüp: pas/oyun stilini UI'dan oku (milli mod dinleyicisi bulaşmasın)
+        try {
+          var passEl = document.getElementById("passStyleSelect");
+          var gameEl = document.getElementById("gameStyleSelect");
+          if (passEl && teamConfig && teamConfig.home)
+            teamConfig.home.passStyle = passEl.value;
+          if (gameEl && teamConfig && teamConfig.home)
+            teamConfig.home.gameStyle = gameEl.value;
+        } catch (eSt) {}
         return _origSaveClub();
       };
 
@@ -18967,16 +19525,48 @@ function addForumPost() {
       function goToForum() {
         goToCommunity("forum");
       }
-      function goToCommunity(tab) {
+      
+      function goToPolls() {
+        try {
+          if (typeof goToCommunity === "function") {
+            goToCommunity("polls");
+          } else {
+            if (typeof switchPage === "function") switchPage("page-forum");
+            setTimeout(function () {
+              try {
+                if (typeof showCommunityTab === "function") showCommunityTab("polls");
+              } catch (e) {}
+            }, 80);
+          }
+        } catch (e) {
+          try {
+            switchPage("page-forum");
+            showCommunityTab("polls");
+          } catch (_) {}
+        }
+      }
+function goToCommunity(tab) {
         hideMainMenuAndShowBack();
         switchPage("page-forum");
         const t =
-          tab === "help" ? "help" : tab === "support" ? "support" : "forum";
+          tab === "help"
+            ? "help"
+            : tab === "support"
+              ? "support"
+              : tab === "polls"
+                ? "polls"
+                : "forum";
         showCommunityTab(t);
       }
       function showCommunityTab(tab) {
         const t =
-          tab === "help" ? "help" : tab === "support" ? "support" : "forum";
+          tab === "help"
+            ? "help"
+            : tab === "support"
+              ? "support"
+              : tab === "polls"
+                ? "polls"
+                : "forum";
         document.querySelectorAll("#communityTabs .community-tab").forEach(function (btn) {
           const on = btn.getAttribute("data-ctab") === t;
           btn.classList.toggle("active", on);
@@ -19276,9 +19866,9 @@ function addForumPost() {
               window.emApiFetch;
             if (typeof fetchFn === "function" && u) {
               const data = await fetchFn(
-                "/api/managers/" + encodeURIComponent(u),
+                "/api/manager/" + encodeURIComponent(u),
               );
-              const profile = data && data.profile;
+              const profile = data || null;
               if (profile) {
                 window._viewingManagerProfile = profile;
                 if (profile.teamName)
@@ -19375,9 +19965,9 @@ function addForumPost() {
             window.emApiFetch;
           if (typeof fetchFn !== "function") throw new Error("apiFetch yok");
           const data = await fetchFn(
-            "/api/managers/" + encodeURIComponent(_viewingManagerUser),
+            "/api/manager/" + encodeURIComponent(_viewingManagerUser),
           );
-          profile = data && data.profile ? data.profile : null;
+          profile = data || null;
         } catch (eProf) {
           console.warn("[mgrProfile]", eProf);
         }
@@ -21486,20 +22076,30 @@ function addForumPost() {
             typeof clubBudget === "number"
               ? clubBudget
               : teamConfig.home.budget || 0,
+          formation: teamConfig.home.formation || "4-4-2",
+          gameStyle: teamConfig.home.gameStyle || null,
+          passStyle: teamConfig.home.passStyle || null,
+          teamBehavior: teamConfig.home.teamBehavior || null,
+          division: 1,
         };
       }
       function applyTeamSnapshot(snap) {
         if (!snap) return;
         teamConfig.home.name = snap.name || teamConfig.home.name;
-        // Boş snapshot mevcut kadroyu silmesin
         if (Array.isArray(snap.players) && snap.players.length > 0) {
           teamConfig.home.players = snap.players;
         }
         if (Array.isArray(snap.bench) && snap.bench.length > 0) {
           teamConfig.home.bench = snap.bench;
         }
-        if (typeof clubBudget === "number") clubBudget = snap.budget || clubBudget;
+        if (typeof clubBudget === "number")
+          clubBudget = snap.budget != null ? snap.budget : clubBudget;
         else if (snap.budget != null) teamConfig.home.budget = snap.budget;
+        if (snap.formation) teamConfig.home.formation = snap.formation;
+        if (snap.gameStyle != null) teamConfig.home.gameStyle = snap.gameStyle;
+        if (snap.passStyle != null) teamConfig.home.passStyle = snap.passStyle;
+        if (snap.teamBehavior != null)
+          teamConfig.home.teamBehavior = snap.teamBehavior;
         try {
           const el = document.getElementById("menuClubName");
           if (el) el.innerText = snap.name;
@@ -21507,6 +22107,42 @@ function addForumPost() {
         try {
           if (typeof updateBudgetUI === "function") updateBudgetUI();
         } catch (e) {}
+        try {
+          if (typeof applyFormationToTeam === "function")
+            applyFormationToTeam("home", teamConfig.home.formation || "4-4-2");
+          else if (typeof setFormation === "function")
+            setFormation(teamConfig.home.formation || "4-4-2");
+        } catch (eF) {}
+        try {
+          if (typeof renderTacticsPanel === "function") renderTacticsPanel();
+        } catch (eT) {}
+      }
+      function syncLeagueDivisionUI(div) {
+        const d = Number(div) || 1;
+        USER_DIVISION = d;
+        try {
+          const ds = document.getElementById("leagueDivisionSelect");
+          if (ds) {
+            ds.value = String(d);
+          }
+          const title = document.getElementById("leaguePageTitle");
+          if (title) {
+            const country =
+              typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "";
+            title.innerText =
+              "Lig — " + country + " " + d + ". Lig" +
+              (activeClubSlot === 2 ? " (B takım)" : "");
+          }
+        } catch (e) {}
+        try {
+          if (typeof renderStandings === "function") renderStandings();
+        } catch (e2) {}
+        try {
+          if (typeof window.refreshServerLeagueStandings === "function")
+            window.refreshServerLeagueStandings();
+          else if (typeof renderServerLeagueStandings === "function")
+            renderServerLeagueStandings();
+        } catch (e3) {}
       }
       function switchActiveClubSlot() {
         if (!hasSecondTeam()) {
@@ -21514,27 +22150,48 @@ function addForumPost() {
           goToPremium();
           return;
         }
+        // B takım her zaman 2. Lig
+        if (secondTeamState) secondTeamState.division = 2;
+
         if (activeClubSlot === 1) {
-          // Ana → yedekle, ikinciyi yükle
+          // Ana → yedekle, B takımı yükle
           snapshotCurrentAsPrimary();
+          // Kadro boşsa sunucudan / yerelden doldur
+          if (
+            !secondTeamState.players ||
+            secondTeamState.players.length < 11
+          ) {
+            try {
+              if (typeof window.__emLoadSecondTeamServer === "function") {
+                window.__emLoadSecondTeamServer();
+              }
+            } catch (eL) {}
+          }
           applyTeamSnapshot({
             name: secondTeamState.name,
-            players: secondTeamState.players,
-            bench: secondTeamState.bench,
+            players: secondTeamState.players || [],
+            bench: secondTeamState.bench || [],
             budget: secondTeamState.budget,
+            formation: secondTeamState.formation || "4-4-2",
+            gameStyle: secondTeamState.gameStyle || null,
+            passStyle: secondTeamState.passStyle || null,
+            teamBehavior: secondTeamState.teamBehavior || null,
           });
           activeClubSlot = 2;
-          USER_DIVISION = 2;
+          window.activeClubSlot = 2;
           try {
             registerSecondTeamInLeague();
           } catch (eR) {}
+          syncLeagueDivisionUI(2);
           pushNotification(
             "🔄",
-            "Aktif kulüp: " + secondTeamState.name + " (2. takım · 2. Lig)",
+            "Aktif kulüp: " +
+              secondTeamState.name +
+              " (2. takım · 2. Lig)",
             "Takım",
           );
         } else {
-          // İkinciyi kaydet, ana'ya dön
+          // B'yi kaydet, ana'ya dön
           secondTeamState.name = teamConfig.home.name;
           secondTeamState.players = JSON.parse(
             JSON.stringify(teamConfig.home.players || []),
@@ -21546,14 +22203,23 @@ function addForumPost() {
             typeof clubBudget === "number"
               ? clubBudget
               : teamConfig.home.budget || 0;
+          secondTeamState.formation = teamConfig.home.formation || "4-4-2";
+          secondTeamState.gameStyle = teamConfig.home.gameStyle || null;
+          secondTeamState.passStyle = teamConfig.home.passStyle || null;
+          secondTeamState.teamBehavior = teamConfig.home.teamBehavior || null;
           secondTeamState.division = 2;
           persistSecondTeam();
+          try {
+            if (typeof window.__emSaveSecondTeamServer === "function")
+              window.__emSaveSecondTeamServer(secondTeamState);
+          } catch (eS) {}
           try {
             registerSecondTeamInLeague();
           } catch (eR2) {}
           if (_primaryTeamSnapshot) applyTeamSnapshot(_primaryTeamSnapshot);
           activeClubSlot = 1;
-          USER_DIVISION = 1;
+          window.activeClubSlot = 1;
+          syncLeagueDivisionUI(1);
           pushNotification(
             "🔄",
             "Aktif kulüp: " +
@@ -21567,9 +22233,20 @@ function addForumPost() {
             renderSquadRosterPage("home");
         } catch (e) {}
         try {
+          if (typeof renderFormationPage === "function")
+            renderFormationPage();
+        } catch (eF2) {}
+        try {
+          if (typeof ensureMatchPitchPositions === "function")
+            ensureMatchPitchPositions();
+        } catch (eP) {}
+        try {
           if (typeof refreshManagerProfile === "function")
             refreshManagerProfile();
         } catch (e) {}
+        try {
+          if (typeof schedulePushTeam === "function") schedulePushTeam();
+        } catch (ePush) {}
       }
       window.switchActiveClubSlot = switchActiveClubSlot;
       window.hasSecondTeam = hasSecondTeam;
@@ -23298,7 +23975,7 @@ function addForumPost() {
           let dailyHtml =
             '<div id="premiumDailyBox" style="margin-top:10px;padding:10px;background:#020617;border-radius:10px;border:1px solid #334155;font-size:12px;color:#94a3b8;">' +
             '🎁 Günlük ödül: <button type="button" class="sub-btn" style="width:auto;padding:4px 10px;font-size:11px;margin-left:6px;" onclick="claimDailyFromPremiumPage()">Ödülü al</button>' +
-            '<span id="premiumDailyHint" style="margin-left:8px;">25.000 € + seri×5.000 €</span></div>';
+            '<span id="premiumDailyHint" style="margin-left:8px;">30.000 € · her gün sabit tutar</span></div>';
           if (st.active) {
             const planLabel =
               st.plan === "trial"
@@ -23340,18 +24017,14 @@ function addForumPost() {
                   const h = document.getElementById("premiumDailyHint");
                   if (!h || !ds) return;
                   if (ds.claimedToday) {
-                    h.innerText =
-                      "Bugün alındı · seri " +
-                      (ds.streak || 0) +
-                      " · yarın tekrar";
+                    h.innerText = "Bugün alındı · yarın tekrar";
                   } else {
                     h.innerText =
                       "Alınabilir: +" +
                       Number(ds.amountIfClaim || 30000).toLocaleString(
                         "tr-TR",
                       ) +
-                      " € · seri " +
-                      (ds.streak || 1);
+                      " €";
                   }
                 })
                 .catch(function () {});
@@ -23366,9 +24039,7 @@ function addForumPost() {
                 alert(
                   "Günlük ödül: +" +
                     Number(r.amount).toLocaleString("tr-TR") +
-                    " € (seri " +
-                    r.streak +
-                    ")",
+                    " €",
                 );
               } else {
                 alert((r && r.error) || "Bugün zaten alındı");
@@ -25882,32 +26553,283 @@ function addForumPost() {
       }
 
       function buildCountryPotHTML() {
-        const { pot } = buildContinentalQualifiers();
         let html =
-          '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Ülke torbası, o ülkenin kulüp takımlarının lig puanlarına göre sıralanır. En başarılı ülkeden en fazla takım Kıtalar Ligi\'ne katılır; sıralama düştükçe kontenjan kademeli azalır.</div>';
-        pot.forEach((e) => {
-          const isMine = e.country === USER_COUNTRY;
-          const flag =
-            typeof countryFlag === "function" ? countryFlag(e.country) : "";
-          html += cardBox(
-            e.rank +
-              ". " +
-              flag +
-              " " +
-              (isMine
-                ? '<span style="color:#4ade80;font-weight:700;">' +
-                  e.country +
-                  "</span>"
-                : e.country) +
-              " · <b>" +
-              Math.round(e.totalPts) +
-              "</b> puan" +
-              ' <span style="color:#38bdf8;float:right;">' +
-              e.slots +
-              " kontenjan</span>",
-          );
-        });
+          '<div class="youth-section-title">Ülke Katsayısı — Puan Listesi</div>' +
+          '<div style="font-size:11px;color:#94a3b8;margin-bottom:10px;">Kıtasal Lig + Elite Kupa sonuçlarından puan. 3. sezondan itibaren kontenjan bu sıraya göre verilir (KL 64 + EK 128).</div>' +
+          '<div id="realCountryCoeffBox" style="color:#64748b;font-size:12px;padding:10px;text-align:center;">Yükleniyor…</div>';
+        setTimeout(function () {
+          fillCountryCoefficientList();
+        }, 0);
         return html;
+      }
+
+      async function fetchCountryCoefficients() {
+        if (typeof window.apiFetch === "function") {
+          return window.apiFetch("/api/continental/coefficients");
+        }
+        const headers = { "Content-Type": "application/json" };
+        const token = localStorage.getItem("em_jwt_token");
+        if (token) headers["Authorization"] = "Bearer " + token;
+        const res = await fetch(
+          (window.EM_API_BASE || "") + "/api/continental/coefficients",
+          { headers: headers },
+        );
+        if (!res.ok) throw new Error("coeff " + res.status);
+        return res.json();
+      }
+
+      function fillCountryCoefficientList(attempt) {
+        const box = document.getElementById("realCountryCoeffBox");
+        if (!box) return;
+        const n = attempt || 0;
+        fetchCountryCoefficients()
+          .then(function (data) {
+            const pot = (data && data.pot) || [];
+            const modeLabel =
+              (data && data.modeLabel) ||
+              "Katsayı listesi (2. sezon sonuçlarından birikir)";
+            let h =
+              '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">' +
+              modeLabel +
+              "</div>";
+            h +=
+              '<div style="display:flex;gap:6px;flex-wrap:wrap;font-size:10px;color:#64748b;margin-bottom:8px;">' +
+              '<span style="background:#1e293b;padding:3px 8px;border-radius:6px;">KL hedef: ' +
+              ((data && data.kitasalTarget) || 64) +
+              "</span>" +
+              '<span style="background:#1e293b;padding:3px 8px;border-radius:6px;">EK hedef: ' +
+              ((data && data.eliteTarget) || 128) +
+              "</span></div>";
+            if (!pot.length) {
+              h +=
+                '<div style="text-align:center;padding:12px;color:#94a3b8;">Henüz puan yok. 2. sezon Kıtasal Lig / Elite Kupa maçlarından sonra dolacak.</div>';
+              box.innerHTML = h;
+              return;
+            }
+            pot.forEach(function (e) {
+              const isMine =
+                e.country ===
+                (typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "");
+              const flag =
+                typeof countryFlag === "function"
+                  ? countryFlag(e.country)
+                  : "";
+              const kl = e.kitasalSlots != null ? e.kitasalSlots : 0;
+              const ek = e.eliteSlots != null ? e.eliteSlots : 0;
+              const total = e.totalSlots != null ? e.totalSlots : kl + ek;
+              const pts =
+                e.points != null
+                  ? e.points
+                  : e.totalPts != null
+                    ? e.totalPts
+                    : 0;
+              h +=
+                '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;margin:4px 0;background:#0f172a;border:1px solid #334155;border-radius:8px;font-size:12px;">' +
+                "<div>" +
+                '<span style="color:#94a3b8;margin-right:6px;">#' +
+                (e.rank || "?") +
+                "</span>" +
+                flag +
+                " " +
+                (isMine
+                  ? '<b style="color:#4ade80;">' + e.country + "</b>"
+                  : "<b>" + e.country + "</b>") +
+                ' <span style="color:#facc15;margin-left:6px;">' +
+                Math.round(Number(pts) * 10) / 10 +
+                " puan</span></div>" +
+                '<div style="text-align:right;font-size:11px;">' +
+                '<span style="color:#38bdf8;">KL ' +
+                kl +
+                "</span>" +
+                ' <span style="color:#64748b;">·</span> ' +
+                '<span style="color:#a78bfa;">EK ' +
+                ek +
+                "</span>" +
+                ' <span style="color:#e2e8f0;margin-left:6px;">Σ ' +
+                total +
+                "</span></div></div>";
+            });
+            box.innerHTML = h;
+          })
+          .catch(function () {
+            if (n < 5) {
+              setTimeout(function () {
+                fillCountryCoefficientList(n + 1);
+              }, 400);
+              return;
+            }
+            box.innerHTML =
+              '<div style="text-align:center;color:#f87171;">Ülke puan listesi yüklenemedi.</div>';
+          });
+      }
+
+      function buildEliteCupHubHTML() {
+        let html =
+          '<div class="youth-section-title">⭐ Elite Kupa</div>' +
+          '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">1. Lig 2. ve 3. sıralar · tek maçlı eleme · Çarşamba 15:00 TR (Kıtasal Lig ile aynı slot)</div>' +
+          '<div id="realEliteCupBox" style="color:#64748b;font-size:12px;padding:10px;text-align:center;">Yükleniyor…</div>' +
+          '<div class="youth-section-title" style="margin-top:16px;">Ülke Puanı / Kontenjan</div>' +
+          '<div id="realEliteCoeffBox" style="color:#64748b;font-size:12px;padding:10px;text-align:center;">Yükleniyor…</div>';
+        setTimeout(function () {
+          fillEliteCupPanel();
+          // katsayı listesini elite kutusuna da bas
+          const src = document.getElementById("realCountryCoeffBox");
+          fillCountryCoefficientListInto("realEliteCoeffBox");
+        }, 0);
+        return html;
+      }
+
+      function fillCountryCoefficientListInto(boxId, attempt) {
+        const box = document.getElementById(boxId);
+        if (!box) return;
+        const n = attempt || 0;
+        fetchCountryCoefficients()
+          .then(function (data) {
+            const pot = (data && data.pot) || [];
+            if (!pot.length) {
+              box.innerHTML =
+                '<div style="text-align:center;color:#94a3b8;">Henüz katsayı puanı yok (2. sezon maçlarından sonra).</div>';
+              return;
+            }
+            let h = "";
+            pot.forEach(function (e) {
+              const isMine =
+                e.country ===
+                (typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "");
+              const kl = e.kitasalSlots != null ? e.kitasalSlots : 0;
+              const ek = e.eliteSlots != null ? e.eliteSlots : 0;
+              const pts = e.points != null ? e.points : 0;
+              h +=
+                '<div style="display:flex;justify-content:space-between;padding:6px 8px;margin:3px 0;border:1px solid #334155;border-radius:6px;font-size:12px;">' +
+                "<span>#" +
+                (e.rank || "?") +
+                " " +
+                (isMine
+                  ? '<b style="color:#4ade80;">' + e.country + "</b>"
+                  : e.country) +
+                ' <span style="color:#facc15;">' +
+                Math.round(Number(pts) * 10) / 10 +
+                "p</span></span>" +
+                '<span style="color:#a78bfa;">Elite ' +
+                ek +
+                ' <span style="color:#38bdf8;">KL ' +
+                kl +
+                "</span></span></div>";
+            });
+            box.innerHTML = h;
+          })
+          .catch(function () {
+            if (n < 4) {
+              setTimeout(function () {
+                fillCountryCoefficientListInto(boxId, n + 1);
+              }, 400);
+              return;
+            }
+            box.innerHTML =
+              '<div style="text-align:center;">Liste yüklenemedi.</div>';
+          });
+      }
+
+      async function fetchEliteCupData() {
+        if (typeof window.apiFetch === "function") {
+          return window.apiFetch("/api/elite-cup");
+        }
+        const headers = { "Content-Type": "application/json" };
+        const token = localStorage.getItem("em_jwt_token");
+        if (token) headers["Authorization"] = "Bearer " + token;
+        const res = await fetch(
+          (window.EM_API_BASE || "") + "/api/elite-cup",
+          { headers: headers },
+        );
+        if (!res.ok) throw new Error("ek " + res.status);
+        return res.json();
+      }
+
+      function fillEliteCupPanel(attempt) {
+        const box = document.getElementById("realEliteCupBox");
+        if (!box) return;
+        const n = attempt || 0;
+        fetchEliteCupData()
+          .then(function (data) {
+            const edition = data && data.edition;
+            const fixtures = (data && data.fixtures) || [];
+            if (!edition) {
+              box.innerHTML =
+                '<div style="text-align:center;padding:10px;color:#94a3b8;">' +
+                ((data && data.hint) ||
+                  "Elite Kupa 2. sezonda açılır (1. Lig 2. ve 3. sıralar).") +
+                "</div>";
+              return;
+            }
+            let h =
+              '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">' +
+              (edition.yearLabel || "") +
+              " · Tur " +
+              (edition.currentRound || "?") +
+              "/" +
+              (edition.totalRounds || "?") +
+              (edition.championName
+                ? " · 🏆 " + edition.championName
+                : "") +
+              "</div>";
+            if (!fixtures.length) {
+              h +=
+                '<div style="text-align:center;">Fikstür henüz yok.</div>';
+              box.innerHTML = h;
+              return;
+            }
+            let lastRound = "";
+            fixtures.forEach(function (f) {
+              const phase = f.roundLabel || "Tur " + f.round;
+              if (phase !== lastRound) {
+                h +=
+                  '<div style="font-size:12px;font-weight:700;color:#a78bfa;margin:10px 0 4px;">' +
+                  phase +
+                  "</div>";
+                lastRound = phase;
+              }
+              const home = f.homeName || (f.status === "bye" ? "BYE" : "?");
+              const away = f.awayName || (f.status === "bye" ? "—" : "?");
+              const played =
+                f.status === "finished" ||
+                (f.homeGoals != null && f.awayGoals != null);
+              let scoreHtml;
+              if (f.status === "bye") {
+                scoreHtml =
+                  ' <span style="color:#64748b;">(bay)</span> ';
+              } else if (played) {
+                scoreHtml =
+                  " <b style=\"color:#facc15;\">" +
+                  (f.homeGoals != null ? f.homeGoals : "?") +
+                  "-" +
+                  (f.awayGoals != null ? f.awayGoals : "?") +
+                  (f.penalties ? " (p)" : "") +
+                  "</b> ";
+              } else if (f.status === "live") {
+                scoreHtml =
+                  ' <b style="color:#f87171;">CANLI</b> <span style="color:#64748b;">vs</span> ';
+              } else {
+                scoreHtml = ' <span style="color:#64748b;">vs</span> ';
+              }
+              h +=
+                '<div style="padding:6px 8px;margin:3px 0;border:1px solid #334155;border-radius:6px;font-size:13px;">' +
+                home +
+                scoreHtml +
+                away +
+                "</div>";
+            });
+            box.innerHTML = h;
+          })
+          .catch(function () {
+            if (n < 5) {
+              setTimeout(function () {
+                fillEliteCupPanel(n + 1);
+              }, 400);
+              return;
+            }
+            box.innerHTML =
+              '<div style="text-align:center;">Elite Kupa yüklenemedi.</div>';
+          });
       }
 
       const userHomeLeagueEntry = {
@@ -26269,92 +27191,64 @@ function addForumPost() {
       }
 
       function openLightweightTeamProfile(country, tier, teamName) {
-        const team = worldLeagues[country][tier].find(
-          (t) => t.name === teamName,
-        );
+        const team = worldLeagues[country] && worldLeagues[country][tier]
+          ? worldLeagues[country][tier].find(function (t) {
+              return t.name === teamName;
+            })
+          : null;
         if (!team) return;
         const modal = document.getElementById("teamModal");
         document.getElementById("teamModalName").innerText = team.name;
         document.getElementById("teamModalSub").innerText =
-          "🇹🇷 " + country + " · " + tier + ". Lig · Güç: " + team.strength;
+          (typeof countryFlag === "function" ? countryFlag(country) + " " : "") +
+          country +
+          " · " +
+          tier +
+          ". Lig";
         setTeamModalFriendlyVisible(true, team.name);
-        const squadContainer = document.getElementById("teamSquadList");
-        if (team.players && team.players.length > 0) {
-          squadContainer.innerHTML = team.players
-            .map((p) => {
-              const quality = calculatePlayerQuality(p);
-              const qColor = getQualityColor(quality);
+        renderTeamOverview(team, country, tier);
+        renderTeamSquad(team);
+        // Fikstür
+        const fixtureContainer = document.getElementById("teamFixtureList");
+        if (fixtureContainer) {
+          const teams = (worldLeagues[country] && worldLeagues[country][tier]) || [];
+          const opponents = teams.filter(function (t) {
+            return t.name !== teamName;
+          }).slice(0, 6);
+          fixtureContainer.innerHTML = opponents
+            .map(function (opp, idx) {
+              const isHome = idx % 2 === 0;
+              const hN = isHome ? teamName : opp.name;
+              const aN = isHome ? opp.name : teamName;
               return (
-                '<div class="team-player-row" onclick="event.stopPropagation(); showPlayerProfile(' +
-                JSON.stringify(p).replace(/"/g, "&quot;") +
-                ", '" +
-                team.name +
-                '\')"><span class="num">#' +
-                p.number +
-                '</span><span class="name">' +
-                p.name +
-                '</span><span class="pos">' +
-                p.pos +
-                '</span><span class="quality" style="color:' +
-                (qColor === "high"
-                  ? "#4ade80"
-                  : qColor === "mid"
-                    ? "#facc15"
-                    : "#f87171") +
-                '">' +
-                (typeof qualityLabel === "function"
-                  ? qualityLabel(quality)
-                  : quality) +
+                '<div class="fixture-item"><span class="fixture-home">' +
+                hN +
+                '</span><span class="fixture-vs">vs</span><span class="fixture-away">' +
+                aN +
                 "</span></div>"
               );
             })
-            .join("");
-        } else {
-          squadContainer.innerHTML =
-            '<div style="color:#64748b;font-size:13px;padding:10px 0;text-align:center;">Bu takımın kadrosu bulunmuyor.</div>';
+            .join("") ||
+            '<div style="color:#64748b;font-size:13px;padding:10px 0;text-align:center;">Fikstür yok.</div>';
         }
-        const fixtureContainer = document.getElementById("teamFixtureList");
-        const teams = worldLeagues[country][tier];
-        const opponents = teams.filter((t) => t.name !== teamName).slice(0, 6);
-        fixtureContainer.innerHTML = opponents
-          .map((opp, idx) => {
-            const isHome = idx % 2 === 0;
-            const score =
-              Math.floor(Math.random() * 4) +
-              "-" +
-              Math.floor(Math.random() * 4);
-            const hN = isHome ? teamName : opp.name;
-            const aN = isHome ? opp.name : teamName;
-            return (
-              '<div class="fixture-item"><span class="fixture-home">' +
-              hN +
-              '</span><span class="fixture-vs">vs</span><span class="fixture-score" style="cursor:pointer;text-decoration:underline;color:#38bdf8;" title="Maç raporu" onclick="event.stopPropagation();openMatchReportByScore(\'' +
-              String(hN).replace(/'/g, "\\'") +
-              "', '" +
-              String(aN).replace(/'/g, "\\'") +
-              "', '" +
-              score +
-              "')\">" +
-              score +
-              '</span><span class="fixture-away">' +
-              aN +
-              "</span></div>"
-            );
-          })
-          .join("");
         const trophyContainer = document.getElementById("teamTrophiesList");
-        trophyContainer.innerHTML =
-          '<div style="color:#64748b;font-size:13px;padding:10px 0;text-align:center;">Bu takımın kupa bilgisi yok.</div>';
+        if (trophyContainer)
+          trophyContainer.innerHTML =
+            '<div style="color:#64748b;font-size:13px;padding:10px 0;text-align:center;">Bu takımın kupa bilgisi yok.</div>';
         document
           .querySelectorAll(".team-modal-tab")
-          .forEach((t) => t.classList.remove("active"));
+          .forEach(function (t) {
+            t.classList.remove("active");
+          });
         document
           .querySelectorAll(".team-modal-tab-content")
-          .forEach((c) => c.classList.remove("active"));
-        document
-          .querySelector('[data-teamtab="team-squad"]')
-          .classList.add("active");
-        document.getElementById("team-squad").classList.add("active");
+          .forEach(function (c) {
+            c.classList.remove("active");
+          });
+        const ovTab = document.querySelector('[data-teamtab="team-overview"]');
+        const ovPane = document.getElementById("team-overview");
+        if (ovTab) ovTab.classList.add("active");
+        if (ovPane) ovPane.classList.add("active");
         modal.classList.add("active");
       }
 
@@ -26363,192 +27257,245 @@ function addForumPost() {
         const modal = document.getElementById("teamModal");
         document.getElementById("teamModalName").innerText = team.name;
         document.getElementById("teamModalSub").innerText =
-          "🇹🇷 Türkiye · 1. Lig · " + team.players.length + " oyuncu";
+          (typeof countryFlag === "function" ? countryFlag(USER_COUNTRY || "Türkiye") + " " : "") +
+          (USER_COUNTRY || "Türkiye") +
+          " · " +
+          (USER_DIVISION || 1) +
+          ". Lig";
         setTeamModalFriendlyVisible(side !== "home", team.name);
+        renderTeamOverview(team, USER_COUNTRY || "Türkiye", USER_DIVISION || 1);
         renderTeamSquad(team);
         renderTeamFixture(team);
         renderTeamTrophies(side);
         document
           .querySelectorAll(".team-modal-tab")
-          .forEach((t) => t.classList.remove("active"));
+          .forEach(function (t) {
+            t.classList.remove("active");
+          });
         document
           .querySelectorAll(".team-modal-tab-content")
-          .forEach((c) => c.classList.remove("active"));
-        document
-          .querySelector('[data-teamtab="team-squad"]')
-          .classList.add("active");
-        document.getElementById("team-squad").classList.add("active");
+          .forEach(function (c) {
+            c.classList.remove("active");
+          });
+        const ovTab = document.querySelector('[data-teamtab="team-overview"]');
+        const ovPane = document.getElementById("team-overview");
+        if (ovTab) ovTab.classList.add("active");
+        if (ovPane) ovPane.classList.add("active");
         modal.classList.add("active");
       }
-
-      function playLeagueRound() {
-        const country = USER_COUNTRY;
-        const tier = 1;
-        try {
-          const cs = document.getElementById("leagueCountrySelect");
-          const ds = document.getElementById("leagueDivisionSelect");
-          if (cs) cs.value = USER_COUNTRY;
-          if (ds) ds.value = "1";
-        } catch (e) {}
-        const teams = worldLeagues[country][tier].filter((t) => !t.isUserTeam);
-        const shuffled = [...teams].sort(() => Math.random() - 0.5);
-        if (!leagueReports[country]) leagueReports[country] = {};
-        leagueReports[country][tier] = [];
-        for (let i = 0; i < shuffled.length - 1; i += 2) {
-          const [gA, gB] = simulateQuickMatch(shuffled[i], shuffled[i + 1]);
-          applyLeagueResult(shuffled[i], shuffled[i + 1], gA, gB);
-          leagueReports[country][tier].push(
-            generateMatchReport(shuffled[i], shuffled[i + 1], gA, gB),
-          );
-        }
-        renderStandings();
-        if (typeof renderLeagueScorers === "function") renderLeagueScorers();
-      }
-
-      /** Kullanıcı kendi ligindeki fikstür maçını oynadığında, o haftanın
-       *  geri kalan (bot-bot) maçlarını da otomatik oynatıp fikstüre işler —
-       *  böylece "Haftayı Oynat" butonuna gerek kalmadan hafta tamamlanır. */
-      function simulateRemainingRoundMatches(homeName, awayName) {
-        try {
-          const country = USER_COUNTRY;
-          const tier = USER_DIVISION;
-          const teams = [
-            ...((worldLeagues[country] && worldLeagues[country][tier]) || []),
-          ];
-          const n = teams.length;
-          if (n < 2) return;
-          const weeks = Math.max(1, Math.min(n - 1, 9));
-          let foundWeek = -1;
-          let foundRotated = null;
-          for (let w = 0; w < weeks; w++) {
-            const rotated = teams.slice(w % n).concat(teams.slice(0, w % n));
-            for (let i = 0; i < Math.floor(n / 2); i++) {
-              const h = rotated[i],
-                a = rotated[n - 1 - i];
-              if (!h || !a) continue;
-              if (
-                (h.name === homeName && a.name === awayName) ||
-                (h.name === awayName && a.name === homeName)
-              ) {
-                foundWeek = w;
-                foundRotated = rotated;
-                break;
-              }
-            }
-            if (foundWeek >= 0) break;
-          }
-          if (foundWeek < 0 || !foundRotated) return;
-          if (!leagueReports[country]) leagueReports[country] = {};
-          if (!leagueReports[country][tier]) leagueReports[country][tier] = [];
-          const reps = leagueReports[country][tier];
-          for (let i = 0; i < Math.floor(n / 2); i++) {
-            const h = foundRotated[i],
-              a = foundRotated[n - 1 - i];
-            if (!h || !a) continue;
-            if (
-              h.name === homeName ||
-              a.name === homeName ||
-              h.name === awayName ||
-              a.name === awayName
-            )
-              continue; // kullanıcının maçı zaten işlendi
-            const already = reps.some(
-              (r) =>
-                (r.home === h.name && r.away === a.name) ||
-                (r.home === a.name && r.away === h.name),
-            );
-            if (already) continue;
-            const [gA, gB] = simulateQuickMatch(h, a);
-            applyLeagueResult(h, a, gA, gB);
-            reps.push(generateMatchReport(h, a, gA, gB));
-          }
-          renderStandings();
-          if (typeof renderLeagueScorers === "function") renderLeagueScorers();
-        } catch (e) {}
-      }
-      window.simulateRemainingRoundMatches = simulateRemainingRoundMatches;
-
-      // ============================================================
-      // TAKIM PROFİLİ
-      // ============================================================
-      const teamTrophies = {
-        home: [
-          { name: "🏆 Süper Lig Şampiyonluğu", year: "2023" },
-          { name: "🏆 Türkiye Kupası", year: "2022" },
-          { name: "🏆 Süper Kupa", year: "2023" },
-          { name: "🏆 UEFA Konferans Ligi", year: "2024" },
-        ],
-        away: [
-          { name: "🏆 1. Lig Şampiyonluğu", year: "2021" },
-          { name: "🏆 Bölgesel Kupa", year: "2020" },
-        ],
-      };
 
       function openUserTeamProfile(side) {
         const team = side === "home" ? teamConfig.home : teamConfig.away;
         const modal = document.getElementById("teamModal");
         document.getElementById("teamModalName").innerText = team.name;
         document.getElementById("teamModalSub").innerText =
-          "🇹🇷 Türkiye · 1. Lig · " + team.players.length + " oyuncu";
+          (typeof countryFlag === "function" ? countryFlag(USER_COUNTRY || "Türkiye") + " " : "") +
+          (USER_COUNTRY || "Türkiye") +
+          " · " +
+          (USER_DIVISION || 1) +
+          ". Lig · " +
+          ((team.players && team.players.length) || 0) +
+          " oyuncu";
+        setTeamModalFriendlyVisible(side !== "home", team.name);
+        renderTeamOverview(team, USER_COUNTRY || "Türkiye", USER_DIVISION || 1);
         renderTeamSquad(team);
         renderTeamFixture(team);
         renderTeamTrophies(side);
         document
           .querySelectorAll(".team-modal-tab")
-          .forEach((t) => t.classList.remove("active"));
+          .forEach(function (t) {
+            t.classList.remove("active");
+          });
         document
           .querySelectorAll(".team-modal-tab-content")
-          .forEach((c) => c.classList.remove("active"));
-        document
-          .querySelector('[data-teamtab="team-squad"]')
-          .classList.add("active");
-        document.getElementById("team-squad").classList.add("active");
+          .forEach(function (c) {
+            c.classList.remove("active");
+          });
+        const ovTab = document.querySelector('[data-teamtab="team-overview"]');
+        const ovPane = document.getElementById("team-overview");
+        if (ovTab) ovTab.classList.add("active");
+        if (ovPane) ovPane.classList.add("active");
         modal.classList.add("active");
       }
 
+      /** Genel profil: stadyum, son 5 maç, en iyi oyuncu — kalite/rating yok */
+      function renderTeamOverview(team, country, tier) {
+        const body = document.getElementById("teamOverviewBody");
+        if (!body || !team) return;
+        const allPlayers = [].concat(team.players || [], team.bench || []);
+        // En iyi oyuncu: skill ortalamasına göre (sayı göstermeden isim)
+        let best = null;
+        let bestScore = -1;
+        allPlayers.forEach(function (p) {
+          if (!p) return;
+          const score =
+            (Number(p.pace) || 0) +
+            (Number(p.passing) || 0) +
+            (Number(p.technique) || 0) +
+            (Number(p.finishing) || 0) +
+            (Number(p.tackle) || 0) +
+            (Number(p.positioning) || 0);
+          if (score > bestScore) {
+            bestScore = score;
+            best = p;
+          }
+        });
+        // Stadyum
+        let stadName = team.stadiumName || team.stadium || null;
+        let stadCap = team.stadiumCapacity || team.capacity || null;
+        const nm = String(team.name || "");
+        try {
+          if (
+            !stadName &&
+            teamConfig &&
+            teamConfig.home &&
+            team.name === teamConfig.home.name &&
+            typeof stadium !== "undefined" &&
+            stadium
+          ) {
+            stadName = stadium.name;
+            stadCap = stadium.capacity;
+          }
+        } catch (e) {}
+        if (!stadName) stadName = (team.name || "Takım") + " Stadyumu";
+        if (!stadCap) {
+          let s = 0;
+          for (let i = 0; i < nm.length; i++) s += nm.charCodeAt(i);
+          stadCap = 12000 + (s % 28) * 1000;
+        }
+        // Son 5 maç
+        const last5 = [];
+        try {
+          const leagueTeams =
+            (worldLeagues[country] && worldLeagues[country][tier]) || [];
+          const opps = leagueTeams
+            .filter(function (t) {
+              return t && t.name !== team.name;
+            })
+            .slice(0, 12);
+          let seed = 0;
+          for (let i = 0; i < nm.length; i++) seed += nm.charCodeAt(i);
+          for (let i = 0; i < 5; i++) {
+            const opp =
+              (opps[(seed + i * 3) % Math.max(1, opps.length)] &&
+                opps[(seed + i * 3) % Math.max(1, opps.length)].name) ||
+              "Rakip";
+            const gf = (seed + i * 2) % 4;
+            const ga = (seed + i * 5) % 3;
+            const res = gf > ga ? "G" : gf < ga ? "M" : "B";
+            last5.push({ opp: opp, score: gf + "-" + ga, res: res });
+          }
+        } catch (eL5) {
+          for (let i = 0; i < 5; i++)
+            last5.push({ opp: "Rakip", score: "1-1", res: "B" });
+        }
+        const playerCount = allPlayers.length;
+        const avgAge =
+          playerCount > 0
+            ? Math.round(
+                (allPlayers.reduce(function (a, p) {
+                  return a + (Number(p.age) || 24);
+                }, 0) /
+                  playerCount) *
+                  10,
+              ) / 10
+            : "—";
+        body.innerHTML =
+          '<div style="display:grid;gap:10px;">' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+          '<div style="padding:10px;border-radius:10px;background:#0f172a;border:1px solid #2c3a52;">' +
+          '<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;">🏟️ Stadyum</div>' +
+          '<div style="font-weight:700;color:#e2e8f0;font-size:13px;">' +
+          stadName +
+          "</div>" +
+          '<div style="font-size:11px;color:#94a3b8;margin-top:2px;">Kapasite: ' +
+          Number(stadCap).toLocaleString("tr-TR") +
+          "</div></div>" +
+          '<div style="padding:10px;border-radius:10px;background:#0f172a;border:1px solid #2c3a52;">' +
+          '<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;">⭐ En iyi oyuncu</div>' +
+          '<div style="font-weight:700;color:#e2e8f0;font-size:13px;">' +
+          (best
+            ? (best.pos || best.naturalPos || "") + " · " + (best.name || "—")
+            : "—") +
+          "</div>" +
+          '<div style="font-size:11px;color:#94a3b8;margin-top:2px;">Yaş: ' +
+          (best && best.age != null ? best.age : "—") +
+          "</div></div>" +
+          '<div style="padding:10px;border-radius:10px;background:#0f172a;border:1px solid #2c3a52;">' +
+          '<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;">👥 Kadro</div>' +
+          '<div style="font-weight:700;color:#e2e8f0;font-size:13px;">' +
+          playerCount +
+          " oyuncu</div>" +
+          '<div style="font-size:11px;color:#94a3b8;margin-top:2px;">Ort. yaş: ' +
+          avgAge +
+          "</div></div>" +
+          '<div style="padding:10px;border-radius:10px;background:#0f172a;border:1px solid #2c3a52;">' +
+          '<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;">🌍 Lig</div>' +
+          '<div style="font-weight:700;color:#e2e8f0;font-size:13px;">' +
+          (country || "—") +
+          "</div>" +
+          '<div style="font-size:11px;color:#94a3b8;margin-top:2px;">' +
+          (tier || 1) +
+          ". Lig</div></div>" +
+          "</div>" +
+          '<div style="font-size:12px;font-weight:800;color:#94a3b8;margin-top:4px;">Son 5 maç</div>' +
+          last5
+            .map(function (m) {
+              const col =
+                m.res === "G" ? "#4ade80" : m.res === "M" ? "#f87171" : "#facc15";
+              return (
+                '<div style="display:flex;justify-content:space-between;padding:7px 4px;border-bottom:1px solid #1e293b;font-size:12px;color:#e2e8f0;">' +
+                '<span><b style="color:' +
+                col +
+                ';">' +
+                m.res +
+                "</b> vs " +
+                m.opp +
+                '</span><span style="font-weight:700;">' +
+                m.score +
+                "</span></div>"
+              );
+            })
+            .join("") +
+          "</div>";
+      }
+      window.renderTeamOverview = renderTeamOverview;
+
       function renderTeamSquad(team) {
         const container = document.getElementById("teamSquadList");
+        if (!container) return;
         container.innerHTML = "";
-        const sorted = [...team.players].sort((a, b) => {
+        const sorted = [...(team.players || [])].sort(function (a, b) {
           const order = { GK: 0, DF: 1, DM: 2, MF: 3, AM: 4, FW: 5 };
-          return (
-            (order[posFamily(a.pos)] ?? 99) - (order[posFamily(b.pos)] ?? 99)
-          );
+          const fa =
+            typeof posFamily === "function" ? posFamily(a.pos) : a.pos;
+          const fb =
+            typeof posFamily === "function" ? posFamily(b.pos) : b.pos;
+          return (order[fa] ?? 99) - (order[fb] ?? 99);
         });
-        sorted.forEach((p) => {
-          const rating = computePlayerRating(p);
-          const quality = calculatePlayerQuality(p);
-          const qColor = getQualityColor(quality);
-          const ratingColor =
-            rating >= 7.5 ? "#4ade80" : rating >= 6.3 ? "#facc15" : "#f87171";
+        if (!sorted.length) {
+          container.innerHTML =
+            '<div style="color:#64748b;font-size:13px;padding:10px 0;text-align:center;">Kadro bulunmuyor.</div>';
+          return;
+        }
+        sorted.forEach(function (p) {
           const row = document.createElement("div");
           row.className = "team-player-row";
+          // Kalite / rating YOK — sadece numara, isim, mevki
           row.innerHTML =
             '<span class="num">#' +
-            p.number +
+            (p.number != null ? p.number : "—") +
             '</span><span class="name" onclick="event.stopPropagation(); showPlayerProfile(' +
             JSON.stringify(p).replace(/"/g, "&quot;") +
             ", '" +
-            team.name +
+            String(team.name || "").replace(/'/g, "\\'") +
             "')\">" +
-            p.name +
-            (typeof playerStatusBadgesHtml === "function" ? playerStatusBadgesHtml(p) : "") +
+            (p.name || "?") +
+            (typeof playerStatusBadgesHtml === "function"
+              ? playerStatusBadgesHtml(p)
+              : "") +
             '</span><span class="pos">' +
-            p.pos +
-            '</span><span class="quality" style="color:' +
-            (qColor === "high"
-              ? "#4ade80"
-              : qColor === "mid"
-                ? "#facc15"
-                : "#f87171") +
-            '">' +
-            (typeof qualityLabel === "function"
-              ? qualityLabel(quality)
-              : quality) +
-            '</span><span class="rating" style="color:' +
-            ratingColor +
-            '">' +
-            rating.toFixed(1) + "/10" +
+            (p.pos || p.naturalPos || "") +
             "</span>";
           container.appendChild(row);
         });
@@ -26556,9 +27503,15 @@ function addForumPost() {
 
       function renderTeamFixture(team) {
         const container = document.getElementById("teamFixtureList");
-        const allTeams = worldLeagues[USER_COUNTRY][USER_DIVISION];
+        if (!container) return;
+        const allTeams =
+          (worldLeagues[USER_COUNTRY] &&
+            worldLeagues[USER_COUNTRY][USER_DIVISION]) ||
+          [];
         const opponents = allTeams
-          .filter((t) => t.name !== team.name)
+          .filter(function (t) {
+            return t.name !== team.name;
+          })
           .slice(0, 8);
         if (opponents.length === 0) {
           container.innerHTML =
@@ -26576,29 +27529,16 @@ function addForumPost() {
           "8. Hafta",
         ];
         container.innerHTML = opponents
-          .map((opp, idx) => {
+          .map(function (opp, idx) {
             const isHome = idx % 2 === 0;
-            const score =
-              Math.floor(Math.random() * 4) +
-              "-" +
-              Math.floor(Math.random() * 4);
-            const week = weeks[idx % weeks.length];
             const hN = isHome ? team.name : opp.name;
             const aN = isHome ? opp.name : team.name;
             return (
-              '<div class="fixture-item"><span style="color:#94a3b8;font-size:10px;width:65px;">' +
-              week +
+              '<div class="fixture-item"><span style="font-size:10px;color:#64748b;margin-right:6px;">' +
+              (weeks[idx] || "") +
               '</span><span class="fixture-home">' +
               hN +
-              '</span><span class="fixture-vs">vs</span><span class="fixture-score" style="cursor:pointer;text-decoration:underline;color:#38bdf8;" title="Maç raporu" onclick="event.stopPropagation();openMatchReportByScore(\'' +
-              String(hN).replace(/'/g, "\\'") +
-              "', '" +
-              String(aN).replace(/'/g, "\\'") +
-              "', '" +
-              score +
-              "')\">" +
-              score +
-              '</span><span class="fixture-away">' +
+              '</span><span class="fixture-vs">vs</span><span class="fixture-away">' +
               aN +
               "</span></div>"
             );
@@ -31108,62 +32048,123 @@ function renderTransferPage() {
       }
 
       function buildTacticsPanel() {
-        const team = teamConfig.home;
+        const isNat =
+          window._tacticsMode === "A" || window._tacticsMode === "U21";
+        const team = isNat
+          ? teamConfig._natTeam || teamConfig.home
+          : teamConfig.home;
         const container = document.getElementById("homeTacticsList");
         if (!container) return;
         container.innerHTML = "";
-        Object.keys(TACTIC_LABELS).forEach((key) => {
-          const isActive = team.customTactics?.[key] === "aktif";
-          const row = document.createElement("div");
-          row.className = "tactic-toggle";
-          row.style.justifyContent = "space-between";
-          const left = document.createElement("label");
-          left.style.cssText =
-            "display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;";
-          const checkbox = document.createElement("input");
-          checkbox.type = "checkbox";
-          checkbox.checked = isActive;
-          checkbox.addEventListener("change", (e) =>
-            toggleTactic("home", key, e.target.checked),
-          );
-          const span = document.createElement("span");
-          span.innerText = TACTIC_LABELS[key];
-          left.appendChild(checkbox);
-          left.appendChild(span);
-          const infoBtn = document.createElement("button");
-          infoBtn.type = "button";
-          infoBtn.innerText = "ℹ️";
-          infoBtn.title = "Nasıl kazanılır?";
-          infoBtn.style.cssText =
-            "background:#1e293b;border:1px solid #475569;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:14px;color:#fbbf24;font-weight:700;flex-shrink:0;";
-          infoBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            showTacticInfo(key);
+        // Özel taktik kutuları sadece kulüp için
+        if (!isNat) {
+          Object.keys(TACTIC_LABELS).forEach((key) => {
+            const isActive = team.customTactics?.[key] === "aktif";
+            const row = document.createElement("div");
+            row.className = "tactic-toggle";
+            row.style.justifyContent = "space-between";
+            const left = document.createElement("label");
+            left.style.cssText =
+              "display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;";
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = isActive;
+            checkbox.addEventListener("change", (e) =>
+              toggleTactic("home", key, e.target.checked),
+            );
+            const span = document.createElement("span");
+            span.innerText = TACTIC_LABELS[key];
+            left.appendChild(checkbox);
+            left.appendChild(span);
+            const infoBtn = document.createElement("button");
+            infoBtn.type = "button";
+            infoBtn.innerText = "ℹ️";
+            infoBtn.title = "Nasıl kazanılır?";
+            infoBtn.style.cssText =
+              "background:#1e293b;border:1px solid #475569;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:14px;color:#fbbf24;font-weight:700;flex-shrink:0;";
+            infoBtn.addEventListener("click", (e) => {
+              e.preventDefault();
+              showTacticInfo(key);
+            });
+            row.appendChild(left);
+            row.appendChild(infoBtn);
+            container.appendChild(row);
           });
-          row.appendChild(left);
-          row.appendChild(infoBtn);
-          container.appendChild(row);
-        });
+        } else {
+          const hint = document.createElement("div");
+          hint.style.cssText =
+            "font-size:11px;color:#94a3b8;padding:6px 0;";
+          hint.innerText =
+            "Milli takım pas / oyun stili aşağıdan ayarlanır (kulüpten bağımsız).";
+          container.appendChild(hint);
+        }
         const passEl = document.getElementById("passStyleSelect");
         const gameEl = document.getElementById("gameStyleSelect");
         const atkEl = document.getElementById("attackDirSelect");
+        // Eski dinleyicileri klonlayarak temizle
+        function rebind(el, value, onChange) {
+          if (!el) return;
+          const neu = el.cloneNode(true);
+          el.parentNode.replaceChild(neu, el);
+          neu.value = value || neu.value;
+          neu.addEventListener("change", onChange);
+          return neu;
+        }
         if (passEl) {
-          passEl.value = teamConfig.home.passStyle;
-          passEl.addEventListener("change", function () {
-            if (!matchStarted) teamConfig.home.passStyle = this.value;
+          const curPass = isNat
+            ? (_natTacDraft && _natTacDraft.passStyle) ||
+              (team && team.passStyle) ||
+              "kisa"
+            : teamConfig.home.passStyle || "kisa";
+          rebind(passEl, curPass, function () {
+            if (matchStarted) return;
+            if (window._tacticsMode === "A" || window._tacticsMode === "U21") {
+              if (!_natTacDraft)
+                _natTacDraft =
+                  typeof natFreshDraft === "function" && _natTacState
+                    ? natFreshDraft(_natTacState)
+                    : { passStyle: "kisa", gameStyle: "normal" };
+              _natTacDraft.passStyle = this.value;
+              if (teamConfig._natTeam)
+                teamConfig._natTeam.passStyle = this.value;
+            } else {
+              teamConfig.home.passStyle = this.value;
+            }
           });
         }
         if (gameEl) {
-          gameEl.value = teamConfig.home.gameStyle;
-          gameEl.addEventListener("change", function () {
-            if (!matchStarted) teamConfig.home.gameStyle = this.value;
+          const curGame = isNat
+            ? (_natTacDraft && _natTacDraft.gameStyle) ||
+              (team && team.gameStyle) ||
+              "normal"
+            : teamConfig.home.gameStyle || "normal";
+          rebind(gameEl, curGame, function () {
+            if (matchStarted) return;
+            if (window._tacticsMode === "A" || window._tacticsMode === "U21") {
+              if (!_natTacDraft)
+                _natTacDraft =
+                  typeof natFreshDraft === "function" && _natTacState
+                    ? natFreshDraft(_natTacState)
+                    : { passStyle: "kisa", gameStyle: "normal" };
+              _natTacDraft.gameStyle = this.value;
+              if (teamConfig._natTeam)
+                teamConfig._natTeam.gameStyle = this.value;
+            } else {
+              teamConfig.home.gameStyle = this.value;
+            }
           });
         }
         if (atkEl) {
-          atkEl.value = teamConfig.home.attackDir || "orta";
-          atkEl.addEventListener("change", function () {
-            if (!matchStarted) teamConfig.home.attackDir = this.value;
-          });
+          if (isNat) {
+            atkEl.style.opacity = "0.5";
+            atkEl.disabled = true;
+          } else {
+            atkEl.style.opacity = "";
+            atkEl.disabled = false;
+            rebind(atkEl, teamConfig.home.attackDir || "orta", function () {
+              if (!matchStarted) teamConfig.home.attackDir = this.value;
+            });
+          }
         }
       }
 
@@ -35118,6 +36119,14 @@ function renderTransferPage() {
         // Otomatik kadro doldurma YOK — sadece formasyon şekli değişir
         team.currentFormation = key;
         team.formation = key;
+        try {
+          if (
+            (window._tacticsMode === "A" || window._tacticsMode === "U21") &&
+            _natTacDraft
+          ) {
+            _natTacDraft.formation = key;
+          }
+        } catch (eNatForm) {}
         const slots = template.map(function (s) {
           return {
             pos: s.pos,
@@ -35195,6 +36204,14 @@ function renderTransferPage() {
         renderFormationBench(side);
         if (typeof populateSubSelects === "function") populateSubSelects(side);
         if (typeof syncBallToValidHolder === "function") syncBallToValidHolder();
+        try {
+          if (
+            (window._tacticsMode === "A" || window._tacticsMode === "U21") &&
+            typeof pullNatDraftFromFormationTeam === "function"
+          ) {
+            pullNatDraftFromFormationTeam();
+          }
+        } catch (ePullN) {}
       }
 
       // ============================================================
@@ -35812,6 +36829,13 @@ function renderTransferPage() {
 
       function startMatch() {
         if (matchStarted) return;
+        // Sunucu maçı izleniyorsa yerel simülasyon BAŞLATMA (çift motor = desync)
+        try {
+          if (window._emServerMatchActive || window._emWatchingFixtureId) {
+            console.warn("[em] startMatch blocked: server match active");
+            return;
+          }
+        } catch (eBlock) {}
         try {
           if (localStorage.getItem("em_confirm_match") === "1") {
             if (!confirm("Maça başlamak istediğine emin misin?")) return;

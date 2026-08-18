@@ -715,8 +715,8 @@
             await fetchYouthFromServer();
           else {
             const y = await apiFetch("/api/youth");
-            if (y && y.state && typeof applyYouthStateToClient === "function")
-              applyYouthStateToClient(y.state);
+            if (y && typeof applyYouthStateToClient === "function")
+              applyYouthStateToClient(y);
           }
         } catch (e) {}
       }
@@ -1174,9 +1174,13 @@
             if (sb) {
               const minStr = String(d.minute != null ? d.minute : 0).padStart(2, "0");
               const hn =
+                (d.homeName) ||
+                (window._emLiveHomeName) ||
                 (typeof teamConfig !== "undefined" && teamConfig.home && teamConfig.home.name) ||
                 "Ev";
               const an =
+                (d.awayName) ||
+                (window._emLiveAwayName) ||
                 (typeof teamConfig !== "undefined" && teamConfig.away && teamConfig.away.name) ||
                 "Dep";
               sb.innerText =
@@ -1229,7 +1233,7 @@
           }
           setConnBanner(false);
         } catch (eBan) {}
-        // Skor globals
+        // Skor globals + isim cache (izlenen maç kendi takımın olmayabilir)
         try {
           if (state.score) {
             if (typeof homeScore !== "undefined") homeScore = state.score.home || 0;
@@ -1237,6 +1241,10 @@
           }
           if (state.minute != null && typeof matchMinute !== "undefined")
             matchMinute = state.minute;
+          if (state.homeName) window._emLiveHomeName = state.homeName;
+          if (state.awayName) window._emLiveAwayName = state.awayName;
+          if (state.home && state.home.name) window._emLiveHomeName = state.home.name;
+          if (state.away && state.away.name) window._emLiveAwayName = state.away.name;
         } catch (eSc) {}
         renderServerMatchState(state);
         maybeShowInmatchPanel(state);
@@ -2026,74 +2034,145 @@ function renderServerMatchState(state) {
     refreshNextMatchFromServer().catch(() => {});
   };
 
-  // Canlı Maçlar sayfası: sunucudaki tüm fikstür listesi
+  // Canlı Maçlar: lig / kupa / kıtasal / elite / anlık
+  let _liveMatchesRefreshTimer = null;
   async function renderServerLiveMatches() {
     const list = document.getElementById("liveMatchesList");
     if (!list) return;
-    list.innerHTML =
-      '<div style="color:#64748b;text-align:center;padding:12px;">Yükleniyor...</div>';
+    if (!list.dataset.loading) {
+      list.innerHTML =
+        '<div style="color:#64748b;text-align:center;padding:12px;">Yükleniyor...</div>';
+    }
+    list.dataset.loading = "1";
     try {
-      const data = await apiFetch("/api/fixtures");
-      const fixtures = data.fixtures || [];
-      fixtures.forEach(cacheFixture);
+      const data = await apiFetch("/api/fixtures/live?limit=50");
+      const fixtures = (data && data.fixtures) || [];
+      fixtures.forEach(function (f) {
+        if (f && f.id) cacheFixture(f);
+      });
       if (!fixtures.length) {
         list.innerHTML =
-          '<div style="color:#64748b;text-align:center;padding:12px;">Fikstür yok.</div>';
+          '<div style="color:#64748b;text-align:center;padding:12px;">Şu an canlı veya yaklaşan maç yok.</div>' +
+          '<div style="text-align:center;margin-top:8px;"><button type="button" class="sub-btn" style="width:auto;padding:6px 12px;font-size:11px;" onclick="typeof renderServerLiveMatches===\'function\'&&renderServerLiveMatches()">Yenile</button></div>';
         return;
       }
       list.innerHTML = fixtures
-        .map((f) => {
-          const badge =
-            f.status === "live"
-              ? '<span style="color:#f87171;font-weight:800;">● CANLI</span>'
-              : '<span style="color:#38bdf8;">Yaklaşan</span>';
-          const when = new Date(f.kickoffAt).toLocaleString("tr-TR", {
-            weekday: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
+        .map(function (f) {
+          const isLive = f.status === "live";
+          const badge = isLive
+            ? '<span style="color:#f87171;font-weight:800;">● CANLI</span>'
+            : '<span style="color:#38bdf8;">Yaklaşan</span>';
+          let when = "";
+          try {
+            if (f.kickoffAt) {
+              when = new Date(f.kickoffAt).toLocaleString("tr-TR", {
+                weekday: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+            }
+          } catch (eW) {}
+          const hasScore =
+            f.homeGoals != null && f.awayGoals != null;
+          const score = hasScore
+            ? '<b style="color:#facc15;">' +
+              f.homeGoals +
+              "-" +
+              f.awayGoals +
+              "</b>"
+            : '<span style="color:#64748b;">vs</span>';
+          const comp = f.compLabel || f.competition || "Maç";
+          const fid = String(f.id || "").replace(/'/g, "");
           return (
             '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;">' +
             '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#94a3b8;">' +
-            when +
+            escapeHtml(comp) +
+            (when ? " · " + when + " (TR)" : "") +
             '</div><div style="font-size:13px;color:#e2e8f0;font-weight:700;">' +
-            escapeHtml(f.homeName) +
-            " vs " +
-            escapeHtml(f.awayName) +
+            escapeHtml(f.homeName || "?") +
+            " " +
+            score +
+            " " +
+            escapeHtml(f.awayName || "?") +
             '</div><div style="font-size:11px;">' +
             badge +
             "</div></div>" +
-            '<button class="sub-btn" style="width:auto;padding:6px 12px;font-size:11px;" onclick="watchFixture(\'' +
-            f.id +
-            '\')">İzle</button></div>'
+            (fid
+              ? '<button class="sub-btn" style="width:auto;padding:6px 12px;font-size:11px;" onclick="watchFixture(\'' +
+                fid +
+                "')\">" +
+                (isLive ? "📡 İzle" : "▶ İzle") +
+                "</button>"
+              : "") +
+            "</div>"
           );
         })
         .join("");
     } catch (e) {
       list.innerHTML =
-        '<div style="color:#f87171;text-align:center;padding:12px;">Fikstürler alınamadı.</div>';
+        '<div style="color:#f87171;text-align:center;padding:12px;">Canlı maçlar alınamadı.</div>' +
+        '<div style="text-align:center;margin-top:8px;"><button type="button" class="sub-btn" style="width:auto;padding:6px 12px;font-size:11px;" onclick="typeof renderServerLiveMatches===\'function\'&&renderServerLiveMatches()">Tekrar dene</button></div>';
+    } finally {
+      delete list.dataset.loading;
     }
   }
+  window.renderServerLiveMatches = renderServerLiveMatches;
+
   window.goToLiveMatches = function () {
     try {
       hideMainMenuAndShowBack();
       switchPage("page-live-matches");
     } catch (e) {}
     renderServerLiveMatches();
+    try {
+      if (_liveMatchesRefreshTimer) clearInterval(_liveMatchesRefreshTimer);
+      _liveMatchesRefreshTimer = setInterval(function () {
+        try {
+          const page = document.getElementById("page-live-matches");
+          if (!page || !page.classList.contains("active")) {
+            clearInterval(_liveMatchesRefreshTimer);
+            _liveMatchesRefreshTimer = null;
+            return;
+          }
+          renderServerLiveMatches();
+        } catch (e2) {}
+      }, 12000);
+    } catch (e3) {}
   };
   window.goToQuickMatch = function () {
     try {
       hideMainMenuAndShowBack();
       switchPage("page-quick-match");
     } catch (e) {}
+    const st = document.getElementById("instantMatchStatus");
+    (async function () {
+      try {
+        await apiFetch("/api/instant/presence", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        if (st)
+          st.innerHTML =
+            '<span style="color:#4ade80;">Sunucu bağlı · çevrimiçi</span>';
+      } catch (e) {
+        if (st)
+          st.innerHTML =
+            '<span style="color:#f87171;">' +
+            ((e && e.message) || "Sunucu yok") +
+            "</span>";
+      }
+      try {
+        if (typeof refreshInstantOpponents === "function")
+          refreshInstantOpponents();
+      } catch (e2) {}
+      try {
+        if (typeof loadInstantRankingPanel === "function")
+          loadInstantRankingPanel();
+      } catch (e3) {}
+    })();
     try {
-      if (typeof refreshInstantOpponents === "function") refreshInstantOpponents();
-    } catch (e2) {}
-    try {
-      if (typeof loadInstantRankingPanel === "function") loadInstantRankingPanel();
-    } catch (e3) {}
-    try {
-      if (typeof startInstantLobbyRefresh === "function") startInstantLobbyRefresh();
+      if (typeof startInstantLobbyRefresh === "function")
+        startInstantLobbyRefresh();
     } catch (e4) {}
   };
 
@@ -2222,7 +2301,83 @@ function renderServerMatchState(state) {
     );
   }
 
-  /** Eşleşme ağacı — sadece "played" sekmesi */
+  /** Grup maçlarından anlık puan tablosu (client tarafı) */
+  function buildCupGroupTables(groupFixtures) {
+    const byGroup = {};
+    (groupFixtures || []).forEach((f) => {
+      const label = f.roundLabel || "Grup";
+      if (!byGroup[label]) byGroup[label] = [];
+      byGroup[label].push(f);
+    });
+    const tables = [];
+    Object.keys(byGroup)
+      .sort()
+      .forEach((label) => {
+        const matches = byGroup[label];
+        const table = {};
+        const touch = (id, name) => {
+          if (!id) return null;
+          if (!table[id])
+            table[id] = {
+              clubId: id,
+              name: name || "?",
+              played: 0,
+              w: 0,
+              d: 0,
+              l: 0,
+              gf: 0,
+              ga: 0,
+              pts: 0,
+            };
+          return table[id];
+        };
+        matches.forEach((m) => {
+          if (m.status !== "finished" && m.status !== "bye") {
+            touch(m.homeClubId, m.homeName);
+            touch(m.awayClubId, m.awayName);
+            return;
+          }
+          const H = touch(m.homeClubId, m.homeName);
+          const A = touch(m.awayClubId, m.awayName);
+          if (!H || !A) return;
+          const hg = Number(m.homeGoals) || 0;
+          const ag = Number(m.awayGoals) || 0;
+          H.played++;
+          A.played++;
+          H.gf += hg;
+          H.ga += ag;
+          A.gf += ag;
+          A.ga += hg;
+          if (hg > ag) {
+            H.w++;
+            H.pts += 3;
+            A.l++;
+          } else if (ag > hg) {
+            A.w++;
+            A.pts += 3;
+            H.l++;
+          } else {
+            H.d++;
+            A.d++;
+            H.pts += 1;
+            A.pts += 1;
+          }
+        });
+        const ranked = Object.keys(table)
+          .map((k) => table[k])
+          .sort((x, y) => {
+            if (y.pts !== x.pts) return y.pts - x.pts;
+            const gdx = x.gf - x.ga;
+            const gdy = y.gf - y.ga;
+            if (gdy !== gdx) return gdy - gdx;
+            return y.gf - x.gf;
+          });
+        tables.push({ label, ranked, matches });
+      });
+    return tables;
+  }
+
+  /** Eşleşme ağacı — grup aşamasında puan tablosu, elemede bracket */
   async function renderServerCupTree() {
     const list = document.getElementById("fixturesHubList");
     if (!list) return;
@@ -2236,13 +2391,17 @@ function renderServerMatchState(state) {
         return;
       }
       const fixtures = data.bracket || [];
-      const rounds = {};
-      fixtures.forEach((f) => {
-        (rounds[f.round] = rounds[f.round] || []).push(f);
-      });
-      const roundKeys = Object.keys(rounds)
-        .map(Number)
-        .sort((a, b) => a - b);
+      const groupFx = fixtures.filter((f) =>
+        String(f.roundLabel || "")
+          .toLowerCase()
+          .startsWith("grup"),
+      );
+      const koFx = fixtures.filter(
+        (f) =>
+          !String(f.roundLabel || "")
+            .toLowerCase()
+            .startsWith("grup"),
+      );
 
       function teamLine(name, goals, isWinner) {
         const nm = name || "TBD";
@@ -2268,47 +2427,131 @@ function renderServerMatchState(state) {
       let html =
         '<div class="youth-section-title">🏅 Eşleşme Ağacı · ' +
         (data.edition.yearLabel || "") +
-        "</div>" +
-        '<div style="overflow-x:auto;padding-bottom:10px;"><div style="display:flex;align-items:stretch;gap:8px;min-width:min-content;">';
+        "</div>";
 
-      roundKeys.forEach((rk, colIdx) => {
-        const rf = rounds[rk];
-        const label = (rf[0] && rf[0].roundLabel) || "Tur " + rk;
+      // ---- Grup puan tabloları ----
+      if (groupFx.length) {
+        const tables = buildCupGroupTables(groupFx);
         html +=
-          '<div style="display:flex;flex-direction:column;gap:12px;min-width:168px;">' +
-          '<div style="text-align:center;font-size:11px;font-weight:700;color:#facc15;">' +
-          label +
-          "</div>";
-        rf.forEach((f) => {
-          if (f.id)
-            cacheFixture({
-              id: f.id,
-              homeClubId: f.homeClubId,
-              awayClubId: f.awayClubId,
-            });
-          const fin = f.status === "finished";
-          const hw = fin && Number(f.homeGoals) > Number(f.awayGoals);
-          const aw = fin && Number(f.awayGoals) > Number(f.homeGoals);
+          '<div style="font-size:12px;font-weight:700;color:#94a3b8;margin:8px 0 6px;">Grup aşaması</div>';
+        html +=
+          '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">';
+        tables.forEach((t) => {
           html +=
-            '<div style="background:#0f172a;border:1px solid #2c3a52;border-radius:10px;padding:6px;">' +
-            teamLine(f.homeName, fin ? f.homeGoals : null, hw) +
-            '<div style="height:1px;background:#1e293b;margin:2px 4px;"></div>' +
-            teamLine(f.awayName, fin ? f.awayGoals : null, aw) +
-            (f.status === "scheduled" || f.status === "live"
-              ? '<button class="sub-btn" style="width:100%;margin-top:4px;padding:3px;font-size:10px;" onclick="watchFixture(\'' +
-                f.id +
-                "')\">" +
-                (f.status === "live" ? "Canlı" : "İzle") +
-                "</button>"
-              : "") +
+            '<div style="flex:1;min-width:200px;max-width:320px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;padding:8px 10px;">' +
+            '<div style="font-size:12px;font-weight:800;color:#facc15;margin-bottom:6px;">' +
+            escapeHtml(t.label) +
             "</div>";
+          html +=
+            '<div style="display:grid;grid-template-columns:18px 1fr 22px 22px 22px 28px 28px;gap:2px;font-size:10px;color:#64748b;margin-bottom:4px;">' +
+            "<span>#</span><span>Takım</span><span>O</span><span>G</span><span>B</span><span>Av</span><span>P</span></div>";
+          t.ranked.forEach((r, i) => {
+            const qualify = i < 2;
+            const gd = r.gf - r.ga;
+            html +=
+              '<div style="display:grid;grid-template-columns:18px 1fr 22px 22px 22px 28px 28px;gap:2px;font-size:11px;padding:3px 0;border-top:1px solid #1e293b;' +
+              (qualify ? "color:#4ade80;" : "color:#e2e8f0;") +
+              '">' +
+              "<span>" +
+              (i + 1) +
+              "</span><span style=\"overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\">" +
+              escapeHtml(r.name) +
+              "</span><span>" +
+              r.played +
+              "</span><span>" +
+              r.w +
+              "</span><span>" +
+              r.d +
+              "</span><span>" +
+              (gd > 0 ? "+" : "") +
+              gd +
+              '</span><b style="color:' +
+              (qualify ? "#4ade80" : "#facc15") +
+              ';">' +
+              r.pts +
+              "</b></div>";
+          });
+          html += "</div>";
         });
         html += "</div>";
-        if (colIdx < roundKeys.length - 1)
+      }
+
+      // ---- Eleme bracket ----
+      if (koFx.length) {
+        const rounds = {};
+        koFx.forEach((f) => {
+          (rounds[f.round] = rounds[f.round] || []).push(f);
+        });
+        const roundKeys = Object.keys(rounds)
+          .map(Number)
+          .sort((a, b) => a - b);
+
+        html +=
+          '<div style="font-size:12px;font-weight:700;color:#94a3b8;margin:8px 0 6px;">Eleme turları</div>' +
+          '<div style="overflow-x:auto;padding-bottom:10px;"><div style="display:flex;align-items:stretch;gap:8px;min-width:min-content;">';
+
+        roundKeys.forEach((rk, colIdx) => {
+          const rf = rounds[rk];
+          const label = (rf[0] && rf[0].roundLabel) || "Tur " + rk;
           html +=
-            '<div style="display:flex;align-items:center;color:#334155;font-size:18px;">›</div>';
-      });
-      html += "</div></div>";
+            '<div style="display:flex;flex-direction:column;gap:12px;min-width:168px;">' +
+            '<div style="text-align:center;font-size:11px;font-weight:700;color:#facc15;">' +
+            escapeHtml(label) +
+            "</div>";
+          rf.forEach((f) => {
+            if (f.id)
+              cacheFixture({
+                id: f.id,
+                homeClubId: f.homeClubId,
+                awayClubId: f.awayClubId,
+              });
+            if (f.status === "bye") {
+              html +=
+                '<div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:6px;">' +
+                teamLine(f.homeName || f.winnerName, null, true) +
+                '<div style="text-align:center;font-size:10px;color:#64748b;">BYE</div></div>';
+              return;
+            }
+            const fin = f.status === "finished";
+            const hw = fin && Number(f.homeGoals) > Number(f.awayGoals);
+            const aw = fin && Number(f.awayGoals) > Number(f.homeGoals);
+            // Penaltı ile bitenlerde skor eşit olabilir; winner vurgula
+            let hw2 = hw;
+            let aw2 = aw;
+            if (fin && f.penalties && f.winnerClubId) {
+              hw2 = f.winnerClubId === f.homeClubId;
+              aw2 = f.winnerClubId === f.awayClubId;
+            }
+            html +=
+              '<div style="background:#0f172a;border:1px solid #2c3a52;border-radius:10px;padding:6px;">' +
+              teamLine(f.homeName, fin ? f.homeGoals : null, hw2) +
+              '<div style="height:1px;background:#1e293b;margin:2px 4px;"></div>' +
+              teamLine(f.awayName, fin ? f.awayGoals : null, aw2) +
+              (f.penalties
+                ? '<div style="text-align:center;font-size:9px;color:#94a3b8;">pen</div>'
+                : "") +
+              (f.status === "scheduled" || f.status === "live"
+                ? '<button class="sub-btn" style="width:100%;margin-top:4px;padding:3px;font-size:10px;" onclick="watchFixture(\'' +
+                  f.id +
+                  "')\">" +
+                  (f.status === "live" ? "Canlı" : "İzle") +
+                  "</button>"
+                : "") +
+              "</div>";
+          });
+          html += "</div>";
+          if (colIdx < roundKeys.length - 1)
+            html +=
+              '<div style="display:flex;align-items:center;color:#334155;font-size:18px;">›</div>';
+        });
+        html += "</div></div>";
+      }
+
+      if (!groupFx.length && !koFx.length) {
+        html +=
+          '<div style="color:#64748b;text-align:center;padding:12px;">Maç yok.</div>';
+      }
+
       if (data.edition.championClubId) {
         html +=
           '<div style="text-align:center;margin-top:14px;padding:12px;border:1px solid #facc15;border-radius:12px;color:#facc15;font-weight:800;">🏆 Şampiyon belli</div>';
@@ -2543,6 +2786,286 @@ function renderServerMatchState(state) {
     return renderServerCupPanel("played");
   }
 
+  /** Lig fikstürü — sunucu /api/fixtures (yerel sahte rotasyon yerine) */
+  async function renderServerLeagueFixtures() {
+    const area = document.getElementById("compContentArea");
+    if (!area) return;
+    area.innerHTML =
+      '<div style="color:#64748b;text-align:center;padding:12px;">Yükleniyor...</div>';
+    try {
+      const data = await apiFetch("/api/fixtures");
+      const fixtures = (data && data.fixtures) || [];
+      fixtures.forEach(function (f) {
+        try {
+          cacheFixture(f);
+        } catch (eC) {}
+      });
+      window.__emServerFixtures = fixtures;
+      window.__emServerSeason = (data && data.season) || null;
+
+      const seasonLabel =
+        (data && data.season && (data.season.yearLabel || data.season.year_label)) ||
+        "";
+      const country =
+        (data && data.season && data.season.country) ||
+        (typeof USER_COUNTRY !== "undefined" ? USER_COUNTRY : "");
+      const division =
+        (data && data.season && data.season.division) ||
+        (typeof USER_DIVISION !== "undefined" ? USER_DIVISION : 1);
+
+      let html =
+        '<div class="youth-section-title">' +
+        escapeHtml(String(country)) +
+        " " +
+        escapeHtml(String(division)) +
+        ". Lig — Fikstür" +
+        (seasonLabel ? " · " + escapeHtml(String(seasonLabel)) : "") +
+        "</div>";
+
+      if (!fixtures.length) {
+        html +=
+          '<div style="color:#64748b;text-align:center;padding:16px;">Lig fikstürü henüz oluşmadı. Kayıt/giriş sonrası otomatik üretilir.</div>';
+        area.innerHTML = html;
+        return;
+      }
+
+      const sorted = fixtures.slice().sort(function (a, b) {
+        const ta = a.kickoffAt ? new Date(a.kickoffAt).getTime() : 0;
+        const tb = b.kickoffAt ? new Date(b.kickoffAt).getTime() : 0;
+        return ta - tb;
+      });
+      const upcoming = sorted.filter(function (f) {
+        return f.status !== "finished";
+      });
+      const finished = sorted.filter(function (f) {
+        return f.status === "finished";
+      });
+
+      function leagueMatchRow(f) {
+        let scoreHtml;
+        let btn = "";
+        if (f.status === "finished") {
+          const sc =
+            (f.homeGoals != null ? f.homeGoals : "?") +
+            " - " +
+            (f.awayGoals != null ? f.awayGoals : "?");
+          scoreHtml =
+            '<b style="color:#facc15;cursor:pointer;text-decoration:underline;" title="Maç raporu" onclick="event.stopPropagation();openMatchReportByScore(' +
+            JSON.stringify(f.homeName || "") +
+            "," +
+            JSON.stringify(f.awayName || "") +
+            "," +
+            JSON.stringify(sc) +
+            ')">' +
+            sc +
+            "</b>";
+        } else if (f.status === "live") {
+          scoreHtml =
+            '<span style="color:#f87171;font-weight:700;cursor:pointer;" onclick="event.stopPropagation();watchFixture(\'' +
+            (f.id || "") +
+            "')\">● CANLI</span>";
+          btn =
+            '<button class="sub-btn" style="width:auto;padding:3px 8px;font-size:10px;margin-left:6px;" onclick="watchFixture(\'' +
+            f.id +
+            '\')">İzle</button>';
+        } else {
+          scoreHtml = '<span style="color:#64748b;">vs</span>';
+          if (f.id) {
+            btn =
+              '<button class="sub-btn" style="width:auto;padding:3px 8px;font-size:10px;margin-left:6px;" onclick="watchFixture(\'' +
+              f.id +
+              '\')">İzle</button>';
+          }
+        }
+        let meta = "";
+        if (f.kickoffAt) {
+          const when = new Date(f.kickoffAt).toLocaleString("tr-TR", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          meta =
+            '<div style="font-size:10px;color:#64748b;margin-top:3px;">' +
+            when +
+            "</div>";
+        }
+        const myName =
+          typeof teamConfig !== "undefined" &&
+          teamConfig.home &&
+          teamConfig.home.name
+            ? teamConfig.home.name
+            : "";
+        const isMe =
+          myName &&
+          (f.homeName === myName || f.awayName === myName);
+        return (
+          '<div style="padding:10px 12px;margin-bottom:6px;background:#0f172a;border:1px solid #2c3a52;border-radius:10px;font-size:13px;color:#e2e8f0;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
+          "<span>" +
+          (isMe
+            ? '<span style="color:#4ade80;font-weight:700;">● </span>'
+            : "") +
+          escapeHtml(f.homeName || "?") +
+          " " +
+          scoreHtml +
+          " " +
+          escapeHtml(f.awayName || "?") +
+          "</span>" +
+          btn +
+          "</div>" +
+          meta +
+          "</div>"
+        );
+      }
+
+      if (upcoming.length) {
+        html +=
+          '<div style="font-size:11px;color:#94a3b8;margin:8px 0 4px;">Oynanacak / canlı (' +
+          upcoming.length +
+          ")</div>";
+        upcoming.forEach(function (f) {
+          html += leagueMatchRow(f);
+        });
+      }
+      if (finished.length) {
+        html +=
+          '<div style="font-size:11px;color:#94a3b8;margin:12px 0 4px;">Oynanan (' +
+          finished.length +
+          ")</div>";
+        finished
+          .slice()
+          .reverse()
+          .forEach(function (f) {
+            html += leagueMatchRow(f);
+          });
+      }
+      area.innerHTML = html;
+    } catch (e) {
+      area.innerHTML =
+        '<div style="color:#f87171;text-align:center;padding:12px;">Lig fikstürü alınamadı.</div>';
+    }
+  }
+
+  /** Lig puan durumu — sunucu standings + senkron */
+  async function renderServerLeagueStandings() {
+    const area = document.getElementById("compContentArea");
+    if (!area) return;
+    area.innerHTML =
+      '<div class="youth-section-title">Puan Durumu</div><div id="inlineStandingsWrap"><div style="color:#64748b;text-align:center;padding:12px;">Yükleniyor...</div></div>';
+    try {
+      const st = await apiFetch("/api/league/standings");
+      applyServerStandingsToClient((st && st.standings) || []);
+      if (typeof renderStandings === "function") {
+        try {
+          renderStandings();
+        } catch (eR) {}
+      }
+      const wrap = document.getElementById("inlineStandingsWrap");
+      const tb = document.getElementById("standingsBody");
+      if (wrap && tb) {
+        wrap.innerHTML =
+          '<table class="standings-table"><thead><tr><th>#</th><th>Takım</th><th>O</th><th>G</th><th>B</th><th>M</th><th>Av</th><th>Puan</th></tr></thead><tbody>' +
+          tb.innerHTML +
+          "</tbody></table>";
+      } else if (wrap && st && st.standings && st.standings.length) {
+        let rows = "";
+        st.standings.forEach(function (r, i) {
+          const gd = (r.gf || 0) - (r.ga || 0);
+          rows +=
+            "<tr><td>" +
+            (i + 1) +
+            "</td><td>" +
+            escapeHtml(r.name || "?") +
+            "</td><td>" +
+            (r.played || 0) +
+            "</td><td>" +
+            (r.w || 0) +
+            "</td><td>" +
+            (r.d || 0) +
+            "</td><td>" +
+            (r.l || 0) +
+            "</td><td>" +
+            (gd > 0 ? "+" : "") +
+            gd +
+            "</td><td><b>" +
+            (r.pts || 0) +
+            "</b></td></tr>";
+        });
+        wrap.innerHTML =
+          '<table class="standings-table"><thead><tr><th>#</th><th>Takım</th><th>O</th><th>G</th><th>B</th><th>M</th><th>Av</th><th>Puan</th></tr></thead><tbody>' +
+          rows +
+          "</tbody></table>";
+      } else if (wrap) {
+        wrap.innerHTML =
+          '<div style="color:#64748b;text-align:center;padding:12px;">Puan durumu boş.</div>';
+      }
+    } catch (e) {
+      const wrap = document.getElementById("inlineStandingsWrap");
+      if (wrap)
+        wrap.innerHTML =
+          '<div style="color:#f87171;text-align:center;padding:12px;">Puan durumu alınamadı.</div>';
+    }
+  }
+
+  /** Lig gol/asist — sunucu /api/league/stats */
+  async function renderServerLeagueKings() {
+    const area = document.getElementById("compContentArea");
+    if (!area) return;
+    area.innerHTML =
+      '<div style="color:#64748b;text-align:center;padding:12px;">Yükleniyor...</div>';
+    try {
+      const data = await apiFetch("/api/league/stats");
+      let html = '<div class="youth-section-title">👑 Lig Gol / Asist Krallığı</div>';
+      const goals = (data && data.playerOfYearPreview) || [];
+      const awards = (data && data.awards) || [];
+
+      if (goals.length) {
+        html +=
+          '<div style="font-size:11px;color:#94a3b8;margin:8px 0 4px;">Sezon gol sıralaması</div>';
+        goals.forEach(function (r, i) {
+          html +=
+            '<div style="display:flex;justify-content:space-between;padding:8px 10px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:8px;font-size:13px;color:#e2e8f0;">' +
+            "<span><b style=\"color:#38bdf8;\">" +
+            (i + 1) +
+            ".</b> " +
+            escapeHtml(r.playerName || r.name || "?") +
+            ' <span style="color:#64748b;font-size:11px;">' +
+            escapeHtml(r.clubName || "") +
+            "</span></span><b style=\"color:#4ade80;\">" +
+            escapeHtml(String(r.goals != null ? r.goals : r.value || 0)) +
+            " gol</b></div>";
+        });
+      } else {
+        html +=
+          '<div style="color:#64748b;text-align:center;padding:12px;">Henüz gol kaydı yok.</div>';
+      }
+
+      if (awards.length) {
+        html +=
+          '<div style="font-size:11px;color:#94a3b8;margin:12px 0 4px;">Sezon ödülleri</div>';
+        awards.slice(0, 10).forEach(function (a) {
+          html +=
+            '<div style="padding:8px 10px;margin-bottom:4px;background:#0f172a;border:1px solid #2c3a52;border-radius:8px;font-size:12px;color:#cbd5e1;">' +
+            escapeHtml(a.awardType || a.type || "Ödül") +
+            ": " +
+            escapeHtml(a.playerName || a.name || "") +
+            "</div>";
+        });
+      }
+      area.innerHTML = html;
+    } catch (e) {
+      // Fallback: eski yerel HTML
+      if (typeof buildKingsHTML === "function") {
+        area.innerHTML = buildKingsHTML("league");
+      } else {
+        area.innerHTML =
+          '<div style="color:#f87171;text-align:center;padding:12px;">Krallık alınamadı.</div>';
+      }
+    }
+  }
+
   const _origShowCompSub = window.showCompSub;
   window.showCompSub = function (comp, sub) {
     if (comp === "cup") {
@@ -2553,6 +3076,26 @@ function renderServerMatchState(state) {
       } catch (e) {}
       renderServerCupPanel(_compSub);
       return;
+    }
+    if (comp === "league" && getToken()) {
+      _currentComp = "league";
+      _compSub = sub || "played";
+      try {
+        highlightCompSubtabs("#leagueSubTabs", _compSub);
+      } catch (e) {}
+      if (_compSub === "fixture") {
+        renderServerLeagueFixtures();
+        return;
+      }
+      if (_compSub === "played") {
+        renderServerLeagueStandings();
+        return;
+      }
+      if (_compSub === "kings") {
+        renderServerLeagueKings();
+        return;
+      }
+      // history → yerel (geçmiş sezonlar sunucuda ayrı endpoint yoksa)
     }
     if (typeof _origShowCompSub === "function")
       return _origShowCompSub.apply(this, arguments);
@@ -3439,9 +3982,9 @@ function renderServerMatchState(state) {
     if (!getToken()) return null;
     try {
       const data = await apiFetch("/api/youth");
-      if (data && data.state) {
-        applyYouthStateToClient(data.state);
-        return data.state;
+      if (data) {
+        applyYouthStateToClient(data);
+        return data;
       }
     } catch (e) {
       console.warn("[em] youth", e);
@@ -3810,12 +4353,8 @@ function renderServerMatchState(state) {
               );
           } catch (e) {}
         }
-        if (res.recent) {
-          applyTrainingStateToClient({
-            coaches:
-              typeof clubCoaches !== "undefined" ? clubCoaches : [],
-            recent: res.recent,
-          });
+        if (res.state) {
+          applyTrainingStateToClient(res.state);
         }
         try {
           if (typeof renderTrainingSquadList === "function")
@@ -4105,9 +4644,9 @@ function renderServerMatchState(state) {
     if (!getToken()) return null;
     try {
       const data = await apiFetch("/api/stadium");
-      if (data && data.stadium) {
-        applyStadiumToClient(data.stadium);
-        return data.stadium;
+      if (data) {
+        applyStadiumToClient(data);
+        return data;
       }
     } catch (e) {
       console.warn("[em] stadium", e);
@@ -7633,6 +8172,7 @@ function renderServerMatchState(state) {
         body: JSON.stringify(name ? { name: name } : {}),
       });
       if (res && res.secondTeam) {
+        res.secondTeam.division = 2; // B takım her zaman 2. Lig
         try {
           if (typeof secondTeamState !== "undefined") secondTeamState = res.secondTeam;
           window.secondTeamState = res.secondTeam;
@@ -7677,6 +8217,8 @@ function renderServerMatchState(state) {
       const res = await apiFetch("/api/premium/second-team");
       if (!res || !res.secondTeam || !res.secondTeam.name) return null;
       const st = res.secondTeam;
+      st.division = 2; // B takım her zaman 2. Lig
+      if (!st.formation) st.formation = "4-4-2";
       try {
         if (typeof secondTeamState !== "undefined") {
           secondTeamState = st;
