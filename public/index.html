@@ -1177,6 +1177,78 @@
         -webkit-overflow-scrolling: touch;
         touch-action: pan-y;
       }
+
+      /* Ayarlar: taşma yok, açık zemin, okunaklı yazı */
+      #page-settings {
+        overflow-x: hidden !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+      }
+      #page-settings .report-container {
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
+      }
+      #page-settings .settings-card,
+      #page-settings [style*="background:#0f172a"],
+      #page-settings [style*="background: #0f172a"] {
+        background: #f1f5f9 !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #0f172a !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        flex-wrap: wrap !important;
+      }
+      #page-settings [style*="font-weight:700"],
+      #page-settings [style*="font-weight:800"],
+      #page-settings [style*="color:#e2e8f0"],
+      #page-settings [style*="color: #e2e8f0"] {
+        color: #0f172a !important;
+      }
+      #page-settings [style*="color:#94a3b8"],
+      #page-settings [style*="color: #94a3b8"],
+      #page-settings .formation-hint {
+        color: #475569 !important;
+      }
+      #page-settings .tactics-title {
+        color: #0f172a !important;
+      }
+      #page-settings select,
+      #page-settings input,
+      #page-settings textarea {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #94a3b8 !important;
+      }
+      #page-settings .sub-btn {
+        flex-shrink: 0;
+      }
+      /* Taktik tıklama: saha ve listeler her zaman tıklanabilir */
+      #page-tactics,
+      #page-tactics .report-container,
+      #page-tactics .tactics-panel,
+      #tacticsClubView,
+      #tacticsNatBody,
+      #formationPitch,
+      #formationPitchScaleWrap,
+      #formationBenchList,
+      #page-tactics .formation-token,
+      #page-tactics .tactics-skill-row,
+      #page-tactics .formation-bench-item,
+      #page-tactics .tactics-mode-btn,
+      #page-tactics .formation-preset-btn {
+        pointer-events: auto !important;
+      }
+      #page-tactics .pitch-tokens-layer {
+        pointer-events: auto !important;
+        z-index: 40 !important;
+      }
+
       #page-tactics .formation-pitch-wrap {
         touch-action: pan-y;
       }
@@ -4336,26 +4408,26 @@
         <div class="tactics-title">⚙️ Ayarlar</div>
         <div class="formation-hint">Ses, bildirim ve görünüm tercihleri</div>
         <div style="display:grid;gap:12px;margin-top:12px;">
-          <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+          <div style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
             <div>
-              <div style="font-weight:700;color:#e2e8f0;">Ses efektleri</div>
+              <div style="font-weight:700;color:#0f172a;">Ses efektleri</div>
               <div style="font-size:12px;color:#94a3b8;">Maç ve menü sesleri</div>
             </div>
             <button type="button" class="sub-btn" id="settingsSoundBtn" style="width:auto;padding:8px 14px;" onclick="toggleSoundFromSettings()">Açık</button>
           </div>
-          <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+          <div style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
             <div>
-              <div style="font-weight:700;color:#e2e8f0;">Bildirimler</div>
+              <div style="font-weight:700;color:#0f172a;">Bildirimler</div>
               <div style="font-size:12px;color:#94a3b8;">Maç ve transfer uyarıları</div>
             </div>
             <button type="button" class="sub-btn" id="settingsNotifBtn" style="width:auto;padding:8px 14px;" onclick="toggleNotifFromSettings()">Açık</button>
           </div>
-          <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <div style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
             <div>
-              <div style="font-weight:700;color:#e2e8f0;">Dil / Language</div>
+              <div style="font-weight:700;color:#0f172a;">Dil / Language</div>
               <div style="font-size:12px;color:#94a3b8;">Arayüz dili</div>
             </div>
-            <select id="settingsLangSelect" onchange="setGameLanguage(this.value)" style="padding:8px 12px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;min-width:130px;">
+            <select id="settingsLangSelect" onchange="setGameLanguage(this.value)" style="padding:8px 12px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;min-width:130px;">
               <option value="tr">Türkçe</option>
               <option value="en">English</option>
               <option value="de">Deutsch</option>
@@ -4371,9 +4443,9 @@
               <option value="zh">中文</option>
             </select>
           </div>
-          <div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+          <div style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
             <div>
-              <div style="font-weight:700;color:#e2e8f0;">Tema</div>
+              <div style="font-weight:700;color:#0f172a;">Tema</div>
               <div style="font-size:12px;color:#94a3b8;">Açık / koyu arayüz</div>
             </div>
             <button type="button" class="sub-btn" id="settingsThemeBtn" style="width:auto;padding:8px 14px;" onclick="toggleTheme()">Koyu</button>
@@ -4381,33 +4453,33 @@
           
           
           
-          <div id="emailVerifyPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
-            <div style="font-weight:700;color:#e2e8f0;">E-posta doğrulama</div>
+          <div id="emailVerifyPanel" style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;">
+            <div style="font-weight:700;color:#0f172a;">E-posta doğrulama</div>
             <div id="emailVerifyStatus" style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
               Durum kontrol ediliyor…
             </div>
             <button type="button" class="sub-btn" style="width:100%;background:#1e3a5f;font-weight:700;" onclick="resendEmailVerification()">✉️ Doğrulama bağlantısı gönder</button>
           </div>
-<div id="changePasswordPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
-            <div style="font-weight:700;color:#e2e8f0;">Şifre değiştir</div>
+<div id="changePasswordPanel" style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;">
+            <div style="font-weight:700;color:#0f172a;">Şifre değiştir</div>
             <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
               Yeni şifre en az 8 karakter. Değişiklikten sonra tüm cihazlarda tekrar giriş gerekir.
             </div>
-            <input id="chgPwCurrent" type="password" placeholder="Mevcut şifre" autocomplete="current-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
-            <input id="chgPwNew" type="password" placeholder="Yeni şifre" autocomplete="new-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
-            <input id="chgPwNew2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+            <input id="chgPwCurrent" type="password" placeholder="Mevcut şifre" autocomplete="current-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
+            <input id="chgPwNew" type="password" placeholder="Yeni şifre" autocomplete="new-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
+            <input id="chgPwNew2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
             <button type="button" class="sub-btn" style="width:100%;background:#1e3a5f;font-weight:700;" onclick="changeOwnPassword()">🔐 Şifreyi güncelle</button>
           </div>
-          <div id="logoutAllPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
-            <div style="font-weight:700;color:#e2e8f0;">Oturumlar</div>
+          <div id="logoutAllPanel" style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;">
+            <div style="font-weight:700;color:#0f172a;">Oturumlar</div>
             <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
               Tüm cihazlardaki oturumları sonlandır. Bu cihaz dahil her yerde tekrar giriş gerekir.
             </div>
             <div id="lastLoginInfo" style="font-size:12px;color:#64748b;margin-bottom:8px;min-height:14px;"></div>
             <button type="button" class="sub-btn" style="width:100%;background:#4c1d95;font-weight:700;" onclick="logoutAllSessions()">🚪 Tüm cihazlardan çıkış</button>
           </div>
-<div id="legalInfoPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
-            <div style="font-weight:700;color:#e2e8f0;">Gizlilik ve yasal</div>
+<div id="legalInfoPanel" style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;">
+            <div style="font-weight:700;color:#0f172a;">Gizlilik ve yasal</div>
             <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
               KVKK aydınlatma metni, kullanım koşulları ve çerez politikası.
             </div>
@@ -4417,8 +4489,8 @@
               <a href="/cookies.html" target="_blank" rel="noopener" class="sub-btn" style="width:auto;padding:8px 12px;text-decoration:none;display:inline-block;">Çerezler</a>
             </div>
           </div>
-<div id="selfExportDataPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">
-            <div style="font-weight:700;color:#e2e8f0;">Verilerimi indir</div>
+<div id="selfExportDataPanel" style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;">
+            <div style="font-weight:700;color:#0f172a;">Verilerimi indir</div>
             <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;line-height:1.45;">
               KVKK kapsamında hesabına ait kişisel verilerin JSON özetini indirebilirsin
               (kullanıcı, kulüp, oyuncular, bağış/ödeme kayıtları, başarımlar).
@@ -4431,7 +4503,7 @@
               KVKK kapsamında hesabını kapatabilirsin. Kullanıcı adı, e-posta ve güvenlik bilgilerin anonimleştirilir;
               maç/lig geçmişi sistem bütünlüğü için saklanır ancak sana bağlanamaz. Bu işlem geri alınamaz.
             </div>
-            <input id="selfDeletePassword" type="password" placeholder="Onay için şifren" autocomplete="current-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+            <input id="selfDeletePassword" type="password" placeholder="Onay için şifren" autocomplete="current-password" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
             <button type="button" class="sub-btn" style="width:100%;background:#7f1d1d;font-weight:800;" onclick="closeOwnAccount()">🗑️ Hesabımı kapat</button>
           </div>
           <div id="adminDeleteAccountPanel" style="display:none;padding:14px;background:#0f172a;border:1px solid #7f1d1d;border-radius:12px;">
@@ -4439,18 +4511,18 @@
             <div style="font-size:12px;color:#94a3b8;margin:6px 0 10px;">
               Soft-delete: PII anonimleştirilir, lig geçmişi korunur. Boş bırakırsan kendi oturum hesabın kapatılır.
             </div>
-            <input id="adminDeleteTargetUser" type="text" placeholder="Kapatılacak kullanıcı adı (opsiyonel)" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+            <input id="adminDeleteTargetUser" type="text" placeholder="Kapatılacak kullanıcı adı (opsiyonel)" style="width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
             <button type="button" class="sub-btn" style="width:100%;background:#7f1d1d;font-weight:800;" onclick="deleteUserAccount()">🗑️ Hesabı kapat</button>
           </div>
-          <div id="staffRolesPanel" style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;display:none;">
-            <div style="font-weight:700;color:#e2e8f0;margin-bottom:6px;">👤 Personel / Görevlendirme</div>
+          <div id="staffRolesPanel" style="padding:14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;display:none;">
+            <div style="font-weight:700;color:#0f172a;margin-bottom:6px;">👤 Personel / Görevlendirme</div>
             <div style="font-size:12px;color:#94a3b8;margin-bottom:10px;line-height:1.45;">
               Forum moderatörü ve diğer görevleri sen atarsın. Kullanıcı adı + rol seç → Ata.
-              Roller: <b style="color:#e2e8f0;">admin</b> (tam yetki), <b style="color:#e2e8f0;">forum_mod</b> (forum silme/düzenleme).
+              Roller: <b style="color:#0f172a;">admin</b> (tam yetki), <b style="color:#0f172a;">forum_mod</b> (forum silme/düzenleme).
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-              <input id="staffAssignUser" type="text" placeholder="Kullanıcı adı" style="flex:1;min-width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
-              <select id="staffAssignRole" style="padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;">
+              <input id="staffAssignUser" type="text" placeholder="Kullanıcı adı" style="flex:1;min-width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
+              <select id="staffAssignRole" style="padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;">
                 <option value="forum_mod">Forum moderatörü</option>
                 <option value="admin">Admin</option>
               </select>
@@ -4461,7 +4533,7 @@
           <div id="adminAntiCheatPanel" style="padding:14px;background:linear-gradient(135deg,#0f172a,#1c1917);border:1px solid #f59e0b;border-radius:12px;display:none;">
             <div style="font-weight:800;color:#fbbf24;margin-bottom:6px;">🛡️ Admin · Anti-Cheat</div>
             <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;line-height:1.45;">
-              Sunucu logları ve hesap banı. Sadece <b style="color:#e2e8f0;">ADMIN_USERNAME</b> hesabı görür.
+              Sunucu logları ve hesap banı. Sadece <b style="color:#0f172a;">ADMIN_USERNAME</b> hesabı görür.
             </div>
             <div id="adminAcSummary" style="font-size:12px;color:#cbd5e1;margin-bottom:12px;padding:10px;background:#0f172a;border-radius:8px;border:1px solid #334155;">
               Özet yükleniyor…
@@ -4470,16 +4542,16 @@
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;" onclick="adminAcRefresh()">Yenile</button>
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#334155;" onclick="adminAcLoadBanned()">Banlı listesi</button>
             </div>
-            <div style="font-weight:700;color:#e2e8f0;font-size:13px;margin:10px 0 6px;">Ban / Unban</div>
+            <div style="font-weight:700;color:#0f172a;font-size:13px;margin:10px 0 6px;">Ban / Unban</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
-              <input id="adminBanUser" type="text" placeholder="Kullanıcı adı veya id" style="flex:1;min-width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
-              <input id="adminBanHours" type="number" placeholder="Saat (boş=süresiz)" min="0" style="width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
-              <input id="adminBanReason" type="text" placeholder="Sebep" style="flex:1;min-width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+              <input id="adminBanUser" type="text" placeholder="Kullanıcı adı veya id" style="flex:1;min-width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
+              <input id="adminBanHours" type="number" placeholder="Saat (boş=süresiz)" min="0" style="width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
+              <input id="adminBanReason" type="text" placeholder="Sebep" style="flex:1;min-width:120px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#b91c1c,#ef4444);" onclick="adminAcBan()">Ban</button>
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#059669,#10b981);" onclick="adminAcUnban()">Unban</button>
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#334155;" onclick="adminAcLookup()">Sorgula</button>
             </div>
-            <div style="font-weight:700;color:#e2e8f0;font-size:13px;margin:12px 0 6px;">🔐 Giriş kilidi</div>
+            <div style="font-weight:700;color:#0f172a;font-size:13px;margin:12px 0 6px;">🔐 Giriş kilidi</div>
             <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;line-height:1.4;">
               Brute-force sonrası <code style="color:#38bdf8;">locked_until</code> ile kilitlenen hesapları açın. Ban ile karıştırmayın.
             </div>
@@ -4489,24 +4561,24 @@
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#0f766e;" onclick="adminAcOnlineUsers()">Çevrimiçi</button>
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#7c3aed,#a78bfa);font-weight:700;" onclick="adminAcRevokeSessions()">Oturumları düşür</button>
             </div>
-            <div style="font-weight:700;color:#e2e8f0;font-size:13px;margin:14px 0 6px;">🛠️ Bakım modu (runtime)</div>
+            <div style="font-weight:700;color:#0f172a;font-size:13px;margin:14px 0 6px;">🛠️ Bakım modu (runtime)</div>
             <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;line-height:1.4;">
               API’yi geçici kapatır (health açık). Env <code style="color:#38bdf8;">MAINTENANCE_MODE=1</code> zorlar; o zaman buradan kapatılamaz.
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
-              <input id="adminMaintMsg" type="text" placeholder="Bakım mesajı (opsiyonel)" style="flex:1;min-width:180px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
+              <input id="adminMaintMsg" type="text" placeholder="Bakım mesajı (opsiyonel)" style="flex:1;min-width:180px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#b45309,#f59e0b);font-weight:700;" onclick="adminMaintSet(true)">Bakımı aç</button>
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:linear-gradient(90deg,#059669,#10b981);font-weight:700;" onclick="adminMaintSet(false)">Bakımı kapat</button>
               <button type="button" class="sub-btn" style="width:auto;padding:8px 12px;background:#334155;" onclick="adminMaintRefresh()">Durum</button>
             </div>
             <div id="adminMaintStatus" style="font-size:12px;color:#94a3b8;margin-bottom:10px;min-height:16px;"></div>
-            <div style="font-weight:700;color:#e2e8f0;font-size:13px;margin:14px 0 6px;">📢 Anlık duyuru</div>
+            <div style="font-weight:700;color:#0f172a;font-size:13px;margin:14px 0 6px;">📢 Anlık duyuru</div>
             <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;line-height:1.4;">
               Tüm bağlı oyunculara socket ile anında mesaj (bakımdan bağımsız).
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
-              <input id="adminAnnounceMsg" type="text" placeholder="Duyuru metni…" maxlength="400" style="flex:1;min-width:180px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;" />
-              <select id="adminAnnounceLevel" style="padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;">
+              <input id="adminAnnounceMsg" type="text" placeholder="Duyuru metni…" maxlength="400" style="flex:1;min-width:180px;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;" />
+              <select id="adminAnnounceLevel" style="padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;">
                 <option value="info">Bilgi</option>
                 <option value="warn">Uyarı</option>
                 <option value="urgent">Acil</option>
@@ -4515,7 +4587,7 @@
             </div>
             <div id="adminAnnounceStatus" style="font-size:12px;color:#94a3b8;margin-bottom:10px;min-height:14px;"></div>
             <div id="adminAcUserBox" style="font-size:12px;color:#94a3b8;margin-bottom:10px;min-height:18px;"></div>
-            <div style="font-weight:700;color:#e2e8f0;font-size:13px;margin:8px 0 6px;">Son loglar</div>
+            <div style="font-weight:700;color:#0f172a;font-size:13px;margin:8px 0 6px;">Son loglar</div>
             <div id="adminAcLogs" style="max-height:280px;overflow:auto;font-size:11px;color:#cbd5e1;border:1px solid #334155;border-radius:8px;background:#020617;"></div>
 
 
@@ -4536,8 +4608,8 @@
             </div>
             <div style="margin-top:16px;padding-top:12px;border-top:1px solid #334155;">
               <div class="youth-section-title">📋 Anket düzenle</div>
-              <input id="adminPollQuestion" type="text" placeholder="Anket sorusu" maxlength="200" style="width:100%;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;margin-bottom:8px;box-sizing:border-box;" />
-              <input id="adminPollOptions" type="text" placeholder="Seçenekler (virgülle): Evet, Hayır, Kararsız" style="width:100%;padding:8px 10px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:13px;margin-bottom:8px;box-sizing:border-box;" />
+              <input id="adminPollQuestion" type="text" placeholder="Anket sorusu" maxlength="200" style="width:100%;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;margin-bottom:8px;box-sizing:border-box;" />
+              <input id="adminPollOptions" type="text" placeholder="Seçenekler (virgülle): Evet, Hayır, Kararsız" style="width:100%;padding:8px 10px;border-radius:8px;background:#1e293b;color:#0f172a;border:1px solid #334155;font-size:13px;margin-bottom:8px;box-sizing:border-box;" />
               <button type="button" class="sub-btn" style="width:auto;padding:8px 14px;background:linear-gradient(90deg,#6366f1,#38bdf8);font-weight:700;" onclick="adminCreatePoll()">Anket yayınla</button>
               <div id="adminPollNote" style="font-size:12px;color:#94a3b8;margin-top:8px;"></div>
             </div>
@@ -5329,6 +5401,7 @@
           <button type="button" class="sub-btn community-tab active" data-ctab="forum" style="width:auto;padding:7px 14px;font-size:12px;" onclick="showCommunityTab('forum')">Forum</button>
           <button type="button" class="sub-btn community-tab" data-ctab="help" style="width:auto;padding:7px 14px;font-size:12px;background:#334155;" onclick="showCommunityTab('help')">❓ Yardım</button>
           <button type="button" class="sub-btn community-tab" data-ctab="support" style="width:auto;padding:7px 14px;font-size:12px;background:#334155;" onclick="showCommunityTab('support')">✉️ Destek</button>
+          <button type="button" class="sub-btn community-tab" data-ctab="polls" style="width:auto;padding:7px 14px;font-size:12px;background:#334155;" onclick="showCommunityTab('polls')">📊 Anketler</button>
         </div>
         <div id="communityForumPane">
           <div id="forumModHint" class="formation-hint" style="display:none;margin-bottom:8px;">Moderasyon: gönderilere tıklayarak silebilirsin.</div>
@@ -5365,6 +5438,10 @@
         </div>
         <div id="communityHelpPane" style="display:none;">
           <div id="communityHelpBody"></div>
+        </div>
+        <div id="communityPollsPane" style="display:none;">
+          <div class="formation-hint" style="margin-bottom:10px;">Yönetici anketleri — oyunu etkilemez, görüş bildirirsin.</div>
+          <div id="communityPollsList" style="display:grid;gap:12px;"></div>
         </div>
         <div id="communitySupportPane" style="display:none;">
           <div class="formation-hint" style="margin-bottom:10px;">Mesajın yöneticiye iletilir.</div>
@@ -18909,14 +18986,20 @@ function addForumPost() {
         const hp = document.getElementById("communityHelpPane");
         const sp = document.getElementById("communitySupportPane");
         const ep = document.getElementById("communityElitePane");
+        const pp = document.getElementById("communityPollsPane");
         if (fp) fp.style.display = t === "forum" ? "block" : "none";
         if (hp) hp.style.display = t === "help" ? "block" : "none";
         if (sp) sp.style.display = t === "support" ? "block" : "none";
+        if (pp) pp.style.display = t === "polls" ? "block" : "none";
         if (ep) ep.style.display = "none";
         if (t === "forum") {
           try {
             renderForum();
           } catch (e) {}
+        } else if (t === "polls") {
+          try {
+            if (typeof loadCommunityPolls === "function") loadCommunityPolls();
+          } catch (eP) {}
         } else if (t === "help") {
           const body = document.getElementById("communityHelpBody");
           const helpPage = document.getElementById("page-help");
@@ -23580,6 +23663,72 @@ function addForumPost() {
       }
       window.applyEliteTheme = applyEliteTheme;
 
+      
+      window.openCommunityPolls = function () {
+        try {
+          if (typeof goToCommunity === "function") goToCommunity();
+          else if (typeof switchPage === "function") switchPage("page-forum");
+          if (typeof showCommunityTab === "function") showCommunityTab("polls");
+          if (typeof loadCommunityPolls === "function") loadCommunityPolls();
+        } catch (e) {}
+      };
+      window.loadCommunityPolls = async function () {
+        const list = document.getElementById("communityPollsList");
+        if (!list) return;
+        list.innerHTML = '<div style="color:#94a3b8;font-size:13px;">Yükleniyor…</div>';
+        try {
+          if (typeof apiFetch !== "function") throw new Error("Bağlantı yok");
+          const r = await apiFetch("/api/polls");
+          const polls = (r && r.polls) || [];
+          const active = polls.filter(function (p) { return p.active !== false; });
+          if (!active.length) {
+            list.innerHTML = '<div style="color:#64748b;font-size:13px;">Aktif anket yok. Admin Ayarlar\'dan yayınlar.</div>';
+            return;
+          }
+          list.innerHTML = active.map(function (p) {
+            const opts = (p.options || []).map(function (o) {
+              return (
+                '<button type="button" class="sub-btn" style="width:auto;padding:8px 12px;margin:4px;background:#1e293b;" ' +
+                'onclick="voteCommunityPoll(\'' + p.id + '\',\'' + String(o).replace(/'/g, "\\'") + '\')">' +
+                o +
+                "</button>"
+              );
+            }).join("");
+            return (
+              '<div style="padding:14px;background:#0f172a;border:1px solid #2c3a52;border-radius:12px;">' +
+              '<div style="font-weight:800;color:#e2e8f0;margin-bottom:8px;">📊 ' +
+              (p.question || "") +
+              "</div><div>" +
+              opts +
+              '</div><div id="pollNote_' + p.id + '" style="font-size:12px;color:#94a3b8;margin-top:8px;"></div></div>'
+            );
+          }).join("");
+        } catch (e) {
+          list.innerHTML =
+            '<div style="color:#f87171;font-size:13px;">Anketler yüklenemedi: ' +
+            ((e && e.message) || "") +
+            "</div>";
+        }
+      };
+      window.voteCommunityPoll = async function (pollId, option) {
+        const note = document.getElementById("pollNote_" + pollId);
+        try {
+          const r = await apiFetch("/api/polls/" + encodeURIComponent(pollId) + "/vote", {
+            method: "POST",
+            body: JSON.stringify({ option: option }),
+          });
+          if (note)
+            note.innerHTML =
+              '<span style="color:#4ade80;">Oyun kaydedildi' +
+              (r && r.total != null ? " · toplam " + r.total + " oy" : "") +
+              "</span>";
+        } catch (e) {
+          if (note)
+            note.innerHTML =
+              '<span style="color:#f87171;">' + ((e && e.message) || "Oy verilemedi") + "</span>";
+        }
+      };
+
       window.adminCreatePoll = async function () {
         const q = ((document.getElementById("adminPollQuestion") || {}).value || "").trim();
         const raw = ((document.getElementById("adminPollOptions") || {}).value || "").trim();
@@ -23605,7 +23754,10 @@ function addForumPost() {
           });
           if (note)
             note.innerHTML =
-              '<span style="color:#4ade80;">Anket yayınlandı.</span>';
+              '<span style="color:#4ade80;">Anket yayınlandı. Oyuncular: Topluluk → Anketler (veya Ana menü).</span>';
+          try {
+            if (typeof loadCommunityPolls === "function") loadCommunityPolls();
+          } catch (eL) {}
           const qi = document.getElementById("adminPollQuestion");
           const oi = document.getElementById("adminPollOptions");
           if (qi) qi.value = "";
@@ -34378,7 +34530,8 @@ function renderTransferPage() {
           zone.innerText = z.pos;
           zone.title = "Hedef bölge: " + z.pos;
           zone.style.cursor = (matchStarted && !matchEnded) ? "default" : "pointer";
-          zone.style.zIndex = selectedFormationToken ? "120" : "15";
+          zone.style.zIndex = selectedFormationToken ? "120" : "25";
+          zone.style.pointerEvents = "auto";
           zone.style.pointerEvents = "auto";
           zone.style.touchAction = "manipulation";
           zone.addEventListener("click", (e) => {

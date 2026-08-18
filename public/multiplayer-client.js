@@ -1018,14 +1018,29 @@
       try {
         startEmSyncHeartbeat();
       } catch (e) {}
-      // Maç içi reconnect: izlenen fikstür/matchId varsa odaya hemen abone ol
-      const wasWatching =
-        !!(window._emWatchingFixtureId || window._emWatchingMatchId);
-      if (wasWatching) {
-        rewatchLiveMatch("reconnect");
-      } else {
-        setConnBanner(false);
-      }
+      // Bağlantı yenilenince maç odasına zorla girme → ana menü
+      try {
+        window._emWatchingFixtureId = null;
+        window._emWatchingMatchId = null;
+      } catch (eW) {}
+      setConnBanner(false);
+      try {
+        const onMatch =
+          typeof currentPageId !== "undefined" && currentPageId === "page-match";
+        const matchPage = document.getElementById("page-match");
+        const matchActive =
+          matchPage && matchPage.classList.contains("active");
+        if (onMatch || matchActive) {
+          if (typeof showMainMenu === "function") showMainMenu();
+          else if (typeof switchPage === "function") {
+            try {
+              document.querySelectorAll(".page.active").forEach(function (el) {
+                el.classList.remove("active");
+              });
+            } catch (eP) {}
+          }
+        }
+      } catch (eMenu) {}
     });
     socket.on("disconnect", (reason) => {
       setConnBanner(true, "Bağlantı koptu (" + (reason || "?") + ") — yeniden deneniyor…");
