@@ -218,7 +218,11 @@ function uid() {
  */
 function randomName(used, opts = {}) {
   const set = used instanceof Set ? used : new Set();
-  const country = opts.country || "Türkiye";
+  let country = opts.country || "Türkiye";
+  try {
+    const { normalizeCountry } = require("./countries");
+    country = normalizeCountry(country) || country;
+  } catch (_) {}
   const pool = CLUB_NAME_BY_COUNTRY[country] || DEFAULT_CLUB_POOL;
   const cities = pool.cities || DEFAULT_CLUB_POOL.cities;
   const suffixes = pool.suffixes || DEFAULT_CLUB_POOL.suffixes;
