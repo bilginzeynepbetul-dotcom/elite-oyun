@@ -101,19 +101,24 @@ async function tickContinental({ io, liveMatches }) {
 }
 
 async function tickEliteCup({ io, liveMatches }) {
-  const due = await eliteCupRepo.listDueFixtures(20);
-  for (const f of due) {
-    try {
-      await startEliteCupFixtureMatch({
-        fixtureId: f.id,
-        io,
-        liveMatches,
-        MatchClass: Match,
-      });
-      console.log("[scheduler] Elite Kupa maçı başladı", f.id);
-    } catch (e) {
-      console.warn("[scheduler] Elite Kupa maçı başlatılamadı", f.id, e.message);
+  try {
+    const due = await eliteCupRepo.listDueFixtures(20);
+    for (const f of due) {
+      try {
+        await startEliteCupFixtureMatch({
+          fixtureId: f.id,
+          io,
+          liveMatches,
+          MatchClass: Match,
+        });
+        console.log("[scheduler] Elite Kupa maçı başladı", f.id);
+      } catch (e) {
+        console.warn("[scheduler] Elite Kupa maçı başlatılamadı", f.id, e.message);
+      }
     }
+  } catch (e) {
+    // Tablo henüz migrate edilmemiş olabilir (relation does not exist)
+    console.warn("[scheduler] eliteCup listDue", e.message);
   }
   try {
     await eliteCupRepo.advanceReadyEditions();
