@@ -1,8 +1,8 @@
 // ============================================================
-// continentalLifecycle.js — Kıtalar Ligi maç başlat / bitir
+// eliteCupLifecycle.js — Elite Kupa maç başlat / bitir
 // ============================================================
 
-const continentalRepo = require("./repos/continentalRepo");
+const eliteCupRepo = require("./repos/eliteCupRepo");
 const clubsRepo = require("./repos/clubsRepo");
 
 let matchArchive = null;
@@ -22,7 +22,7 @@ try {
   stadiumSystem = require("./stadiumSystem");
 } catch (_) {}
 
-async function onContinentalMatchEnd(state, matchInstance) {
+async function onEliteCupMatchEnd(state, matchInstance) {
   if (!state) return;
   const fixtureId = state.fixtureId;
   const homeGoals = state.score ? state.score.home : 0;
@@ -45,12 +45,8 @@ async function onContinentalMatchEnd(state, matchInstance) {
           state.penaltyScore ||
           (matchInstance && matchInstance.penaltyScore) ||
           null;
-        penOpts.penaltyShootout =
-          state.penaltyShootout ||
-          (matchInstance && matchInstance.penaltyShootout) ||
-          null;
       }
-      const result = await continentalRepo.applyMatchResult(
+      const result = await eliteCupRepo.applyMatchResult(
         fixtureId,
         homeGoals,
         awayGoals,
@@ -58,24 +54,24 @@ async function onContinentalMatchEnd(state, matchInstance) {
         penOpts,
       );
       if (!result.ok) {
-        console.warn("[clLifecycle] applyMatchResult", result.error);
+        console.warn("[eliteCup] applyMatchResult", result.error);
       } else if (result.editionId) {
         try {
-          await continentalRepo.maybeAdvanceKnockout(result.editionId);
+          await eliteCupRepo.advanceReadyEditions();
         } catch (e) {
-          console.error("[clLifecycle] advance", e);
+          console.error("[eliteCup] advance", e);
         }
       }
     }
   } catch (e) {
-    console.error("[clLifecycle] result", e);
+    console.error("[eliteCup] result", e);
   }
 
   try {
     if (matchArchive && fixtureId) {
-      const fixture = await continentalRepo.getFixtureById(fixtureId);
+      const fixture = await eliteCupRepo.getFixtureById(fixtureId);
       await matchArchive.persistMatch(state, matchInstance || null, {
-        competition: "continental",
+        competition: "elite_cup",
         fixtureId,
         homeClubId: fixture && fixture.homeClubId,
         awayClubId: fixture && fixture.awayClubId,
@@ -84,37 +80,25 @@ async function onContinentalMatchEnd(state, matchInstance) {
       });
     }
   } catch (e) {
-    console.error("[clLifecycle] archive", e);
+    console.error("[eliteCup] archive", e);
   }
 
   try {
     if (fixtureId && stadiumSystem && stadiumSystem.applyMatchTicketRevenue) {
-      const fixture = await continentalRepo.getFixtureById(fixtureId);
+      const fixture = await eliteCupRepo.getFixtureById(fixtureId);
       let homeRes = "draw";
       if (homeGoals > awayGoals) homeRes = "win";
       else if (awayGoals > homeGoals) homeRes = "loss";
       if (fixture && fixture.homeClubId) {
         await stadiumSystem.applyMatchTicketRevenue(fixture.homeClubId, {
           isHome: true,
-          comp: "continental",
+          comp: "elite_cup",
           result: homeRes,
         });
       }
-      try {
-        const { applyMatchPrizeMoney } = require("./economyBalance");
-        await applyMatchPrizeMoney({
-          kind: "continental",
-          homeGoals,
-          awayGoals,
-          homeClubId: fixture && fixture.homeClubId,
-          awayClubId: fixture && fixture.awayClubId,
-        });
-      } catch (eP) {
-        console.error("[clLifecycle] prizes", eP);
-      }
     }
   } catch (e) {
-    console.error("[clLifecycle] tickets", e);
+    console.error("[eliteCup] tickets", e);
   }
 
   try {
@@ -122,32 +106,37 @@ async function onContinentalMatchEnd(state, matchInstance) {
       await statsSystem.recordMatchStats(state, matchInstance || null);
     }
   } catch (e) {
-    console.error("[clLifecycle] stats", e);
+    console.error("[eliteCup] stats", e);
   }
 
   try {
     if (matchRewards && typeof matchRewards.applyMatchRewards === "function") {
       await matchRewards.applyMatchRewards({
-        kind: "continental",
+        kind: "elite_cup",
         state,
         matchInstance: matchInstance || null,
       });
     }
   } catch (e) {
-    console.error("[clLifecycle] rewards", e);
+    console.error("[eliteCup] rewards", e);
   }
 }
 
-async function startContinentalFixtureMatch(opts) {
+async function startEliteCupFixtureMatch(opts) {
   const { fixtureId, io, liveMatches, MatchClass } = opts;
   if (!fixtureId || !MatchClass) throw new Error("fixtureId ve MatchClass gerekli");
   if (liveMatches && liveMatches.has(fixtureId)) {
     return liveMatches.get(fixtureId);
   }
 
-  const fixture = await continentalRepo.getFixtureById(fixtureId);
-  if (!fixture) throw new Error("CL fikstürü yok");
-  if (fixture.status === "finished") throw new Error("Maç zaten bitmiş");
+  const fixture = await eliteCupRepo.getFixtureById(fixtureId);
+  if (!fixture) throw new Error("Elite Kupa fikstürü yok");
+  if (fixture.status === "finished" || fixture.status === "bye") {
+    throw new Error("Maç zaten bitmiş");
+  }
+  if (!fixture.homeClubId || !fixture.awayClubId) {
+    throw new Error("Bye / eksik rakip");
+  }
 
   const homeTeam = await clubsRepo.getTeam(fixture.homeClubId);
   const awayTeam = await clubsRepo.getTeam(fixture.awayClubId);
@@ -173,29 +162,26 @@ async function startContinentalFixtureMatch(opts) {
     clubId: fixture.awayClubId,
   };
 
-  const matchId = "cl_" + fixtureId;
+  const matchId = "ek_" + fixtureId;
   const bothBot = !!playerA.isBot && !!playerB.isBot;
-  const isKnockout =
-    fixture.phase && String(fixture.phase).toLowerCase() !== "group";
   const match = new MatchClass(matchId, playerA, playerB, io, {
     fixtureId,
-    // Eleme turunda (qf/sf/final): 90 + uzatma 120, beraberlikte penaltı
-    competition: "continental",
-    maxTime: isKnockout ? 120 : undefined,
-    extraTimeOnDraw: isKnockout,
-    allowPenalties: isKnockout,
+    competition: "elite_cup",
+    maxTime: 120,
+    extraTimeOnDraw: true,
+    allowPenalties: true,
     tickMs: bothBot ? 120 : undefined,
     circulationMs: bothBot ? 100 : undefined,
     onEnd: async (state) => {
       try {
-        await onContinentalMatchEnd(state, match);
+        await onEliteCupMatchEnd(state, match);
       } finally {
         if (liveMatches) liveMatches.delete(fixtureId);
       }
     },
   });
 
-  await continentalRepo.setFixtureLive(fixtureId, matchId);
+  await eliteCupRepo.setFixtureLive(fixtureId, matchId);
   if (liveMatches) liveMatches.set(fixtureId, match);
   match.start();
   if (io) {
@@ -205,6 +191,6 @@ async function startContinentalFixtureMatch(opts) {
 }
 
 module.exports = {
-  onContinentalMatchEnd,
-  startContinentalFixtureMatch,
+  onEliteCupMatchEnd,
+  startEliteCupFixtureMatch,
 };

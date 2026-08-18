@@ -9,6 +9,42 @@
 // ============================================================
 
 const { query } = require("./db");
+const { posFamily, isGkPos } = require("./teamUtils");
+
+/** İlk11 diziliş kuralı — istemciyle aynı: en az 3 defans, 2 orta saha,
+ *  1 forvet ve kaleci zorunlu. Sadece tam (11 kişilik) bir diziliş
+ *  gönderildiğinde uygulanır; kadro henüz kurulurken (eksik listeyle)
+ *  yapılan ara kayıtları engellemez. */
+const MIN_LINE_COUNTS = { def: 3, mid: 2, fwd: 1 };
+
+function validateStartingLineup(players) {
+  if (!Array.isArray(players) || players.length !== LIMITS.maxStarters) {
+    return { ok: true }; // tam 11 kişilik diziliş değilse kural uygulanmaz
+  }
+  const counts = { gk: 0, def: 0, mid: 0, fwd: 0 };
+  for (const p of players) {
+    if (!p) continue;
+    if (isGkPos(p.pos)) counts.gk++;
+    else counts[posFamily(p.pos)] = (counts[posFamily(p.pos)] || 0) + 1;
+  }
+  if (counts.gk < 1) {
+    return {
+      ok: false,
+      error: "Dizilişte kaleci zorunlu",
+      code: "LINEUP_NO_GK",
+    };
+  }
+  for (const fam of ["def", "mid", "fwd"]) {
+    if ((counts[fam] || 0) < MIN_LINE_COUNTS[fam]) {
+      return {
+        ok: false,
+        error: `Diziliş kuralı: en az ${MIN_LINE_COUNTS.def} defans, ${MIN_LINE_COUNTS.mid} orta saha, ${MIN_LINE_COUNTS.fwd} forvet gerekli`,
+        code: "LINEUP_RULE",
+      };
+    }
+  }
+  return { ok: true };
+}
 
 const SKILL_KEYS = [
   "pace",
@@ -378,6 +414,11 @@ function sanitizeTeamPayload(team, existingTeam) {
     });
   players = dedupe(players);
   bench = dedupe(bench);
+
+  const lineupCheck = validateStartingLineup(players);
+  if (!lineupCheck.ok) {
+    return { ok: false, error: lineupCheck.error, code: lineupCheck.code };
+  }
 
   const sanitized = Object.assign({}, team, { players, bench });
   // Stil alanları whitelist

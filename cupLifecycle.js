@@ -34,7 +34,28 @@ async function onCupMatchEnd(state, matchInstance) {
   let result = null;
   try {
     if (fixtureId) {
-      result = await cupRepo.applyMatchResult(fixtureId, homeGoals, awayGoals, matchId);
+      const penOpts = {};
+      if (state.penalties || state.penaltyWinner || (matchInstance && matchInstance.penalties)) {
+        penOpts.penaltyWinner =
+          state.penaltyWinner ||
+          (matchInstance && matchInstance.penaltyWinner) ||
+          null;
+        penOpts.penaltyScore =
+          state.penaltyScore ||
+          (matchInstance && matchInstance.penaltyScore) ||
+          null;
+        penOpts.penaltyShootout =
+          state.penaltyShootout ||
+          (matchInstance && matchInstance.penaltyShootout) ||
+          null;
+      }
+      result = await cupRepo.applyMatchResult(
+        fixtureId,
+        homeGoals,
+        awayGoals,
+        matchId,
+        penOpts,
+      );
       if (!result.ok) console.warn("[cupLifecycle] applyMatchResult", result.error);
     }
   } catch (e) {
@@ -180,6 +201,11 @@ async function startCupFixtureMatch(opts) {
   const bothBot = !!playerA.isBot && !!playerB.isBot;
   const match = new MatchClass(matchId, playerA, playerB, io, {
     fixtureId,
+    // Kupa: tek maçlı eleme — 90 + 30 uzatma (120), hâlâ eşitse penaltı
+    competition: "cup",
+    maxTime: 120,
+    extraTimeOnDraw: true,
+    allowPenalties: true,
     tickMs: bothBot ? 120 : undefined,
     circulationMs: bothBot ? 100 : undefined,
     onEnd: async (state) => {

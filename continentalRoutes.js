@@ -29,15 +29,23 @@ function createContinentalRouter() {
         }
       }
       if (!edition) {
+        let gateHint = null;
+        try {
+          const gate = require("./continentalGate");
+          const can = await gate.canStartContinentalCompetitions();
+          if (!can.ok) gateHint = can.hint;
+        } catch (_) {}
         return res.json({
           edition: null,
           groups: {},
           fixtures: [],
           pot: [],
+          name: "Kıtasal Lig",
           ensureError,
-          hint: ensureError
-            ? ensureError
-            : "Aktif Kıtalar Ligi yok. CL Oluştur ile başlatılabilir.",
+          hint:
+            ensureError ||
+            gateHint ||
+            "Kıtasal Lig 2. sezonda açılır (1. Lig şampiyonları).",
         });
       }
       const [groups, fixtures] = await Promise.all([
@@ -72,20 +80,79 @@ function createContinentalRouter() {
       if (force && !admin) {
         return res.status(403).json({ error: "force sadece admin" });
       }
+
+      const gate = require("./continentalGate");
+      const can = await gate.canStartContinentalCompetitions();
+      if (!can.ok && !force) {
+        return res.json({
+          ok: false,
+          skipped: true,
+          reason: can.reason,
+          hint: can.hint,
+          name: "Kıtasal Lig",
+        });
+      }
+
       const existing = await continentalRepo.getCurrentEdition();
       if (existing && !force) {
         return res.json({ ok: true, skipped: true, edition: existing });
       }
       const yearLabel =
         (req.body && req.body.yearLabel) ||
-        "CL-" + new Date().getFullYear();
+        "KL-" + new Date().getFullYear();
+      let startAt;
+      try {
+        startAt = require("./calendarSchedule").nextWednesday1500TR();
+      } catch (_) {
+        startAt = new Date();
+        startAt.setUTCHours(12, 0, 0, 0);
+        while (startAt.getUTCDay() !== 3) {
+          startAt = new Date(startAt.getTime() + 86400000);
+        }
+      }
       const result = await continentalRepo.createEdition(yearLabel, {
-        targetSize: 8,
+        startAt,
       });
       res.json(result);
     } catch (e) {
       console.error("[continental/generate]", e);
       res.status(500).json({ error: e.message || "Oluşturulamadı" });
+    }
+  });
+
+  // GET /api/continental/coefficients — ülke torbası (puan + kontenjan)
+  // 2. sezon kupa sonuçlarından birikir; 3. sezondan kontenjan uygulanır.
+  router.get("/continental/coefficients", async (req, res) => {
+    try {
+      const coeff = require("./countryCoefficient");
+      const [pot, mode] = await Promise.all([
+        coeff.getPot(),
+        coeff.getAccessMode(),
+      ]);
+      res.json({
+        name: "Ülke katsayısı torbası",
+        mode: mode.mode,
+        modeLabel:
+          mode.mode === "coefficient"
+            ? "3. sezon+ kontenjan aktif"
+            : mode.mode === "fixed_s2"
+              ? "2. sezon sabit kontenjan (1→Kıtasal, 2+3→Elite)"
+              : "Henüz 1. sezon bitmedi",
+        slotsRule: [
+          { rank: "1–8", total: 7, kitasal: 3, elite: 4 },
+          { rank: "9–16", total: 5, kitasal: 2, elite: 3 },
+          { rank: "17–40", total: 3, kitasal: 1, elite: 2 },
+          { rank: "41+", total: 1, kitasal: 0, elite: 1 },
+        ],
+        kitasalTarget: 64,
+        eliteTarget: 128,
+        pot,
+        labels: mode.labels,
+        countries: mode.countries,
+      });
+    } catch (e) {
+      console.error("[continental/coefficients]", e);
+      res.status(500).json({ error: "Torba alınamadı" });
     }
   });
 

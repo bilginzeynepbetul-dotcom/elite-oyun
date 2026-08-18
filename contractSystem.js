@@ -86,13 +86,27 @@ async function getPayroll(clubId) {
     );
   } catch (_) {}
 
+  // Doktor maaşı (varsa) — aynı ölçek: aylık gibi tutulmuş, haftalığa /4
+  let doctorWeekly = 0;
+  try {
+    const { rows: doctors } = await query(
+      `SELECT salary FROM club_doctors WHERE club_id = $1`,
+      [clubId],
+    );
+    doctorWeekly = doctors.reduce(
+      (s, d) => s + Math.round(Number(d.salary || 0) / 4),
+      0,
+    );
+  } catch (_) {}
+
   const club = await clubsRepo.getClub(clubId);
   return {
     players: rows.sort((a, b) => b.wage - a.wage),
     playerWeekly: weeklyTotal,
     coachWeekly,
-    weeklyTotal: weeklyTotal + coachWeekly,
-    monthlyTotal: (weeklyTotal + coachWeekly) * 4,
+    doctorWeekly,
+    weeklyTotal: weeklyTotal + coachWeekly + doctorWeekly,
+    monthlyTotal: (weeklyTotal + coachWeekly + doctorWeekly) * 4,
     balance: club ? Number(club.balance) : 0,
     lastPayrollAt: club && club.last_payroll_at ? club.last_payroll_at : null,
     wageIntervalMs: WAGE_INTERVAL_MS,

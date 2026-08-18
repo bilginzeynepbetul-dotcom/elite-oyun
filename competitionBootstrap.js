@@ -64,23 +64,25 @@ async function ensureAllCups() {
   return results;
 }
 
-/** Kıtasal turnuva — yoksa oluştur */
+/**
+ * Kıtasal Lig + Elite Kupa — yalnızca 1. sezon bitince (2. sezon).
+ * Boot'ta zorla açılmaz.
+ */
 async function ensureContinental() {
   try {
-    if (typeof continentalRepo.getCurrentEdition === "function") {
-      const cur = await continentalRepo.getCurrentEdition();
-      if (cur) return { status: "exists", id: cur.id };
+    const gate = require("./continentalGate");
+    const can = await gate.canStartContinentalCompetitions();
+    if (!can.ok) {
+      return {
+        status: "skipped",
+        reason: can.reason,
+        hint: can.hint,
+        closed: can.closed,
+      };
     }
-    const yearLabel = currentYearLabel();
-    if (typeof continentalRepo.ensureEditionExists === "function") {
-      const r = await continentalRepo.ensureEditionExists(yearLabel);
-      return { status: "ensured", result: r };
-    }
-    if (typeof continentalRepo.createEdition === "function") {
-      const r = await continentalRepo.createEdition(yearLabel);
-      return { status: "created", result: r };
-    }
-    return { status: "skip", reason: "API yok" };
+    return await gate.tryStartSeason2Competitions({
+      yearLabel: currentYearLabel(),
+    });
   } catch (e) {
     console.warn("[compBoot] continental", e.message);
     return { status: "error", error: e.message };
@@ -104,36 +106,51 @@ async function ensureAllNational() {
 
 /**
  * Haftalık otomatik dostluk:
- * - Kupada aktif maçı olmayan (elenen / kupaya girmemiş) takımlar
- * - Bu hafta zaten dostluğu olanlar atlanır
- * - Çiftler eşleştirilir, status=scheduled (onay beklemeden — canlı oyun)
- * - Haftada en fazla 1 dostluk / kulüp
+ * - Lig kupası ile AYNI gün/saat: Perşembe 13:00 TR
+ * - Sezon içi: kupadan elenen takımlar, lig fark etmeksizin (aynı ülke)
+ * - Sezon öncesi (ilk lig maçından önce, ~2 hafta): herkes, haftada 2 maç
+ *   (Perşembe 13:00 TR + Pazar 13:00 TR)
  */
 async function scheduleWeeklyFriendlies(opts = {}) {
-  const maxPairsPerCountry = opts.maxPairsPerCountry || 20;
+  const maxPairsPerCountry = opts.maxPairsPerCountry || 40;
+  let cal = null;
+  try {
+    cal = require("./calendarSchedule");
+  } catch (_) {}
+
+  // Ana slot: Perşembe 13:00 TR (Lig Kupası ile aynı)
   let kickoffBase = opts.kickoffBase;
   if (!kickoffBase) {
-    try {
-      const seasonConfig = require("./seasonConfig");
-      kickoffBase = await seasonConfig.getSeasonStartAt();
-    } catch (_) {
-      kickoffBase = new Date(Date.now() + 90 * 60 * 1000);
-    }
-    // Dostluk: sezon başlangıcından ~2 saat sonra (kupa ile çakışmasın)
-    kickoffBase = new Date(kickoffBase.getTime() + 2 * 60 * 60 * 1000);
-    if (kickoffBase.getTime() < Date.now() + 30 * 60 * 1000) {
-      kickoffBase = new Date(Date.now() + 90 * 60 * 1000);
+    if (cal && typeof cal.nextThursday1300TR === "function") {
+      kickoffBase = cal.nextThursday1300TR();
+    } else {
+      kickoffBase = new Date();
+      kickoffBase.setUTCHours(10, 0, 0, 0);
+      while (kickoffBase.getUTCDay() !== 4) {
+        kickoffBase = new Date(kickoffBase.getTime() + 86400000);
+      }
+      if (kickoffBase.getTime() <= Date.now()) {
+        kickoffBase = new Date(kickoffBase.getTime() + 7 * 86400000);
+      }
     }
   }
 
   let scheduled = 0;
   let skipped = 0;
+  let preSeasonCountries = 0;
 
   for (const country of SUPPORTED_COUNTRIES) {
     try {
-      // Ülkedeki insan + bot kulüpler
+      const pre = await friendlySystem.isPreSeasonWindow(country);
+      const isPre = !!(pre && pre.preSeason);
+      if (isPre) preSeasonCountries++;
+      const maxPerWeek = isPre ? 2 : 1;
+
+      // Aynı ülke, tüm ligler
       const { rows: clubs } = await query(
-        `SELECT id, name, is_bot FROM clubs WHERE country = $1 ORDER BY is_bot ASC, name ASC`,
+        `SELECT id, name, division, COALESCE(is_bot, FALSE) AS is_bot
+         FROM clubs WHERE country = $1
+         ORDER BY division ASC, is_bot ASC, name ASC`,
         [country],
       );
       if (!clubs || clubs.length < 2) continue;
@@ -142,11 +159,11 @@ async function scheduleWeeklyFriendlies(opts = {}) {
       for (const c of clubs) {
         const can = await friendlySystem.canPlayFriendly(c.id);
         if (!can.ok) continue;
-        // Bu hafta zaten dostluk var mı?
-        const hasWeek = await friendlySystem.hasFriendlyThisWeek(c.id);
-        if (hasWeek) continue;
+        const has = await friendlySystem.hasFriendlyThisWeek(c.id, maxPerWeek);
+        if (has) continue;
         eligible.push(c);
       }
+      if (eligible.length < 2) continue;
 
       // Karıştır
       for (let i = eligible.length - 1; i > 0; i--) {
@@ -156,23 +173,53 @@ async function scheduleWeeklyFriendlies(opts = {}) {
         eligible[j] = tmp;
       }
 
-      let pairs = 0;
-      for (let i = 0; i + 1 < eligible.length && pairs < maxPairsPerCountry; i += 2) {
-        const home = eligible[i];
-        const away = eligible[i + 1];
-        const kick = new Date(
-          kickoffBase.getTime() + pairs * 15 * 60 * 1000 + Math.floor(Math.random() * 5) * 60000,
-        );
-        try {
-          const r = await friendlySystem.autoSchedule(home.id, away.id, kick);
-          if (r && r.ok) {
-            scheduled++;
-            pairs++;
-          } else {
+      // Slot listesi
+      const slots = [new Date(kickoffBase)];
+      if (isPre && cal && typeof cal.nextSunday1300TR === "function") {
+        const sun = cal.nextSunday1300TR(kickoffBase);
+        // Aynı hafta içinde olsun
+        if (sun.getTime() - kickoffBase.getTime() < 7 * 86400000) {
+          slots.push(sun);
+        } else {
+          // kickoffBase'ten önceki pazar veya +3 gün civarı
+          slots.push(new Date(kickoffBase.getTime() + 3 * 86400000));
+        }
+      }
+
+      for (const slotKick of slots) {
+        // Bu slot için yeniden eligible (limit)
+        const pool = [];
+        for (const c of eligible) {
+          const has = await friendlySystem.hasFriendlyThisWeek(c.id, maxPerWeek);
+          if (!has) pool.push(c);
+        }
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = pool[i];
+          pool[i] = pool[j];
+          pool[j] = tmp;
+        }
+        let pairs = 0;
+        for (
+          let i = 0;
+          i + 1 < pool.length && pairs < maxPairsPerCountry;
+          i += 2
+        ) {
+          const home = pool[i];
+          const away = pool[i + 1];
+          // Aynı kickoff (kupa saati) — tüm çiftler aynı anda
+          const kick = new Date(slotKick);
+          try {
+            const r = await friendlySystem.autoSchedule(home.id, away.id, kick);
+            if (r && r.ok) {
+              scheduled++;
+              pairs++;
+            } else {
+              skipped++;
+            }
+          } catch (e) {
             skipped++;
           }
-        } catch (e) {
-          skipped++;
         }
       }
     } catch (e) {
@@ -180,7 +227,13 @@ async function scheduleWeeklyFriendlies(opts = {}) {
     }
   }
 
-  return { scheduled, skipped };
+  return {
+    scheduled,
+    skipped,
+    preSeasonCountries,
+    kickoffAt: kickoffBase.toISOString(),
+    slot: "Thursday 13:00 TR (Lig Kupası ile aynı)",
+  };
 }
 
 /**

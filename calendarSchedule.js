@@ -4,7 +4,7 @@
 // Ülke yerel saatine göre uyku penceresine (00:00–08:59) düşmez.
 // ============================================================
 // Rezerve (tüm ülkeler, TR saati):
-//   Çarşamba 15:00 TR — Kıtalar Ligi
+//   Çarşamba 15:00 TR — Kıtasal Lig + Elite Kupa (aynı slot)
 //   Perşembe 13:00 TR — Lig Kupası
 //   Cuma     22:00 TR — Milli takımlar
 //
@@ -12,10 +12,105 @@
 // ============================================================
 
 const RESERVED = [
-  { dow: 3, hour: 15, minute: 0, label: "Kıtalar Ligi" }, // Çarşamba
+  { dow: 3, hour: 15, minute: 0, label: "Kıtasal Lig + Elite Kupa" }, // Çarşamba
   { dow: 4, hour: 13, minute: 0, label: "Lig Kupası" }, // Perşembe
   { dow: 5, hour: 22, minute: 0, label: "Milli Takım" }, // Cuma
 ];
+
+/**
+ * Bir sonraki Çarşamba 15:00 TR (UTC 12:00).
+ * Kıtasal Lig ve Elite Kupa ortak slot.
+ * fromDate verilirse o tarihten sonraki ilk Çarşamba 15:00 (geçmişse +7 gün).
+ */
+function nextWednesday1500TR(fromDate) {
+  const base = fromDate instanceof Date ? new Date(fromDate) : new Date();
+  // 15:00 TR = 12:00 UTC (UTC+3 sabit)
+  let kick = new Date(
+    Date.UTC(
+      base.getUTCFullYear(),
+      base.getUTCMonth(),
+      base.getUTCDate(),
+      12,
+      0,
+      0,
+      0,
+    ),
+  );
+  while (kick.getUTCDay() !== 3) {
+    kick = new Date(kick.getTime() + 86400000);
+  }
+  // Bu Çarşamba 15:00 geçmişse bir sonraki
+  if (kick.getTime() <= Date.now() + 60 * 1000) {
+    kick = new Date(kick.getTime() + 7 * 86400000);
+  }
+  return kick;
+}
+
+/** fromDate'ten n hafta sonraki Çarşamba 15:00 TR */
+function wednesday1500TRPlusWeeks(fromDate, weeks) {
+  const w = Math.max(0, Number(weeks) || 0);
+  const first = nextWednesday1500TR(fromDate);
+  return new Date(first.getTime() + w * 7 * 86400000);
+}
+
+/**
+ * Bir sonraki Perşembe 13:00 TR (UTC 10:00).
+ * Lig Kupası + Dostluk maçları ortak slot.
+ */
+function nextThursday1300TR(fromDate) {
+  const base = fromDate instanceof Date ? new Date(fromDate) : new Date();
+  let kick = new Date(
+    Date.UTC(
+      base.getUTCFullYear(),
+      base.getUTCMonth(),
+      base.getUTCDate(),
+      10, // 13:00 TR = 10:00 UTC
+      0,
+      0,
+      0,
+    ),
+  );
+  while (kick.getUTCDay() !== 4) {
+    kick = new Date(kick.getTime() + 86400000);
+  }
+  if (kick.getTime() <= Date.now() + 60 * 1000) {
+    kick = new Date(kick.getTime() + 7 * 86400000);
+  }
+  return kick;
+}
+
+/** fromDate'ten n hafta sonraki Perşembe 13:00 TR */
+function thursday1300TRPlusWeeks(fromDate, weeks) {
+  const w = Math.max(0, Number(weeks) || 0);
+  const first = nextThursday1300TR(fromDate);
+  return new Date(first.getTime() + w * 7 * 86400000);
+}
+
+/**
+ * Sezon öncesi dostluk 2. slot: Pazar 13:00 TR (UTC 10:00).
+ * (Perşembe kupa saati + Pazar = haftada 2)
+ */
+function nextSunday1300TR(fromDate) {
+  const base = fromDate instanceof Date ? new Date(fromDate) : new Date();
+  let kick = new Date(
+    Date.UTC(
+      base.getUTCFullYear(),
+      base.getUTCMonth(),
+      base.getUTCDate(),
+      10,
+      0,
+      0,
+      0,
+    ),
+  );
+  while (kick.getUTCDay() !== 0) {
+    kick = new Date(kick.getTime() + 86400000);
+  }
+  if (kick.getTime() <= Date.now() + 60 * 1000) {
+    kick = new Date(kick.getTime() + 7 * 86400000);
+  }
+  return kick;
+}
 
 // Ardışık olmayan gün çiftleri (Pazar=0 … Cumartesi=6)
 const DAY_PAIRS = [
@@ -440,6 +535,11 @@ module.exports = {
   generateKickoffSequence,
   assignKickoffsToFixtures,
   kickoffAtTR,
+  nextWednesday1500TR,
+  wednesday1500TRPlusWeeks,
+  nextThursday1300TR,
+  thursday1300TRPlusWeeks,
+  nextSunday1300TR,
   isReserved,
   isSleepLocalHour,
   localHourToTR,

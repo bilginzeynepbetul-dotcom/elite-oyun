@@ -17,188 +17,260 @@ const crypto = require("crypto");
 const CLUB_NAME_BY_COUNTRY = {
   Türkiye: {
     cities: ["Ankara","İzmir","Bursa","Konya","Trabzon","Adana","Antalya","Gaziantep","Kayseri","Samsun","Eskişehir","Malatya","Sivas","Denizli","Muğla","Manisa","Balıkesir","Sakarya","Hatay","Ordu"],
-    suffixes: ["Spor","SK","FK","Belediyespor","Gençlikspor","Gücü","Idmanyurdu","Yıldızspor","Demirspor","Sanayispor"],
+    suffixes: ["Spor","SK","FK","Belediyespor","Gençlikspor","Gücü","İdmanyurdu","Yıldızspor","Demirspor","Sanayispor"],
   },
   Almanya: {
-    cities: ["Bayern","Dortmund","Berlin","Hamburg","Köln","Stuttgart","Frankfurt","Leipzig","Bremen","Gladbach","Hoffenheim","Freiburg","Augsburg","Mainz","Wolfsburg","Schalke","Bochum","Heidenheim","Darmstadt","Kiel"],
-    suffixes: ["FC","SV","BV","SC","VfB","VfL","Sport-Club","United"],
+    cities: ["München","Dortmund","Berlin","Hamburg","Köln","Stuttgart","Frankfurt","Leipzig","Bremen","Mönchengladbach","Hoffenheim","Freiburg","Augsburg","Mainz","Wolfsburg","Gelsenkirchen","Bochum","Heidenheim","Darmstadt","Kiel","Nürnberg","Hannover","Düsseldorf","Bielefeld"],
+    suffixes: ["FC","SV","BV","SC","VfB","VfL","FSV","TSG"],
   },
   İngiltere: {
-    cities: ["London","Manchester","Liverpool","Birmingham","Leeds","Newcastle","Sheffield","Bristol","Brighton","Leicester","Nottingham","Southampton","Norwich","Wolverhampton","Burnley","Watford","Reading","Ipswich","Hull","Derby"],
+    cities: ["London","Manchester","Liverpool","Birmingham","Leeds","Newcastle","Sheffield","Bristol","Brighton","Leicester","Nottingham","Southampton","Norwich","Wolverhampton","Burnley","Watford","Reading","Ipswich","Hull","Derby","Coventry","Middlesbrough","Stoke","Sunderland"],
     suffixes: ["FC","United","City","Town","Athletic","Rovers","Wanderers","Albion"],
   },
   İspanya: {
-    cities: ["Madrid","Barcelona","Sevilla","Valencia","Bilbao","Villarreal","Sociedad","Betis","Vigo","Gijón","Zaragoza","Mallorca","Girona","Cádiz","Granada","Osasuna","Almería","Valladolid","Elche","Leganés"],
-    suffixes: ["FC","CF","CD","UD","Atlético","Deportivo","Racing"],
+    cities: ["Madrid","Barcelona","Sevilla","Valencia","Bilbao","Villarreal","San Sebastián","Betis","Vigo","Gijón","Zaragoza","Mallorca","Girona","Cádiz","Granada","Pamplona","Almería","Valladolid","Elche","Leganés","Oviedo","Santander","Las Palmas","Málaga"],
+    suffixes: ["FC","CF","CD","UD","Atlético","Deportivo","Racing","Real"],
   },
   İtalya: {
-    cities: ["Milano","Torino","Napoli","Roma","Firenze","Bologna","Genova","Palermo","Verona","Parma","Udine","Cagliari","Lecce","Sassuolo","Empoli","Salerno","Bergamo","Brescia","Pisa","Bari"],
-    suffixes: ["FC","AC","US","Calcio","Sportiva","United"],
+    cities: ["Milano","Torino","Napoli","Roma","Firenze","Bologna","Genova","Palermo","Verona","Parma","Udine","Cagliari","Lecce","Sassuolo","Empoli","Salerno","Bergamo","Brescia","Pisa","Bari","Catania","Perugia","Modena","Spezia"],
+    suffixes: ["FC","AC","US","Calcio","SSC","AS"],
   },
   Fransa: {
-    cities: ["Paris","Marseille","Lyon","Lille","Nice","Monaco","Rennes","Lens","Nantes","Strasbourg","Montpellier","Toulouse","Reims","Brest","Lorient","Angers","Metz","Clermont","Auxerre","Troyes"],
-    suffixes: ["FC","Olympique","Racing","Stade","Sporting","AS","US"],
+    cities: ["Paris","Marseille","Lyon","Lille","Nice","Monaco","Rennes","Lens","Nantes","Strasbourg","Montpellier","Toulouse","Reims","Brest","Lorient","Angers","Metz","Clermont","Auxerre","Troyes","Bordeaux","Saint-Étienne","Nancy","Dijon"],
+    suffixes: ["FC","Olympique","Racing","Stade","AS","US","SCO"],
   },
   Portekiz: {
-    cities: ["Lisboa","Porto","Braga","Guimarães","Coimbra","Setúbal","Faro","Aveiro","Funchal","Leiria","Viseu","Évora","Barcelos","Famalicão","Moreira","Chaves","Estoril","Arouca","Casa Pia","Nacional"],
-    suffixes: ["FC","SC","CF","Sporting","United"],
+    cities: ["Lisboa","Porto","Braga","Guimarães","Coimbra","Setúbal","Faro","Aveiro","Funchal","Leiria","Viseu","Évora","Barcelos","Famalicão","Moreira","Chaves","Estoril","Arouca","Amadora","Funchal"],
+    suffixes: ["FC","SC","CF","Sporting","CD"],
   },
   Hollanda: {
-    cities: ["Amsterdam","Rotterdam","Eindhoven","Utrecht","Alkmaar","Twente","Heerenveen","Groningen","Breda","Arnhem","Tilburg","Nijmegen","Zwolle","Den Haag","Emmen","Volendam","Sittard","Waalwijk","Almere","Kerkrade"],
-    suffixes: ["FC","SV","Ajax","VV","Sport"],
+    cities: ["Amsterdam","Rotterdam","Eindhoven","Utrecht","Alkmaar","Enschede","Heerenveen","Groningen","Breda","Arnhem","Tilburg","Nijmegen","Zwolle","Den Haag","Emmen","Volendam","Sittard","Waalwijk","Almere","Kerkrade"],
+    suffixes: ["FC","SV","VV","SC","AFC"],
   },
   Belçika: {
-    cities: ["Anderlecht","Brugge","Liège","Gent","Charleroi","Genk","Antwerp","Mechelen","Kortrijk","Oostende","Seraing","Eupen","Westerlo","Leuven","Cercle","Standard","Union","Mouscron","Beerschot","Lierse"],
-    suffixes: ["FC","KV","Royal","Sporting","Union"],
-  },
-  Brezilya: {
-    cities: ["São Paulo","Rio","Bahia","Minas","Recife","Fortaleza","Curitiba","Porto Alegre","Salvador","Belém","Manaus","Goiânia","Campinas","Santos","Fluminense","Botafogo","Cruzeiro","Atlético","Palmeiras","Internacional"],
-    suffixes: ["EC","FC","Clube","Atlético","Esporte","Sport"],
-  },
-  Arjantin: {
-    cities: ["Boca","River","Rosario","Córdoba","La Plata","Mendoza","Santa Fe","Tucumán","Salta","Mar del Plata","Avellaneda","Lanús","Banfield","Quilmes","Huracán","Vélez","Racing","Independiente","Talleres","Belgrano"],
-    suffixes: ["CA","FC","Deportivo","Atlético","Club"],
-  },
-  Meksika: {
-    cities: ["América","Guadalajara","Monterrey","Tigres","Pachuca","Toluca","León","Cruz Azul","Santos","Puebla","Atlas","Necaxa","Querétaro","Tijuana","Juárez","Mazatlán","Pumas","Chivas","Xolos","Gallos"],
-    suffixes: ["FC","CF","Club","Deportivo","United"],
-  },
-  ABD: {
-    cities: ["New York","Los Angeles","Chicago","Miami","Seattle","Dallas","Atlanta","Houston","Philadelphia","Boston","Portland","Columbus","Kansas City","Salt Lake","Orlando","Austin","Nashville","Cincinnati","Minnesota","Colorado"],
-    suffixes: ["FC","SC","United","City","Athletic"],
-  },
-  Japonya: {
-    cities: ["Tokyo","Osaka","Yokohama","Nagoya","Sapporo","Kobe","Hiroshima","Fukuoka","Sendai","Kawasaki","Urawa","Kashima","Shimizu","Niigata","Kyoto","Oita","Tosu","Kashiwa","Gamba","Cerezo"],
-    suffixes: ["FC","SC","United","Albirex","Frontale"],
-  },
-  "Güney Kore": {
-    cities: ["Seoul","Busan","Incheon","Daegu","Ulsan","Jeonbuk","Suwon","Pohang","Jeju","Gwangju","Daejeon","Seongnam","Gangwon","Gimcheon","Anyang","Bucheon","Cheonan","Asan","Gyeongnam","Chungnam"],
-    suffixes: ["FC","United","City","SC"],
-  },
-  Avustralya: {
-    cities: ["Sydney","Melbourne","Brisbane","Perth","Adelaide","Newcastle","Wellington","Western","Central Coast","Macarthur","Canberra","Hobart","Gold Coast","Townsville","Geelong","Wollongong","Cairns","Darwin","Ballarat","Newcastle Jets"],
-    suffixes: ["FC","United","City","Wanderers","Roar"],
-  },
-  Mısır: {
-    cities: ["Cairo","Alexandria","Giza","Aswan","Luxor","Port Said","Suez","Mansoura","Tanta","Ismailia","Zagazig","Minya","Asyut","Hurghada","Sharm","Damietta","Beni Suef","Faiyum","Qena","Sohag"],
-    suffixes: ["SC","FC","Club","United"],
-  },
-  Fas: {
-    cities: ["Casablanca","Rabat","Fes","Marrakech","Tanger","Agadir","Meknes","Oujda","Kenitra","Tetouan","Safi","El Jadida","Mohammedia","Nador","Khouribga","Beni Mellal","Settat","Larache","Taza","Essaouira"],
-    suffixes: ["SC","FC","Club","Athletic"],
-  },
-  Nijerya: {
-    cities: ["Lagos","Kano","Ibadan","Enugu","Abuja","Port Harcourt","Kaduna","Benin City","Jos","Ilorin","Calabar","Warri","Abeokuta","Maiduguri","Owerri","Akure","Sokoto","Zaria","Uyo","Aba"],
-    suffixes: ["FC","United","Stars","Rangers","City"],
-  },
-  "Güney Afrika": {
-    cities: ["Johannesburg","Cape Town","Durban","Pretoria","Soweto","Port Elizabeth","Bloemfontein","Polokwane","Rustenburg","Kimberley","Nelspruit","East London","Pietermaritzburg","Mbombela","Tshwane","Kaizer","Orlando","Mamelodi","SuperSport","Stellenbosch"],
-    suffixes: ["FC","United","City","Stars","Athletic"],
-  },
-  Rusya: {
-    cities: ["Moskova","Sankt-Peterburg","Kazan","Sochi","Rostov","Krasnodar","Samara","Ekaterinburg","Nizhny","Ufa","Orenburg","Perm","Tula","Grozny","Makhachkala","Voronezh","Saratov","Tomsk","Omsk","Volgograd"],
-    suffixes: ["FK","FC","Dinamo","Lokomotiv","Spartak"],
-  },
-  Polonya: {
-    cities: ["Warszawa","Kraków","Poznań","Gdańsk","Wrocław","Łódź","Szczecin","Lublin","Białystok","Katowice","Gdynia","Bydgoszcz","Rzeszów","Radom","Kielce","Gliwice","Zabrze","Tychy","Opole","Elbląg"],
-    suffixes: ["KS","FC","United","Sportowa"],
-  },
-  Ukrayna: {
-    cities: ["Kyiv","Kharkiv","Donetsk","Odesa","Lviv","Dnipro","Zaporizhzhia","Poltava","Kryvyi Rih","Mariupol","Vinnytsia","Chernihiv","Sumy","Rivne","Ivano-Frankivsk","Ternopil","Lutsk","Uzhhorod","Cherkasy","Zhytomyr"],
-    suffixes: ["FK","FC","Dinamo","Shakhtar","United"],
-  },
-  Yunanistan: {
-    cities: ["Athina","Thessaloniki","Piraeus","Patras","Heraklion","Larissa","Volos","Ioannina","Kavala","Rhodes","Chania","Trikala","Kalamata","Serres","Xanthi","Komotini","Agrinio","Corfu","Mytilene","Chalkida"],
-    suffixes: ["FC","AEK","PAOK","Olympiacos","Aris"],
-  },
-  İsveç: {
-    cities: ["Stockholm","Göteborg","Malmö","Uppsala","Västerås","Örebro","Linköping","Helsingborg","Norrköping","Jönköping","Umeå","Lund","Borås","Sundsvall","Gävle","Eskilstuna","Halmstad","Karlstad","Växjö","Kalmar"],
-    suffixes: ["IF","FK","FF","United","BK"],
-  },
-  Norveç: {
-    cities: ["Oslo","Bergen","Trondheim","Stavanger","Kristiansand","Tromsø","Drammen","Fredrikstad","Bodø","Ålesund","Sandefjord","Haugesund","Molde","Lillestrøm","Sarpsborg","Strømsgodset","Vålerenga","Rosenborg","Brann","Odd"],
-    suffixes: ["FK","IF","United","BK"],
-  },
-  Danimarka: {
-    cities: ["København","Aarhus","Odense","Aalborg","Esbjerg","Randers","Viborg","Horsens","Silkeborg","Nordsjælland","Midtjylland","Brøndby","Lyngby","Vejle","SønderjyskE","Hobro","Fredericia","Hvidovre","Næstved","Kolding"],
-    suffixes: ["FC","IF","BK","United"],
-  },
-  İsviçre: {
-    cities: ["Zürich","Basel","Bern","Genève","Lausanne","Lugano","St. Gallen","Luzern","Thun","Sion","Young Boys","Grasshopper","Servette","Winterthur","Aarau","Schaffhausen","Vaduz","Chiasso","Yverdon","Neuchâtel"],
-    suffixes: ["FC","SC","United","Sport"],
-  },
-  Avusturya: {
-    cities: ["Wien","Salzburg","Graz","Innsbruck","Linz","Klagenfurt","Wolfsberg","Ried","Altach","Hartberg","LASK","Rapid","Austria","Sturm","Wacker","Admira","Mattersburg","St. Pölten","Kapfenberg","Blau-Weiß"],
-    suffixes: ["FC","SK","SC","United"],
-  },
-  Hırvatistan: {
-    cities: ["Zagreb","Split","Rijeka","Osijek","Zadar","Pula","Slavonski Brod","Varaždin","Šibenik","Dubrovnik","Vinkovci","Karlovac","Sisak","Koprivnica","Čakovec","Bjelovar","Vukovar","Đakovo","Samobor","Zaprešić"],
-    suffixes: ["NK","HNK","FC","United"],
-  },
-  Sırbistan: {
-    cities: ["Beograd","Novi Sad","Niš","Kragujevac","Subotica","Zrenjanin","Pančevo","Čačak","Kraljevo","Novi Pazar","Smederevo","Leskovac","Valjevo","Vranje","Šabac","Užice","Sombor","Požarevac","Pirot","Zaječar"],
-    suffixes: ["FK","FK Crvena","Partizan","United"],
-  },
-  Arnavutluk: {
-    cities: ["Tirana","Durrës","Vlorë","Shkodër","Elbasan","Fier","Korçë","Berat","Lushnjë","Kavajë","Gjirokastër","Sarandë","Pogradec","Laç","Kukës","Lezhë","Peqin","Gramsh","Tepelenë","Bilisht"],
-    suffixes: ["KF","FK","United","SC"],
-  },
-  Slovenya: {
-    cities: ["Ljubljana","Maribor","Celje","Koper","Domžale","Nova Gorica","Murska Sobota","Kranj","Velenje","Ptuj","Trbovlje","Kamnik","Jesenice","Novo Mesto","Izola","Ajdovščina","Sežana","Brežice","Krško","Rogaška"],
-    suffixes: ["NK","FC","United"],
-  },
-  Bulgaristan: {
-    cities: ["Sofia","Plovdiv","Varna","Burgas","Ruse","Stara Zagora","Pleven","Sliven","Dobrich","Shumen","Pernik","Haskovo","Yambol","Pazardzhik","Blagoevgrad","Veliko Tarnovo","Vidin","Montana","Lovech","Gabrovo"],
-    suffixes: ["FC","PFK","United","Sport"],
-  },
-  Romanya: {
-    cities: ["București","Cluj","Timișoara","Iași","Constanța","Craiova","Brașov","Galați","Ploiești","Oradea","Arad","Sibiu","Târgu Mureș","Baia Mare","Bacău","Pitești","Suceava","Botoșani","Satu Mare","Drobeta"],
-    suffixes: ["FC","CFR","United","Sport"],
-  },
-  Çin: {
-    cities: ["Beijing","Shanghai","Guangzhou","Shenzhen","Chengdu","Wuhan","Tianjin","Chongqing","Hangzhou","Nanjing","Qingdao","Dalian","Changchun","Shenyang","Xi'an","Suzhou","Zhengzhou","Xiamen","Fuzhou","Harbin"],
-    suffixes: ["FC","United","City","SC"],
-  },
-  Hindistan: {
-    cities: ["Mumbai","Kolkata","Delhi","Bengaluru","Chennai","Goa","Hyderabad","Pune","Kerala","Northeast","Jamshedpur","Odisha","Punjab","Rajasthan","Ahmedabad","Lucknow","Guwahati","Kochi","Indore","Nagpur"],
-    suffixes: ["FC","United","SC","City"],
-  },
-  Kolombiya: {
-    cities: ["Bogotá","Medellín","Cali","Barranquilla","Cartagena","Bucaramanga","Pereira","Manizales","Cúcuta","Ibagué","Santa Marta","Villavicencio","Pasto","Neiva","Armenia","Tunja","Popayán","Montería","Valledupar","Sincelejo"],
-    suffixes: ["FC","CD","Atlético","Deportivo","United"],
+    cities: ["Anderlecht","Brugge","Gent","Antwerpen","Genk","Charleroi","Leuven","Mechelen","Kortrijk","Oostende","Sint-Truiden","Eupen","Waregem","Cercle","Standard","Mouscron","Westerlo","Beerschot","Lokeren","Seraing"],
+    suffixes: ["FC","KV","KRC","RSC","SV"],
   },
   İskoçya: {
-    cities: ["Glasgow","Edinburgh","Aberdeen","Dundee","Motherwell","Kilmarnock","Hibernian","Hearts","St Johnstone","Livingston","Ross County","St Mirren","Inverness","Falkirk","Dunfermline","Partick","Hamilton","Ayr","Greenock","Paisley"],
-    suffixes: ["FC","United","Athletic","Rovers","City"],
+    cities: ["Glasgow","Edinburgh","Aberdeen","Dundee","Motherwell","Kilmarnock","Livingston","St Johnstone","Hibernian","Hearts","St Mirren","Ross County","Inverness","Falkirk","Dunfermline","Partick","Hamilton","Ayr","Raith","Queen's Park"],
+    suffixes: ["FC","United","Athletic","Rovers"],
   },
-
-  Uruguay: { cities: ["Montevideo","Nacional","Peñarol","Salto","Paysandú","Maldonado","Canelones","Colonia","Cerro","Danubio"], suffixes: ["FC","CA","Club","Deportivo"] },
-  Şili: { cities: ["Santiago","Valparaíso","Concepción","Antofagasta","La Serena","Temuco","Iquique","Rancagua","Colo-Colo","Universidad"], suffixes: ["FC","CD","Deportes","United"] },
-  Ekvador: { cities: ["Quito","Guayaquil","Cuenca","Ambato","Machala","Manta","Loja","Barcelona","Emelec","LDU"], suffixes: ["FC","SC","Club","Deportivo"] },
-  Kanada: { cities: ["Toronto","Vancouver","Montreal","Calgary","Edmonton","Ottawa","Winnipeg","Halifax","Quebec","Hamilton"], suffixes: ["FC","United","City","SC"] },
-  Senegal: { cities: ["Dakar","Thiès","Saint-Louis","Kaolack","Ziguinchor","Touba","Rufisque","Mbour","Diourbel","Louga"], suffixes: ["FC","United","ASC","SC"] },
-  Gana: { cities: ["Accra","Kumasi","Tamale","Sekondi","Cape Coast","Tema","Obuasi","Sunyani","Hearts","Asante"], suffixes: ["FC","United","SC","Stars"] },
-  "Suudi Arabistan": { cities: ["Riyad","Jeddah","Dammam","Mecca","Medina","Khobar","Al-Hilal","Al-Nassr","Al-Ittihad","Al-Ahli"], suffixes: ["FC","SC","Club","United"] },
-  İran: { cities: ["Tahran","Isfahan","Mashhad","Tabriz","Shiraz","Ahvaz","Persepolis","Esteghlal","Sepahan","Tractor"], suffixes: ["FC","SC","Club","United"] },
-  Çekya: { cities: ["Praha","Brno","Ostrava","Plzeň","Liberec","Olomouc","Slavia","Sparta","Baník","Bohemians"], suffixes: ["FK","FC","SK","United"] },
-  Macaristan: { cities: ["Budapest","Debrecen","Szeged","Miskolc","Pécs","Győr","Ferencváros","Újpest","MTK","Honvéd"], suffixes: ["FC","TC","United","SC"] },
-  İrlanda: { cities: ["Dublin","Cork","Galway","Limerick","Waterford","Drogheda","Shamrock","Bohemians","Shelbourne","Dundalk"], suffixes: ["FC","United","Rovers","Athletic"] },
-
-  Galler: { cities: ["Cardiff","Swansea","Newport","Wrexham","Bangor","Llanelli","Barry","Pontypridd","Merthyr","Aberystwyth"], suffixes: ["FC","United","City","Athletic"] },
-  Slovakya: { cities: ["Bratislava","Košice","Žilina","Prešov","Nitra","Trnava","Banská Bystrica","Trenčín","Martin","Poprad"], suffixes: ["FC","ŠK","United","FK"] },
-  "Bosna-Hersek": { cities: ["Sarajevo","Banja Luka","Mostar","Tuzla","Zenica","Bijeljina","Prijedor","Bihać","Trebinje","Doboj"], suffixes: ["FK","FC","United"] },
-  Finlandiya: { cities: ["Helsinki","Espoo","Tampere","Turku","Oulu","Jyväskylä","Lahti","Kuopio","Pori","Kouvola"], suffixes: ["FC","United","JK","SC"] },
-  Peru: { cities: ["Lima","Arequipa","Trujillo","Cusco","Piura","Chiclayo","Iquitos","Huancayo","Tacna","Callao"], suffixes: ["FC","Club","Deportivo","United"] },
-  Paraguay: { cities: ["Asunción","Ciudad del Este","Encarnación","Pedro Juan","Luque","San Lorenzo","Capiatá","Lambaré","Fernando","Coronel"], suffixes: ["FC","Club","Deportivo","United"] },
-  Venezuela: { cities: ["Caracas","Maracaibo","Valencia","Barquisimeto","Maracay","Ciudad Guayana","Barcelona","Maturín","San Cristóbal","Mérida"], suffixes: ["FC","Club","Deportivo","United"] },
-  "Costa Rica": { cities: ["San José","Alajuela","Cartago","Heredia","Puntarenas","Limón","Liberia","Pérez Zeledón","Desamparados","Curridabat"], suffixes: ["FC","Deportivo","United"] },
-  Jamaika: { cities: ["Kingston","Montego Bay","Spanish Town","Portmore","May Pen","Mandeville","Ocho Rios","Negril","Half Way Tree","St Ann"], suffixes: ["FC","United","SC"] },
-  Kamerun: { cities: ["Yaoundé","Douala","Garoua","Bamenda","Bafoussam","Maroua","Ngaoundéré","Bertoua","Loum","Kumba"], suffixes: ["FC","United","SC"] },
-  "Fildişi Sahili": { cities: ["Abidjan","Bouaké","Yamoussoukro","San-Pédro","Daloa","Korhogo","Man","Gagnoa","Abengourou","Divo"], suffixes: ["FC","United","SC","ASEC"] },
-  Cezayir: { cities: ["Cezayir","Oran","Constantine","Annaba","Blida","Batna","Sétif","Tlemcen","Béjaïa","Skikda"], suffixes: ["FC","US","MC","United"] },
-  Tunus: { cities: ["Tunus","Sfax","Sousse","Kairouan","Bizerte","Gabès","Ariana","Gafsa","Monastir","Ben Arous"], suffixes: ["FC","ES","CA","United"] },
-  Katar: { cities: ["Doha","Al Rayyan","Al Wakrah","Al Khor","Umm Salal","Al Sailiya","Lusail","Al Gharafa","Qatar SC","Al Duhail"], suffixes: ["SC","FC","United","Club"] },
-
+  İrlanda: {
+    cities: ["Dublin","Cork","Limerick","Galway","Waterford","Drogheda","Sligo","Shamrock","Bohemians","Shelbourne","Dundalk","Athlone","Bray","Longford","Wexford","Finn Harps","UCD","Cork City","St Patrick","Derry"],
+    suffixes: ["FC","United","Rovers","Athletic"],
+  },
+  Galler: {
+    cities: ["Cardiff","Swansea","Newport","Wrexham","Bangor","Llanelli","Barry","Pontypridd","Merthyr","Aberystwyth","Connah's Quay","The New Saints","Caernarfon","Bala","Penybont"],
+    suffixes: ["FC","United","City","Athletic","Town"],
+  },
+  İsveç: {
+    cities: ["Stockholm","Göteborg","Malmö","Norrköping","Helsingborg","Örebro","Sundsvall","Uppsala","Linköping","Västerås","Kalmar","Halmstad","Östersund","Djurgården","AIK","Hammarby","Elfsborg","Häcken","Sirius","Varberg"],
+    suffixes: ["IF","FF","FK","BK","SK"],
+  },
+  Norveç: {
+    cities: ["Oslo","Bergen","Trondheim","Stavanger","Tromsø","Kristiansand","Bodø","Molde","Fredrikstad","Haugesund","Sandefjord","Lillestrøm","Vålerenga","Rosenborg","Brann","Strømsgodset","Odd","Sarpsborg","Aalesund","Viking"],
+    suffixes: ["FK","IF","BK","SK","IL"],
+  },
+  Danimarka: {
+    cities: ["København","Aarhus","Odense","Aalborg","Esbjerg","Randers","Viborg","Horsens","Silkeborg","Midtjylland","Nordsjælland","Brøndby","Lyngby","SønderjyskE","Vejle","Hobro","Helsingør","Hvidovre","Fredericia","Kolding"],
+    suffixes: ["FC","IF","BK","FF"],
+  },
+  İsviçre: {
+    cities: ["Zürich","Basel","Bern","Genève","Lausanne","Luzern","St. Gallen","Thun","Sion","Lugano","Young Boys","Grasshopper","Servette","Winterthur","Aarau","Vaduz","Xamax","Schaffhausen","Yverdon","Wil"],
+    suffixes: ["FC","SC","AC"],
+  },
+  Avusturya: {
+    cities: ["Wien","Salzburg","Graz","Innsbruck","Linz","Klagenfurt","Wolfsberg","Ried","Lustenau","Mattersburg","Sturm","Rapid","Austria","Hartberg","Altach","Admira","Wacker","SV Ried","WSG"],
+    suffixes: ["FC","SK","SC","SV","AK"],
+  },
+  Polonya: {
+    cities: ["Warszawa","Kraków","Gdańsk","Poznań","Wrocław","Łódź","Katowice","Lublin","Białystok","Szczecin","Bydgoszcz","Gdynia","Częstochowa","Radom","Rzeszów","Kielce","Toruń","Gliwice","Zabrze","Legia"],
+    suffixes: ["KS","FC","TS","RKS","GKS"],
+  },
+  Ukrayna: {
+    cities: ["Kyiv","Kharkiv","Donetsk","Lviv","Odesa","Dnipro","Zaporizhzhia","Poltava","Mariupol","Kryvyi Rih","Vinnytsia","Chernihiv","Sumy","Zhytomyr","Mykolaiv","Kherson","Lutsk","Rivne","Ternopil","Uzhhorod"],
+    suffixes: ["FC","FK","SK"],
+  },
+  Çekya: {
+    cities: ["Praha","Brno","Ostrava","Plzeň","Liberec","Olomouc","Hradec Králové","Pardubice","České Budějovice","Jablonec","Zlín","Teplice","Karviná","Slavia","Sparta","Baník","Sigma","Bohemians","Dukla","Viktoria"],
+    suffixes: ["FC","SK","FK","AC"],
+  },
+  Slovakya: {
+    cities: ["Bratislava","Košice","Žilina","Prešov","Nitra","Trnava","Banská Bystrica","Trenčín","Martin","Poprad","Ružomberok","Dunajská Streda","Zlaté Moravce","Senica","Michalovce"],
+    suffixes: ["FC","ŠK","FK","AS"],
+  },
+  Macaristan: {
+    cities: ["Budapest","Debrecen","Szeged","Pécs","Győr","Miskolc","Nyíregyháza","Kecskemét","Szombathely","Veszprém","Honvéd","Ferencváros","Újpest","MTK","Videoton","Diósgyőr","Paksi","Zalaegerszeg","Haladás","Vasas"],
+    suffixes: ["FC","TC","SE","SC"],
+  },
+  Romanya: {
+    cities: ["București","Cluj","Timișoara","Iași","Constanța","Craiova","Galați","Brașov","Ploiești","Oradea","Sibiu","Arad","Bacău","Târgu Mureș","Steaua","Dinamo","CFR","Astra","Viitorul","Sepsi"],
+    suffixes: ["FC","CFR","CS","AS"],
+  },
+  Bulgaristan: {
+    cities: ["Sofia","Plovdiv","Varna","Burgas","Ruse","Stara Zagora","Pleven","Sliven","Dobrich","Shumen","CSKA","Levski","Ludogorets","Botev","Cherno More","Lokomotiv","Slavia","Beroe","Arda","Pirin"],
+    suffixes: ["FC","PFK","FK"],
+  },
+  Yunanistan: {
+    cities: ["Athina","Thessaloniki","Piraeus","Heraklion","Patras","Larissa","Volos","Ioannina","Kavala","Rhodes","Olympiacos","Panathinaikos","AEK","PAOK","Aris","Panionios","OFI","Asteras","Atromitos","PAS"],
+    suffixes: ["FC","AEK","PAOK","AS"],
+  },
+  Hırvatistan: {
+    cities: ["Zagreb","Split","Rijeka","Osijek","Zadar","Pula","Šibenik","Dubrovnik","Varaždin","Slavonski Brod","Dinamo","Hajduk","Lokomotiva","Istra","Gorica","Rudeš","Inter Zaprešić","Cibalia","Šibenik","Varaždin"],
+    suffixes: ["NK","HNK","FC","FK"],
+  },
+  Sırbistan: {
+    cities: ["Beograd","Novi Sad","Niš","Kragujevac","Subotica","Čačak","Zrenjanin","Pančevo","Kruševac","Užice","Crvena Zvezda","Partizan","Vojvodina","Radnički","Čukarički","TSC","Napredak","Spartak","Mladost","Javor"],
+    suffixes: ["FK","OFK","FC"],
+  },
+  "Bosna-Hersek": {
+    cities: ["Sarajevo","Banja Luka","Mostar","Tuzla","Zenica","Bijeljina","Prijedor","Bihać","Trebinje","Doboj","Željezničar","Velež","Široki Brijeg","Zrinjski","Borac","Sloboda","Olimpik","Rudar","TOŠK"],
+    suffixes: ["FK","NK","FC"],
+  },
+  Arnavutluk: {
+    cities: ["Tirana","Durrës","Vlorë","Shkodër","Elbasan","Fier","Korçë","Berat","Lushnjë","Kavajë","Partizani","Dinamo","Vllaznia","Skënderbeu","Teuta","Flamurtari","Laçi","Kukësi","Bylis"],
+    suffixes: ["KF","FK","FC"],
+  },
+  Slovenya: {
+    cities: ["Ljubljana","Maribor","Celje","Koper","Nova Gorica","Domžale","Murska Sobota","Kranj","Ptuj","Novo Mesto","Olimpija","Maribor","Celje","Mura","Bravo","Tabor","Aluminij","Rudar"],
+    suffixes: ["NK","FC","ND"],
+  },
+  Rusya: {
+    cities: ["Moskva","Sankt-Peterburg","Kazan","Samara","Rostov","Krasnodar","Sochi","Nizhny Novgorod","Yekaterinburg","Ufa","Zenit","Spartak","CSKA","Lokomotiv","Rubin","Dynamo","Akhmat","Krylia","Ural","Fakel"],
+    suffixes: ["FC","FK","PFK"],
+  },
+  Finlandiya: {
+    cities: ["Helsinki","Espoo","Tampere","Turku","Oulu","Jyväskylä","Lahti","Kuopio","Pori","Kouvola","HJK","Inter","Ilves","SJK","KuPS","Mariehamn","VPS","HIFK","Honka"],
+    suffixes: ["FC","JK","SC","IF"],
+  },
+  Brezilya: {
+    cities: ["São Paulo","Rio","Belo Horizonte","Porto Alegre","Salvador","Recife","Fortaleza","Curitiba","Campinas","Goiânia","Santos","Flamengo","Corinthians","Palmeiras","Grêmio","Internacional","Cruzeiro","Atlético","Botafogo","Vasco"],
+    suffixes: ["FC","SC","EC","AC"],
+  },
+  Arjantin: {
+    cities: ["Buenos Aires","Rosario","Córdoba","La Plata","Mendoza","Mar del Plata","Tucumán","Salta","Santa Fe","Bahía Blanca","Boca","River","Racing","Independiente","San Lorenzo","Newell's","Estudiantes","Vélez","Huracán","Lanús"],
+    suffixes: ["FC","CA","Club"],
+  },
+  Uruguay: {
+    cities: ["Montevideo","Salto","Paysandú","Las Piedras","Rivera","Maldonado","Tacuarembó","Melo","Artigas","Durazno","Peñarol","Nacional","Defensor","Danubio","Wanderers","Liverpool","Cerro","Racing","Fénix"],
+    suffixes: ["FC","CA","Club"],
+  },
+  Şili: {
+    cities: ["Santiago","Valparaíso","Concepción","Antofagasta","Temuco","La Serena","Viña del Mar","Rancagua","Talca","Iquique","Colo-Colo","Universidad de Chile","Universidad Católica","Audax","Everton","Huachipato","Cobresal","Palestino","Unión Española"],
+    suffixes: ["FC","CD","Club"],
+  },
+  Kolombiya: {
+    cities: ["Bogotá","Medellín","Cali","Barranquilla","Cartagena","Bucaramanga","Cúcuta","Pereira","Manizales","Ibagué","Millonarios","Nacional","América","Junior","Santa Fe","Tolima","Once Caldas","Deportivo Cali","Envigado"],
+    suffixes: ["FC","CD","SC"],
+  },
+  Ekvador: {
+    cities: ["Quito","Guayaquil","Cuenca","Ambato","Manta","Portoviejo","Machala","Santo Domingo","Ibarra","Riobamba","Barcelona","Emelec","LDU","Independiente","Aucas","Delfín","Universidad Católica","Mushuc Runa"],
+    suffixes: ["FC","SC","CD"],
+  },
+  Peru: {
+    cities: ["Lima","Arequipa","Trujillo","Cusco","Piura","Chiclayo","Iquitos","Huancayo","Tacna","Callao","Alianza","Universitario","Sporting Cristal","Melgar","Cienciano","Sport Boys","UTC","Ayacucho","Binacional"],
+    suffixes: ["FC","Club","Deportivo"],
+  },
+  Paraguay: {
+    cities: ["Asunción","Ciudad del Este","Encarnación","Luque","San Lorenzo","Capiatá","Lambaré","Fernando de la Mora","Coronel Oviedo","Pedro Juan Caballero","Olimpia","Cerro Porteño","Libertad","Guaraní","Nacional","Sol de América","Luqueño"],
+    suffixes: ["FC","Club","Deportivo"],
+  },
+  Venezuela: {
+    cities: ["Caracas","Maracaibo","Valencia","Barquisimeto","Maracay","Ciudad Guayana","Barcelona","Maturín","San Cristóbal","Mérida","Caracas FC","Deportivo Táchira","Zamora","Estudiantes","Monagas","La Guaira","Mineros"],
+    suffixes: ["FC","Club","Deportivo"],
+  },
+  Meksika: {
+    cities: ["Ciudad de México","Guadalajara","Monterrey","Puebla","Tijuana","León","Toluca","Querétaro","Santos","Pachuca","América","Chivas","Tigres","Cruz Azul","Pumas","Atlas","Necaxa","Mazatlán","Juárez"],
+    suffixes: ["FC","CF","Club"],
+  },
+  ABD: {
+    cities: ["New York","Los Angeles","Chicago","Houston","Dallas","Atlanta","Seattle","Portland","Columbus","Philadelphia","Kansas City","Salt Lake","Orlando","Miami","Nashville","Austin","Cincinnati","Charlotte","Minnesota","Colorado"],
+    suffixes: ["FC","United","SC","City"],
+  },
+  Kanada: {
+    cities: ["Toronto","Montreal","Vancouver","Calgary","Edmonton","Ottawa","Winnipeg","Halifax","Victoria","Hamilton","Forge","Cavalry","Pacific","York","Valour","HFX","Atlético Ottawa"],
+    suffixes: ["FC","United","SC"],
+  },
+  "Costa Rica": {
+    cities: ["San José","Alajuela","Cartago","Heredia","Puntarenas","Limón","Liberia","Pérez Zeledón","Desamparados","Curridabat","Saprissa","Alajuelense","Herediano","Cartaginés","Santos","Guadalupe"],
+    suffixes: ["FC","Deportivo","CS"],
+  },
+  Jamaika: {
+    cities: ["Kingston","Montego Bay","Spanish Town","Portmore","May Pen","Mandeville","Ocho Rios","Negril","Half Way Tree","St Ann","Arnett Gardens","Harbour View","Waterhouse","Tivoli","Portmore United","Cavalier"],
+    suffixes: ["FC","United","SC"],
+  },
+  Japonya: {
+    cities: ["Tokyo","Osaka","Yokohama","Nagoya","Sapporo","Kobe","Fukuoka","Hiroshima","Sendai","Kawasaki","Urawa","Kashima","Gamba","Cerezo","Sanfrecce","Vissel","Shimizu","Júbilo","Consadole","Frontale"],
+    suffixes: ["FC","SC","United"],
+  },
+  "Güney Kore": {
+    cities: ["Seoul","Busan","Incheon","Daegu","Daejeon","Gwangju","Ulsan","Suwon","Jeonju","Jeju","Pohang","Seongnam","Jeonbuk","Gangwon","Suwon Samsung","FC Seoul","Ulsan Hyundai"],
+    suffixes: ["FC","United","SC"],
+  },
+  Çin: {
+    cities: ["Beijing","Shanghai","Guangzhou","Shenzhen","Chengdu","Wuhan","Tianjin","Chongqing","Hangzhou","Nanjing","Shandong","Henan","Dalian","Changchun","Qingdao","Jiangsu","Beijing Guoan"],
+    suffixes: ["FC","United"],
+  },
+  Avustralya: {
+    cities: ["Sydney","Melbourne","Brisbane","Perth","Adelaide","Newcastle","Wellington","Canberra","Hobart","Gold Coast","Western Sydney","Central Coast","Macarthur","Western United"],
+    suffixes: ["FC","United","City"],
+  },
+  "Suudi Arabistan": {
+    cities: ["Riyadh","Jeddah","Dammam","Mecca","Medina","Khobar","Tabuk","Abha","Taif","Buraidah","Al Hilal","Al Nassr","Al Ittihad","Al Ahli","Al Shabab","Al Fateh","Al Taawoun","Al Ettifaq"],
+    suffixes: ["FC","SC","Club"],
+  },
+  İran: {
+    cities: ["Tehran","Isfahan","Tabriz","Mashhad","Shiraz","Ahvaz","Karaj","Qom","Kermanshah","Rasht","Persepolis","Esteghlal","Sepahan","Tractor","Foolad","Zob Ahan","Naft","Mes"],
+    suffixes: ["FC","SC"],
+  },
+  Katar: {
+    cities: ["Doha","Al Rayyan","Al Wakrah","Al Khor","Umm Salal","Al Sailiya","Lusail","Al Gharafa","Al Duhail","Al Sadd","Qatar SC","Al Arabi","Al Ahli","Al Markhiya"],
+    suffixes: ["SC","FC","Club"],
+  },
+  Hindistan: {
+    cities: ["Mumbai","Kolkata","Delhi","Bengaluru","Chennai","Goa","Hyderabad","Kochi","Pune","Ahmedabad","Kerala","Jamshedpur","Odisha","Northeast","Mohun Bagan","East Bengal","ATK"],
+    suffixes: ["FC","United","SC"],
+  },
+  Mısır: {
+    cities: ["Kahire","İskenderiye","Gize","Port Said","Suez","Mansoura","Tanta","Asyut","Ismailia","Luxor","Al Ahly","Zamalek","Pyramids","Ismaily","Al Masry","ENPPI","Smouha","El Gouna"],
+    suffixes: ["FC","SC","Club"],
+  },
+  Fas: {
+    cities: ["Casablanca","Rabat","Fès","Marrakech","Tangier","Agadir","Meknès","Oujda","Kenitra","Tétouan","Wydad","Raja","FAR","RS Berkane","Maghreb","Hassania","Olympic Safi","Ittihad"],
+    suffixes: ["FC","SC","AS"],
+  },
+  Nijerya: {
+    cities: ["Lagos","Abuja","Kano","Ibadan","Port Harcourt","Benin City","Kaduna","Enugu","Jos","Calabar","Enyimba","Rangers","Shooting Stars","Kano Pillars","Rivers United","Akwa United","Plateau United"],
+    suffixes: ["FC","United","SC"],
+  },
+  Senegal: {
+    cities: ["Dakar","Thiès","Saint-Louis","Kaolack","Ziguinchor","Touba","Mbour","Rufisque","Diourbel","Louga","Génération Foot","Jaraaf","Casa Sports","Teungueth","Diambars","ASC Niarry Tally"],
+    suffixes: ["FC","ASC","SC"],
+  },
+  Gana: {
+    cities: ["Accra","Kumasi","Tamale","Takoradi","Cape Coast","Tema","Obuasi","Koforidua","Sunyani","Ho","Hearts of Oak","Asante Kotoko","Ashanti Gold","Aduana","Medeama","Bechem United"],
+    suffixes: ["FC","SC","United"],
+  },
+  Kamerun: {
+    cities: ["Yaoundé","Douala","Garoua","Bamenda","Bafoussam","Maroua","Ngaoundéré","Bertoua","Loum","Kumba","Canon","Union Douala","Coton Sport","Aigle Royal","Bamboutos","Yong Sports"],
+    suffixes: ["FC","SC","United"],
+  },
+  "Fildişi Sahili": {
+    cities: ["Abidjan","Bouaké","Yamoussoukro","San-Pédro","Daloa","Korhogo","Man","Gagnoa","Abengourou","Divo","ASEC","Africa Sports","Stade d'Abidjan","SOA","Racing Club","AFAD"],
+    suffixes: ["FC","SC","ASC"],
+  },
+  Cezayir: {
+    cities: ["Cezayir","Oran","Constantine","Annaba","Blida","Batna","Sétif","Tlemcen","Béjaïa","Skikda","MC Alger","USM Alger","JS Kabylie","CR Belouizdad","ES Sétif","MC Oran","CS Constantine"],
+    suffixes: ["FC","US","MC","JS"],
+  },
+  Tunus: {
+    cities: ["Tunus","Sfax","Sousse","Kairouan","Bizerte","Gabès","Ariana","Gafsa","Monastir","Ben Arous","Espérance","Club Africain","Étoile du Sahel","CS Sfaxien","CA Bizertin","Stade Tunisien"],
+    suffixes: ["FC","ES","CA","CS"],
+  },
+  "Güney Afrika": {
+    cities: ["Johannesburg","Cape Town","Durban","Pretoria","Port Elizabeth","Bloemfontein","Polokwane","Nelspruit","East London","Kimberley","Kaizer Chiefs","Orlando Pirates","Mamelodi Sundowns","SuperSport","AmaZulu","Stellenbosch","Cape Town City"],
+    suffixes: ["FC","United","AFC"],
+  },
 };
 
 const DEFAULT_CLUB_POOL = CLUB_NAME_BY_COUNTRY["Türkiye"];
@@ -231,22 +303,31 @@ function randomName(used, opts = {}) {
       ? Math.abs(Number(opts.index))
       : null;
 
+  function buildName(city, suffix) {
+    // Şehir zaten kulüp adı gibiyse (Flamengo, Zenit, Al Hilal vb.) tek başına kullan
+    const looksLikeClub =
+      /\s/.test(city) ||
+      /^(FC|SC|AC|AS|CF|CD|FK|NK|HNK|KF|PFK|RSC|KRC|KV|SV|BV|Vf[BL]|TSG|FSV|IF|FF|BK|SK|JK|SE|TC|US|MC|JS|CA|ES|CS|ASC|AFC)\b/i.test(city) ||
+      /\b(United|City|Athletic|Rovers|Wanderers|Albion|Olympique|Racing|Stade|Sporting|Calcio|Deportivo|Atlético|Real)\b/i.test(city) ||
+      city.length > 12;
+    if (looksLikeClub) return city;
+    return city + " " + suffix;
+  }
+
   if (idx != null) {
     const total = cities.length * suffixes.length;
     for (let k = 0; k < total; k++) {
-      const n =
-        cities[(idx + k) % cities.length] +
-        " " +
-        suffixes[Math.floor((idx + k) / cities.length) % suffixes.length];
+      const city = cities[(idx + k) % cities.length];
+      const suffix = suffixes[Math.floor((idx + k) / cities.length) % suffixes.length];
+      const n = buildName(city, suffix);
       if (!set.has(n.toLowerCase())) return n;
     }
   }
 
   for (let i = 0; i < 50; i++) {
-    const n =
-      cities[Math.floor(Math.random() * cities.length)] +
-      " " +
-      suffixes[Math.floor(Math.random() * suffixes.length)];
+    const city = cities[Math.floor(Math.random() * cities.length)];
+    const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+    const n = buildName(city, suffix);
     if (!set.has(n.toLowerCase())) return n;
   }
   return (cities[0] || "Bot") + " FC " + Math.floor(Math.random() * 900 + 100);

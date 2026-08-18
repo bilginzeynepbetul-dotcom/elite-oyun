@@ -219,6 +219,12 @@ function coachSalaryCalibrated(level) {
   return Math.round(4_000 + lv * 5_000 + lv * lv * 1_200);
 }
 
+/** Kulüp doktoru maaş (aylık/4 haftalık — coachSalaryCalibrated ile aynı ölçek) */
+function doctorSalaryCalibrated(level) {
+  const lv = Math.max(1, Math.min(5, Math.floor(Number(level) || 1)));
+  return Math.round(4_000 + lv * 5_500 + lv * lv * 1_000);
+}
+
 /** Özet — debug / admin */
 function getEconomySummary() {
   return {
@@ -259,5 +265,6 @@ module.exports = {
   scoutUpgradeCostCalibrated,
   academyUpgradeCostCalibrated,
   coachSalaryCalibrated,
+  doctorSalaryCalibrated,
   getEconomySummary,
 };

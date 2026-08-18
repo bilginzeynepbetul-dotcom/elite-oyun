@@ -93,8 +93,8 @@ function _pressFactor(intensity) {
   } catch (_) {
     p = String(intensity || "orta").toLowerCase();
   }
-  if (p === "yuksek") return 1.22;
-  if (p === "dusuk") return 0.78;
+  if (p === "yüksek") return 1.22;
+  if (p === "düşük") return 0.78;
   return 1.0;
 }
 

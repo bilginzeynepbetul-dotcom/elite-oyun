@@ -14,7 +14,7 @@ function createContractRouter(opts) {
   // GET /api/contracts  — bordro özeti + oyuncu listesi
   router.get("/", async (req, res) => {
     try {
-      const clubId = getClubId(req);
+      const clubId = await getClubId(req);
       if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
       const payroll = await contractSystem.getPayroll(clubId);
       if (!payroll) return res.status(404).json({ error: "Kulüp yok" });
@@ -28,7 +28,7 @@ function createContractRouter(opts) {
   // POST /api/contracts/renew  { playerId, years, wage }
   router.post("/renew", async (req, res) => {
     try {
-      const clubId = getClubId(req);
+      const clubId = await getClubId(req);
       if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
       const { playerId, years, wage } = req.body || {};
       if (!playerId) return res.status(400).json({ error: "playerId gerekli" });
@@ -49,7 +49,7 @@ function createContractRouter(opts) {
   // POST /api/contracts/pay  — manuel bordro (test / admin hissi)
   router.post("/pay", async (req, res) => {
     try {
-      const clubId = getClubId(req);
+      const clubId = await getClubId(req);
       if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
       const result = await contractSystem.payClubWages(clubId);
       if (!result.ok && !result.skipped && !result.unpaid) {
@@ -65,7 +65,7 @@ function createContractRouter(opts) {
   // POST /api/contracts/release-expired
   router.post("/release-expired", async (req, res) => {
     try {
-      const clubId = getClubId(req);
+      const clubId = await getClubId(req);
       if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
       const result = await contractSystem.releaseExpired(clubId);
       res.json(result);
@@ -78,7 +78,7 @@ function createContractRouter(opts) {
   // POST /api/contracts/release  { playerId }  — tek oyuncuyu serbest bırak
   router.post("/release", async (req, res) => {
     try {
-      const clubId = getClubId(req);
+      const clubId = await getClubId(req);
       if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
       const { playerId } = req.body || {};
       if (!playerId) return res.status(400).json({ error: "playerId gerekli" });
