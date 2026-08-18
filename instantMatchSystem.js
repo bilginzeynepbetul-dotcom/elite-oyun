@@ -96,7 +96,7 @@ async function listHumanOpponents(myClubId, myUserId) {
   const onlineList = listOnline(myUserId);
   const me = await clubsRepo.getClub(myClubId);
   const { rows } = await query(
-    `SELECT c.id, c.name, c.user_id AS "userId", u.username
+    `SELECT c.id, c.name, c.country, c.user_id AS "userId", u.username
      FROM clubs c
      JOIN users u ON u.id = c.user_id
      WHERE COALESCE(c.is_bot, FALSE) = FALSE
@@ -108,13 +108,15 @@ async function listHumanOpponents(myClubId, myUserId) {
     [myClubId],
   );
   const onlineSet = new Set(onlineList.map((o) => String(o.userId)));
+  const myCountry = me && me.country ? String(me.country) : null;
   return rows.map((r) => ({
     userId: String(r.userId),
     username: r.username,
     clubId: r.id,
     clubName: r.name,
+    country: r.country || null,
     online: onlineSet.has(String(r.userId)),
-    sameCountry: me ? r.id /* placeholder */ : false,
+    sameCountry: !!(myCountry && r.country && String(r.country) === myCountry),
   }));
 }
 

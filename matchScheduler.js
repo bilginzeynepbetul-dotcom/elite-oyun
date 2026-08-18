@@ -40,8 +40,10 @@ const { startCupFixtureMatch } = require("./cupLifecycle");
 const { startFriendlyFixtureMatch } = require("./friendlyLifecycle");
 const { startNationalFixtureMatch } = require("./nationalLifecycle");
 const { startContinentalFixtureMatch } = require("./continentalLifecycle");
+const { startEliteCupFixtureMatch } = require("./eliteCupLifecycle");
 const nationalRepo = require("./repos/nationalRepo");
 const continentalRepo = require("./repos/continentalRepo");
+const eliteCupRepo = require("./repos/eliteCupRepo");
 const nationalSystem = require("./nationalSystem");
 const { COUNTRY } = require("./nationalRoutes");
 
@@ -91,10 +93,32 @@ async function tickContinental({ io, liveMatches }) {
         liveMatches,
         MatchClass: Match,
       });
-      console.log("[scheduler] CL maçı başladı", f.id);
+      console.log("[scheduler] Kıtasal Lig maçı başladı", f.id);
     } catch (e) {
-      console.warn("[scheduler] CL maçı başlatılamadı", f.id, e.message);
+      console.warn("[scheduler] Kıtasal Lig maçı başlatılamadı", f.id, e.message);
     }
+  }
+}
+
+async function tickEliteCup({ io, liveMatches }) {
+  const due = await eliteCupRepo.listDueFixtures(20);
+  for (const f of due) {
+    try {
+      await startEliteCupFixtureMatch({
+        fixtureId: f.id,
+        io,
+        liveMatches,
+        MatchClass: Match,
+      });
+      console.log("[scheduler] Elite Kupa maçı başladı", f.id);
+    } catch (e) {
+      console.warn("[scheduler] Elite Kupa maçı başlatılamadı", f.id, e.message);
+    }
+  }
+  try {
+    await eliteCupRepo.advanceReadyEditions();
+  } catch (e) {
+    console.warn("[scheduler] eliteCup advance", e.message);
   }
 }
 
@@ -201,6 +225,7 @@ async function tick(ctx) {
     await tickLeague(ctx);
     await tickCup(ctx);
     await tickContinental(ctx);
+    await tickEliteCup(ctx);
     await tickFriendly(ctx);
     await tickNational(ctx);
     await tickWeeklyFriendlies();

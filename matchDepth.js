@@ -64,7 +64,7 @@ function applyFatigueTick(match) {
     try {
       press = normalizePressIntensity(team.pressIntensity, "orta");
     } catch (_) {}
-    const pressMul = press === "yuksek" ? 1.35 : press === "dusuk" ? 0.75 : 1.0;
+    const pressMul = press === "yüksek" ? 1.35 : press === "düşük" ? 0.75 : 1.0;
     // Gerideyse ekstra efor
     const other = side === "home" ? "away" : "home";
     const diff =
@@ -79,7 +79,7 @@ function applyFatigueTick(match) {
       const fam = posFamily(pl.pos);
       // GK daha az koşar
       const posMul =
-        isGkPos(pl.pos) ? 0.35 : fam === "FW" || fam === "AM" ? 1.15 : fam === "MF" ? 1.1 : 1.0;
+        isGkPos(pl.pos) ? 0.35 : fam === "fwd" ? 1.15 : fam === "mid" ? 1.1 : 1.0;
       // Temel düşüş ~0.12–0.35 / dk (90'da stamina 12 → ~15–25 puan)
       const base = (0.22 + (14 - Math.min(14, sta)) * 0.018) * lateFactor * pressMul * chaseMul * posMul;
       pl.condition = Math.max(28, (Number(pl.condition) || 90) - base);
@@ -190,9 +190,9 @@ function pickSetPieceTaker(team, prefer) {
     const fin = Number(p.finishing) || 10;
     const vis = Number(p.vision) || 10;
     if (prefer === "shot") {
-      w = (fin * 0.55 + tech * 0.35 + vis * 0.1) * (isFwdPos(p.pos) || fam === "AM" ? 1.4 : 1);
+      w = (fin * 0.55 + tech * 0.35 + vis * 0.1) * (isFwdPos(p.pos) ? 1.4 : 1);
     } else if (prefer === "delivery") {
-      w = (tech * 0.4 + vis * 0.35 + (Number(p.passing) || 10) * 0.25) * (fam === "MF" || fam === "AM" ? 1.35 : 1);
+      w = (tech * 0.4 + vis * 0.35 + (Number(p.passing) || 10) * 0.25) * (fam === "mid" ? 1.35 : 1);
     } else {
       w = tech + fin * 0.5;
     }
@@ -242,9 +242,9 @@ function resolveCorner(match, side, attack, defend) {
       : 0.35;
   const defClear =
     avg(
-      (defend.players || []).filter((p) => p && posFamily(p.pos) === "DF" && !p.sentOff),
-      "positioning",
-      10,
+      (defend.players || [])
+        .filter((p) => p && posFamily(p.pos) === "def" && !p.sentOff)
+        .map((p) => Number(p.positioning) || 10),
     ) / 20;
   let goalP = 0.025 + deliv * 0.03 + hdr * 0.04 - defClear * 0.025;
   goalP *= moraleMultiplier(match, side);
@@ -450,7 +450,7 @@ function cardRiskMultiplier(match) {
     try {
       press = normalizePressIntensity(team.pressIntensity, "orta");
     } catch (_) {}
-    if (press === "yuksek") mul += 0.12;
+    if (press === "yüksek") mul += 0.12;
     const other = side === "home" ? "away" : "home";
     if ((match.score[side] || 0) < (match.score[other] || 0)) mul += 0.08;
   }
@@ -478,7 +478,7 @@ function injuryRiskMultiplier(match) {
       try {
         press = normalizePressIntensity(team.pressIntensity, "orta");
       } catch (_) {}
-      if (press === "yuksek") mul += 0.15;
+      if (press === "yüksek") mul += 0.15;
     }
   }
   const min = Number(match.minute) || 0;

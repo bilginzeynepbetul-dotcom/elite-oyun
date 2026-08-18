@@ -279,6 +279,25 @@ async function finalizeSeason(seasonId, opts = {}) {
     } catch (eNat) {
       console.warn("[seasonLifecycle] national", eNat.message);
     }
+
+    // 1. Lig kapanınca: yeterli ülke bittiyse Kıtasal Lig + Elite Kupa (2. sezon)
+    if (division === 1) {
+      try {
+        const gate = require("./continentalGate");
+        const r = await gate.tryStartSeason2Competitions({
+          yearLabel: yearLabel,
+        });
+        if (r && r.started) {
+          console.log(
+            "[seasonLifecycle] Kıtasal Lig / Elite Kupa",
+            r.continental && (r.continental.ok || r.continental.status),
+            r.eliteCup && (r.eliteCup.ok || r.eliteCup.status),
+          );
+        }
+      } catch (eCL) {
+        console.warn("[seasonLifecycle] continentalGate", eCL.message);
+      }
+    }
     try {
       await comp.scheduleWeeklyFriendlies({ maxPairsPerCountry: 12 });
     } catch (eFr) {

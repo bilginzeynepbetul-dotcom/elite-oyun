@@ -116,49 +116,14 @@ function createLeagueRouter() {
     }
   });
 
-  // GET /api/fixtures
-  router.get("/fixtures", async (req, res) => {
-    try {
-      const clubId = await enrichClubId(req);
-      const club = clubId ? await clubsRepo.getClub(clubId) : null;
-      const country = (req.query.country || (club && club.country) || "Türkiye");
-      const division = parseInt(
-        req.query.division || (club && club.division) || 1,
-        10,
-      );
-      const season = await leagueRepo.getCurrentSeason(country, division);
-      if (!season) return res.json({ fixtures: [] });
-
-      const fixtures = await leagueRepo.listFixtures(season.id, {
-        status: req.query.status || null,
-        clubId: req.query.mine === "1" ? clubId : null,
-        limit: req.query.limit ? parseInt(req.query.limit, 10) : 50,
-      });
-      res.json({ fixtures, seasonId: season.id });
-    } catch (e) {
-      console.error("[fixtures]", e);
-      res.status(500).json({ error: "Fikstür alınamadı" });
-    }
-  });
-
-  // GET /api/fixtures/next
-  router.get("/fixtures/next", async (req, res) => {
-    try {
-      const clubId = await enrichClubId(req);
-      if (!clubId) return res.status(404).json({ error: "Kulüp yok" });
-      const club = await clubsRepo.getClub(clubId);
-      const fixture = await leagueRepo.getNextFixtureForClub(clubId);
-      res.json({
-        fixture: fixture || null,
-        club: club
-          ? { id: club.id, name: club.name }
-          : null,
-      });
-    } catch (e) {
-      console.error("[fixtures/next]", e);
-      res.status(500).json({ error: "Sıradaki maç alınamadı" });
-    }
-  });
+  // NOT: GET /api/fixtures ve GET /api/fixtures/next server.js içinde
+  // (api.get(...)) tanımlı ve api router'a bu leagueRouter'dan ÖNCE
+  // mount ediliyor. Burada aynı path'lerin tekrar tanımlanması ölü/
+  // çakışan kod üretiyordu (Express ilk eşleşen route'u kullanır) ve
+  // farklı response şekilleri (ör. clubId yokken 404 vs. {fixture:null})
+  // ileride server.js tarafı değişirse multiplayer-client.js'i
+  // sessizce kırabilirdi. Tekilleştirmek için buradan kaldırıldı;
+  // tek doğruluk kaynağı server.js'deki /api/fixtures* rotalarıdır.
 
   // POST /api/league/generate-fixtures  { force?, intervalHours?, doubleRound? }
   // force=true yalnızca admin. Non-admin yalnızca kendi ligi için (boşsa) üretebilir.

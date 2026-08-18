@@ -41,8 +41,14 @@ const ATTACK_MAP = {
 const STYLE_MAP = {
   dengeli: "dengeli",
   balanced: "dengeli",
-  ofansif: "ofansif",
-  attacking: "ofansif",
+  // Maç motoru (ballSystem.js, matchEngine.js) ve tüm istemci UI'ları
+  // hücum stilini "hücumsel" string'iyle kontrol ediyor. Önceden bu harita
+  // "ofansif" üretiyordu; hiçbir yerde "ofansif" kontrol edilmediği için
+  // kullanıcı "Hücum" seçse bile fallback'e (dengeli) düşüyordu.
+  hücumsel: "hücumsel",
+  hucumsel: "hücumsel",
+  ofansif: "hücumsel",
+  attacking: "hücumsel",
   defansif: "defansif",
   defensive: "defansif",
   kontrol: "kontrol",

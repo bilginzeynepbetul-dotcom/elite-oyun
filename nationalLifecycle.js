@@ -210,9 +210,15 @@ async function onNationalMatchEnd(state, fixture, matchInstance) {
   // (kullanıcı isteğiyle kaldırıldı — bildirimlere maç skoru gelmesin).
 
   try {
-    // Maç bitince hem A hem U21 dostluk zincirini yenile
-    await nationalSystem.scheduleNextFixtureIfNeeded(COUNTRY, cat);
-    await nationalSystem.ensureAllNationalFixtures(COUNTRY);
+    // Maç bitince o ülkenin A + U21 dostluk zincirini yenile
+    // (eski kod sabit COUNTRY="Türkiye" kullanıyordu — diğer ülkeler kırılıyordu)
+    let country = COUNTRY;
+    try {
+      const nt = await nationalRepo.getTeamById(fixture.nationalTeamId);
+      if (nt && nt.country) country = nt.country;
+    } catch (_) {}
+    await nationalSystem.scheduleNextFixtureIfNeeded(country, cat);
+    await nationalSystem.ensureAllNationalFixtures(country);
   } catch (e) {
     console.error("[nationalLifecycle] reschedule", e);
   }

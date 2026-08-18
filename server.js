@@ -47,6 +47,7 @@ const { createContractRouter } = require("./contractRoutes");
 const { createFriendlyRouter } = require("./friendlyRoutes");
 const { createBotRouter } = require("./botRoutes");
 const { createContinentalRouter } = require("./continentalRoutes");
+const { createEliteCupRouter } = require("./eliteCupRoutes");
 const { createMatchArchiveRouter } = require("./matchArchiveRoutes");
 const { createAchievementsRouter } = require("./achievementsRoutes");
 const { createDailyChallengeRouter } = require("./dailyChallengeRoutes");
@@ -723,10 +724,277 @@ api.get("/fixtures/next", async (req, res) => {
   }
 });
 
+/**
+ * Canlı + yaklaşan maçlar (lig / kupa / kıtasal / elite / anlık bellek)
+ * Canlı Maçlar sekmesi için.
+ */
+api.get("/fixtures/live", async (req, res) => {
+  try {
+    const out = [];
+    const limit = Math.min(parseInt(req.query.limit, 10) || 40, 80);
+
+    // Lig — canlı
+    try {
+      const { rows } = await require("./db").query(
+        `SELECT f.id, f.status, f.kickoff_at AS "kickoffAt",
+                f.home_goals AS "homeGoals", f.away_goals AS "awayGoals",
+                hc.name AS "homeName", ac.name AS "awayName",
+                s.country, s.division
+         FROM fixtures f
+         JOIN seasons s ON s.id = f.season_id AND s.is_current = TRUE
+         LEFT JOIN clubs hc ON hc.id = f.home_club_id
+         LEFT JOIN clubs ac ON ac.id = f.away_club_id
+         WHERE f.status = 'live'
+         ORDER BY f.kickoff_at ASC NULLS LAST
+         LIMIT $1`,
+        [limit],
+      );
+      (rows || []).forEach((r) => {
+        out.push({
+          id: r.id,
+          competition: "league",
+          compLabel:
+            (r.country || "") +
+            " " +
+            (r.division != null ? r.division + ". Lig" : "Lig"),
+          status: "live",
+          homeName: r.homeName,
+          awayName: r.awayName,
+          homeGoals: r.homeGoals,
+          awayGoals: r.awayGoals,
+          kickoffAt: r.kickoffAt,
+        });
+      });
+    } catch (e) {
+      console.warn("[fixtures/live] league", e.message);
+    }
+
+    // Ülke kupası
+    try {
+      const { rows } = await require("./db").query(
+        `SELECT cf.id, cf.status, cf.kickoff_at AS "kickoffAt",
+                cf.home_goals AS "homeGoals", cf.away_goals AS "awayGoals",
+                cf.round_label AS "roundLabel",
+                hc.name AS "homeName", ac.name AS "awayName",
+                ce.country
+         FROM cup_fixtures cf
+         JOIN cup_editions ce ON ce.id = cf.edition_id AND ce.is_current = TRUE
+         LEFT JOIN clubs hc ON hc.id = cf.home_club_id
+         LEFT JOIN clubs ac ON ac.id = cf.away_club_id
+         WHERE cf.status = 'live'
+         ORDER BY cf.kickoff_at ASC NULLS LAST
+         LIMIT $1`,
+        [limit],
+      );
+      (rows || []).forEach((r) => {
+        out.push({
+          id: r.id,
+          competition: "cup",
+          compLabel: (r.country || "") + " Kupa" + (r.roundLabel ? " · " + r.roundLabel : ""),
+          status: "live",
+          homeName: r.homeName,
+          awayName: r.awayName,
+          homeGoals: r.homeGoals,
+          awayGoals: r.awayGoals,
+          kickoffAt: r.kickoffAt,
+        });
+      });
+    } catch (e) {
+      console.warn("[fixtures/live] cup", e.message);
+    }
+
+    // Kıtasal Lig
+    try {
+      const { rows } = await require("./db").query(
+        `SELECT cf.id, cf.status, cf.kickoff_at AS "kickoffAt",
+                cf.home_goals AS "homeGoals", cf.away_goals AS "awayGoals",
+                cf.round_label AS "roundLabel", cf.phase,
+                hc.name AS "homeName", ac.name AS "awayName"
+         FROM continental_fixtures cf
+         JOIN continental_editions ce ON ce.id = cf.edition_id AND ce.is_current = TRUE
+         LEFT JOIN clubs hc ON hc.id = cf.home_club_id
+         LEFT JOIN clubs ac ON ac.id = cf.away_club_id
+         WHERE cf.status = 'live'
+         ORDER BY cf.kickoff_at ASC NULLS LAST
+         LIMIT $1`,
+        [limit],
+      );
+      (rows || []).forEach((r) => {
+        out.push({
+          id: r.id,
+          competition: "continental",
+          compLabel:
+            "Kıtasal Lig" +
+            (r.roundLabel ? " · " + r.roundLabel : r.phase ? " · " + r.phase : ""),
+          status: "live",
+          homeName: r.homeName,
+          awayName: r.awayName,
+          homeGoals: r.homeGoals,
+          awayGoals: r.awayGoals,
+          kickoffAt: r.kickoffAt,
+        });
+      });
+    } catch (e) {
+      console.warn("[fixtures/live] continental", e.message);
+    }
+
+    // Elite Kupa
+    try {
+      const { rows } = await require("./db").query(
+        `SELECT ef.id, ef.status, ef.kickoff_at AS "kickoffAt",
+                ef.home_goals AS "homeGoals", ef.away_goals AS "awayGoals",
+                ef.round_label AS "roundLabel",
+                hc.name AS "homeName", ac.name AS "awayName"
+         FROM elite_cup_fixtures ef
+         JOIN elite_cup_editions ee ON ee.id = ef.edition_id AND ee.is_current = TRUE
+         LEFT JOIN clubs hc ON hc.id = ef.home_club_id
+         LEFT JOIN clubs ac ON ac.id = ef.away_club_id
+         WHERE ef.status = 'live'
+         ORDER BY ef.kickoff_at ASC NULLS LAST
+         LIMIT $1`,
+        [limit],
+      );
+      (rows || []).forEach((r) => {
+        out.push({
+          id: r.id,
+          competition: "elite_cup",
+          compLabel: "Elite Kupa" + (r.roundLabel ? " · " + r.roundLabel : ""),
+          status: "live",
+          homeName: r.homeName,
+          awayName: r.awayName,
+          homeGoals: r.homeGoals,
+          awayGoals: r.awayGoals,
+          kickoffAt: r.kickoffAt,
+        });
+      });
+    } catch (e) {
+      console.warn("[fixtures/live] elite", e.message);
+    }
+
+    // Dostluk
+    try {
+      const { rows } = await require("./db").query(
+        `SELECT f.id, f.status, f.kickoff_at AS "kickoffAt",
+                f.home_goals AS "homeGoals", f.away_goals AS "awayGoals",
+                hc.name AS "homeName", ac.name AS "awayName"
+         FROM friendly_fixtures f
+         LEFT JOIN clubs hc ON hc.id = f.home_club_id
+         LEFT JOIN clubs ac ON ac.id = f.away_club_id
+         WHERE f.status = 'live'
+         ORDER BY f.kickoff_at ASC NULLS LAST
+         LIMIT $1`,
+        [limit],
+      );
+      (rows || []).forEach((r) => {
+        out.push({
+          id: r.id,
+          competition: "friendly",
+          compLabel: "Dostluk",
+          status: "live",
+          homeName: r.homeName,
+          awayName: r.awayName,
+          homeGoals: r.homeGoals,
+          awayGoals: r.awayGoals,
+          kickoffAt: r.kickoffAt,
+        });
+      });
+    } catch (e) {
+      console.warn("[fixtures/live] friendly", e.message);
+    }
+
+    // Bellekteki canlı anlık maçlar
+    try {
+      for (const [key, match] of liveMatches.entries()) {
+        const st = match && match.state;
+        if (!st || st.ended) continue;
+        const homeName =
+          (st.home && (st.home.name || st.home.teamName)) ||
+          (match.playerA && match.playerA.username) ||
+          "Ev";
+        const awayName =
+          (st.away && (st.away.name || st.away.teamName)) ||
+          (match.playerB && match.playerB.username) ||
+          "Dep";
+        const hg = st.score ? st.score.home : null;
+        const ag = st.score ? st.score.away : null;
+        const fid = (st.fixtureId || key || "").toString();
+        if (out.some((x) => String(x.id) === fid)) continue;
+        out.push({
+          id: fid,
+          matchId: st.id || match.id || null,
+          competition: String(fid).indexOf("inst_") === 0 ? "instant" : "live",
+          compLabel:
+            String(fid).indexOf("inst_") === 0 ? "Anlık Maç" : "Canlı",
+          status: "live",
+          homeName,
+          awayName,
+          homeGoals: hg,
+          awayGoals: ag,
+          kickoffAt: null,
+        });
+      }
+    } catch (e) {
+      console.warn("[fixtures/live] memory", e.message);
+    }
+
+    // Yaklaşan (son 2 saat içinde kickoff, scheduled)
+    try {
+      const { rows } = await require("./db").query(
+        `SELECT f.id, f.status, f.kickoff_at AS "kickoffAt",
+                hc.name AS "homeName", ac.name AS "awayName",
+                s.country, s.division
+         FROM fixtures f
+         JOIN seasons s ON s.id = f.season_id AND s.is_current = TRUE
+         LEFT JOIN clubs hc ON hc.id = f.home_club_id
+         LEFT JOIN clubs ac ON ac.id = f.away_club_id
+         WHERE f.status = 'scheduled'
+           AND f.kickoff_at IS NOT NULL
+           AND f.kickoff_at > NOW()
+           AND f.kickoff_at < NOW() + INTERVAL '6 hours'
+         ORDER BY f.kickoff_at ASC
+         LIMIT 20`,
+      );
+      (rows || []).forEach((r) => {
+        out.push({
+          id: r.id,
+          competition: "league",
+          compLabel:
+            (r.country || "") +
+            " " +
+            (r.division != null ? r.division + ". Lig" : "Lig"),
+          status: "scheduled",
+          homeName: r.homeName,
+          awayName: r.awayName,
+          homeGoals: null,
+          awayGoals: null,
+          kickoffAt: r.kickoffAt,
+        });
+      });
+    } catch (e) {
+      console.warn("[fixtures/live] upcoming", e.message);
+    }
+
+    out.sort((a, b) => {
+      const oa = a.status === "live" ? 0 : 1;
+      const ob = b.status === "live" ? 0 : 1;
+      if (oa !== ob) return oa - ob;
+      const ta = a.kickoffAt ? new Date(a.kickoffAt).getTime() : 0;
+      const tb = b.kickoffAt ? new Date(b.kickoffAt).getTime() : 0;
+      return ta - tb;
+    });
+
+    res.json({ fixtures: out.slice(0, limit), count: out.length });
+  } catch (e) {
+    logger.error("GET /fixtures/live", { err: e });
+    res.status(500).json({ error: "Canlı maçlar alınamadı" });
+  }
+});
+
 // --- /api/transfer/* ---
 api.get("/transfer/market", async (req, res) => {
   try {
-    const listings = await transferSystem.listMarket();
+    const clubId = await enrichClubId(req);
+    const listings = await transferSystem.listMarket(clubId);
     res.json({ listings: listings || [] });
   } catch (e) {
     logger.error("GET /transfer/market", { err: e });
@@ -743,7 +1011,7 @@ api.post("/transfer/list", async (req, res) => {
     const r = await transferSystem.listPlayer(
       clubId,
       body.playerId || (body.player && body.player.id),
-      body.minPrice || body.auctionStart,
+      body.minPrice || body.auctionStart || body.openPrice,
       body.hours || 24,
     );
     if (!r.ok) return res.status(400).json({ error: r.error });
@@ -794,9 +1062,10 @@ api.post("/transfer/cancel", async (req, res) => {
   }
 });
 
-api.post("/transfer/refresh", async (_req, res) => {
+api.post("/transfer/refresh", async (req, res) => {
   try {
-    const listings = await transferSystem.listMarket();
+    const clubId = await enrichClubId(req);
+    const listings = await transferSystem.listMarket(clubId);
     res.json({ listings: listings || [] });
   } catch (e) {
     res.status(500).json({ error: "Yenilenemedi" });
@@ -930,6 +1199,52 @@ api.post("/training/coach/remove", async (req, res) => {
     res.json(r);
   } catch (e) {
     res.status(500).json({ error: "Antrenör çıkarılamadı" });
+  }
+});
+
+// --- /api/staff — Kulüp Çalışanları sayfası (antrenörler + doktor) ---
+api.get("/staff", async (req, res) => {
+  try {
+    const clubId = await enrichClubId(req);
+    if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
+    const coaches = await staffSystem.listCoaches(clubId);
+    const doctor = await staffSystem.getDoctor(clubId);
+    res.json({
+      coaches,
+      doctor,
+      doctors: doctor ? [doctor] : [],
+      recoveryBonus: doctor ? Number(doctor.level) || 1 : 0,
+    });
+  } catch (e) {
+    logger.error("GET /staff", { err: e });
+    res.status(500).json({ error: "Çalışan bilgisi alınamadı" });
+  }
+});
+
+api.post("/staff/doctor", async (req, res) => {
+  try {
+    const clubId = await enrichClubId(req);
+    if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
+    if (!strictLimit(req, res, "hire-doctor", 6, 60000)) return;
+    const level = req.body && req.body.level;
+    const r = await staffSystem.hireDoctor(clubId, level);
+    if (!r.ok) return res.status(400).json({ error: r.error });
+    res.json(r);
+  } catch (e) {
+    logger.error("POST /staff/doctor", { err: e });
+    res.status(500).json({ error: "Doktor alınamadı" });
+  }
+});
+
+api.post("/staff/doctor/fire", async (req, res) => {
+  try {
+    const clubId = await enrichClubId(req);
+    if (!clubId) return res.status(401).json({ error: "Giriş gerekli" });
+    const r = await staffSystem.removeDoctor(clubId);
+    res.json(r);
+  } catch (e) {
+    logger.error("POST /staff/doctor/fire", { err: e });
+    res.status(500).json({ error: "Doktor çıkarılamadı" });
   }
 });
 
@@ -1073,6 +1388,50 @@ api.post("/messages/read", async (req, res) => {
   }
 });
 
+// "Bize Ulaşın" — mesaj gerçekten yöneticiye ulaşsın diye mevcut
+// mesajlaşma sistemi üzerinden ADMIN_USERNAME'e DM olarak iletilir.
+// ÖNCEDEN: yalnızca gönderenin localStorage'ına yazılıyordu, yönetici
+// başka bir cihazda ise mesaj hiç görünmüyordu.
+api.post("/contact", async (req, res) => {
+  try {
+    if (!strictLimit(req, res, "contact-send", 5, 10 * 60_000)) return;
+    const adminUsername = String(process.env.ADMIN_USERNAME || "").trim();
+    if (!adminUsername) {
+      return res.status(503).json({ error: "Destek hattı şu an yapılandırılmamış" });
+    }
+    const subject = String((req.body && req.body.subject) || "diger")
+      .replace(/[<>]/g, "")
+      .trim()
+      .slice(0, 32);
+    const text = String((req.body && req.body.text) || "")
+      .replace(/[<>]/g, "")
+      .trim()
+      .slice(0, 800);
+    if (!text || text.length < 5) {
+      return res.status(400).json({ error: "En az 5 karakter yaz" });
+    }
+    const { rows } = await require("./db").query(
+      `SELECT id, username FROM users WHERE LOWER(username) = LOWER($1)`,
+      [adminUsername],
+    );
+    if (!rows[0]) {
+      return res.status(503).json({ error: "Yönetici hesabı bulunamadı" });
+    }
+    const result = await socialRepo.sendMessage(
+      req.user.id,
+      req.user.username,
+      rows[0].id,
+      rows[0].username,
+      "[" + subject + "] " + text,
+    );
+    if (!result.ok) return res.status(400).json(result);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("[contact]", e);
+    res.status(500).json({ error: "Mesaj gönderilemedi" });
+  }
+});
+
 api.get("/notifications", async (req, res) => {
   try {
     const items = await socialRepo.listNotifications(req.user.id);
@@ -1154,12 +1513,13 @@ api.use(createCupRouter());
 api.use(
   "/contracts",
   createContractRouter({
-    getClubId: (req) => req.user && req.user.clubId,
+    getClubId: (req) => enrichClubId(req),
   }),
 );
 api.use(createFriendlyRouter());
 api.use(createBotRouter());
 api.use(createContinentalRouter());
+api.use(createEliteCupRouter());
 api.use(createMatchArchiveRouter());
 api.use("/achievements", createAchievementsRouter());
 api.use("/challenges", createDailyChallengeRouter());

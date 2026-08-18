@@ -81,6 +81,10 @@ async function requireElite(userId) {
 async function getSecondTeam(userId, clubId) {
   const elite = await requireElite(userId);
   const raw = await clubsRepo.getSecondTeam(clubId);
+  if (raw) {
+    raw.division = 2;
+    if (!raw.formation) raw.formation = "4-4-2";
+  }
   return {
     ok: true,
     elite,
@@ -95,6 +99,12 @@ async function ensureSecondTeam(userId, clubId, opts = {}) {
 
   let raw = await clubsRepo.getSecondTeam(clubId);
   if (raw && raw.players && raw.players.length >= 11) {
+    raw.division = 2;
+    if (!raw.formation) raw.formation = "4-4-2";
+    // Eski kayıtlarda division 1 kalmış olabilir — düzelt ve kaydet
+    try {
+      await clubsRepo.saveSecondTeam(clubId, raw);
+    } catch (_) {}
     return { ok: true, secondTeam: raw, created: false };
   }
 

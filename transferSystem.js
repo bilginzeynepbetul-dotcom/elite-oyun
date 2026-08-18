@@ -7,6 +7,7 @@ const { query, withTransaction } = require("./db");
 const transferRepo = require("./repos/transferRepo");
 const clubsRepo = require("./repos/clubsRepo");
 const economy = require("./economyBalance");
+const antiCheat = require("./antiCheat");
 
 function newId() {
   return crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
@@ -19,10 +20,19 @@ function playerValue(p) {
   return 100000;
 }
 
-async function listMarket() {
+async function listMarket(viewerClubId) {
   await settleExpired().catch(() => {});
   await maybeBotBids().catch(() => {});
-  return transferRepo.loadActiveListings();
+  const listings = await transferRepo.loadActiveListings();
+  if (!viewerClubId) return listings;
+  return listings.map((L) => ({
+    ...L,
+    isMine: String(L.sellerClubId) === String(viewerClubId),
+    iAmHighest: String(L.highestBidderClubId || "") === String(viewerClubId),
+    userHasBid: (L.bidHistory || []).some(
+      (b) => String(b.clubId) === String(viewerClubId),
+    ),
+  }));
 }
 
 async function listPlayer(clubId, playerId, minPrice, hours) {
@@ -256,7 +266,6 @@ async function settleOne(listingId) {
     setImmediate(async () => {
       try {
         const ach = require("./achievementsSystem");
-const antiCheat = require("./antiCheat");
         if (buyerId) {
           const { rows: br } = await query(
             `SELECT user_id FROM clubs WHERE id = $1`, [buyerId],

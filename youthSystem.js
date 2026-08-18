@@ -101,15 +101,30 @@ async function getState(clubId) {
     branches = [];
   }
 
+  const seasonDraws = Number(r.draws_this_season) || 0;
+  const maxDraws = BASE_DRAWS_PER_SEASON + branches.length;
+  const wk = weekKey();
+  let weeklyBlocked = false;
+  if (r.last_draw_week_key === wk && seasonDraws > 0) {
+    const weeklyCount = (recent || []).filter(
+      (x) =>
+        x.created_at &&
+        Date.now() - new Date(x.created_at).getTime() < 7 * 24 * 60 * 60 * 1000,
+    ).length;
+    weeklyBlocked = weeklyCount >= 2;
+  }
+  const canDrawThisWeek = seasonDraws < maxDraws && !weeklyBlocked;
+
   return {
     scoutLevel: Number(r.scout_level) || 1,
     academyLevel: Number(r.academy_level) || 1,
     maxScout: 5,
     maxAcademy: 5,
-    drawsThisSeason: Number(r.draws_this_season) || 0,
+    drawsThisSeason: seasonDraws,
     homeDrawsThisSeason: Number(r.home_draws_this_season) || 0,
     minHomeDraws: MIN_HOME_DRAWS,
-    maxDrawsPerSeason: BASE_DRAWS_PER_SEASON + branches.length,
+    maxDrawsPerSeason: maxDraws,
+    canDrawThisWeek,
     lastDrawWeekKey: r.last_draw_week_key || "",
     scoutUpgradeUntil: r.scout_upgrade_until
       ? new Date(r.scout_upgrade_until).getTime()

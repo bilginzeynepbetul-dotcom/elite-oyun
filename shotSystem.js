@@ -92,10 +92,19 @@ function attemptShot(match, side) {
       minute: match.minute,
       playerId: shooter.id || null,
     });
+    // mt(key, lang, vars) — önceden (lang, key, vars) sırasıyla çağrılıyordu,
+    // bu yüzden "goal" satır anahtarı yerine dil kodu ("tr"/"en"...) döndürülüp
+    // maç logunda gol/kurtarış/kaçırma anları anlamsız kısa kodlar olarak
+    // görünüyordu. Sıra ve değişken adları (scorer/min/hs/as) düzeltildi.
     const text =
       typeof mt === "function"
-        ? mt(lang, "goal", { name, minute: match.minute }) ||
-          `⚽ GOL! ${name} (${match.minute}')`
+        ? mt("goal", lang, {
+            scorer: name,
+            assist: "",
+            min: match.minute,
+            hs: match.score.home,
+            as: match.score.away,
+          }) || `⚽ GOL! ${name} (${match.minute}')`
         : `⚽ GOL! ${name} (${match.minute}')`;
     match.addLog && match.addLog(text);
     match.broadcast &&
@@ -112,7 +121,7 @@ function attemptShot(match, side) {
     gk.saves = (gk.saves || 0) + 1;
     const text =
       typeof mt === "function"
-        ? mt(lang, "save", { name: gk.name, shooter: name }) ||
+        ? mt("save", lang, { gk: gk.name, name }) ||
           `🧤 ${gk.name} kurtardı (${name})`
         : `🧤 ${(gk && gk.name) || "Kaleci"} kurtardı (${name})`;
     match.addLog && match.addLog(text);
@@ -121,7 +130,7 @@ function attemptShot(match, side) {
 
   const text =
     typeof mt === "function"
-      ? mt(lang, "shot_miss", { name }) || `🎯 ${name} şut — isabetsiz`
+      ? mt("shot_wide", lang, { name }) || `🎯 ${name} şut — isabetsiz`
       : `🎯 ${name} şut — isabetsiz`;
   match.addLog && match.addLog(text);
   return { scored: false, text, shooter };

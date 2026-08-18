@@ -70,7 +70,7 @@ async function hireCoach(clubId, skill, level) {
     [clubId, sk, lv, salary, name],
   );
   const coaches = await listCoaches(clubId);
-  return { ok: true, coaches, coach: coaches.find((c) => c.skill === sk) };
+  return { ok: true, coaches, coach: coaches.find((c) => c.skill === sk), cost: salary * 2 };
 }
 
 async function removeCoach(clubId, skill) {
@@ -102,6 +102,49 @@ async function ensureDoctor(clubId) {
   return getDoctor(clubId);
 }
 
+/** Kulüp doktoru işe al / seviyesini yükselt. Kulüp başına en fazla 1 doktor
+ *  (DB'de uq_club_doctors_one ile de garanti altına alınmıştır). */
+async function hireDoctor(clubId, level) {
+  const lv = Math.max(1, Math.min(5, parseInt(level, 10) || 1));
+  const salary = economy.doctorSalaryCalibrated(lv);
+
+  const club = await clubsRepo.getClub(clubId);
+  if (!club) return { ok: false, error: "Kulüp yok" };
+  if (Number(club.balance) < salary * 2) {
+    return { ok: false, error: "Yetersiz bakiye (2 haftalık maaş peşin)" };
+  }
+
+  const existing = await getDoctor(clubId);
+  if (existing) {
+    return { ok: false, error: "Zaten bir doktorunuz var — önce sözleşmesini feshedin" };
+  }
+
+  const paidOk = await clubsRepo.adjustBalance(
+    clubId,
+    -(salary * 2),
+    "Kulüp doktoru işe alım",
+  );
+  // GÜVENLİK: hireCoach'taki ile aynı desen — üstteki ön-kontrol iyimser,
+  // gerçek atomik garanti adjustBalance'ın FOR UPDATE kilidinde.
+  if (!paidOk) {
+    return { ok: false, error: "Yetersiz bakiye (2 haftalık maaş peşin)" };
+  }
+  await query(
+    `INSERT INTO club_doctors (club_id, name, spec, level, salary)
+     VALUES ($1, 'Dr. Yılmaz', 'genel', $2, $3)
+     ON CONFLICT (club_id) DO UPDATE SET
+       level = EXCLUDED.level, salary = EXCLUDED.salary`,
+    [clubId, lv, salary],
+  );
+  const doctor = await getDoctor(clubId);
+  return { ok: true, doctor, cost: salary * 2 };
+}
+
+async function removeDoctor(clubId) {
+  await query(`DELETE FROM club_doctors WHERE club_id = $1`, [clubId]);
+  return { ok: true, doctor: null };
+}
+
 /** Maç sonu sakatlıkları DB'ye yaz */
 async function persistMatchInjuries(clubId, players) {
   if (!clubId || !Array.isArray(players)) return;
@@ -120,10 +163,13 @@ async function persistMatchInjuries(clubId, players) {
   }
 }
 
-/** Doktor seviyesine göre iyileşme adımı */
+/** Doktor seviyesine göre iyileşme adımı — doktor yoksa Sv.1 hızıyla iyileşir,
+ *  ama (eskiden olduğu gibi) DB'ye ücretsiz sahte bir doktor kaydı YAZMAZ;
+ *  aksi halde her kulüp ilk maçtan sonra bedava doktor kazanır ve ücretli
+ *  "Doktor Al" özelliği anlamsız kalırdı. */
 async function processRecovery(clubId) {
   if (!clubId) return;
-  const doc = await ensureDoctor(clubId);
+  const doc = await getDoctor(clubId);
   const reduce = doc ? Math.max(1, Number(doc.level) || 1) : 1;
   await query(
     `UPDATE players SET
@@ -145,6 +191,8 @@ module.exports = {
   removeCoach,
   getDoctor,
   ensureDoctor,
+  hireDoctor,
+  removeDoctor,
   persistMatchInjuries,
   processRecovery,
   SKILL_LABELS,

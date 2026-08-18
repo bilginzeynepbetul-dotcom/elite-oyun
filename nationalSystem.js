@@ -292,15 +292,21 @@ async function autoFillSquadForMatch(team) {
       finalAssignments.push({ playerId: match.playerId, pos });
     }
   });
-  // 2) Doğal mevkisi uymayan kalan boş slotları, kalan en kaliteli
-  //    oyuncularla (kaleci hariç GK slotuna kaleci olmayan konmaz) doldur.
+  // 2) Kalan boş slotlar: GK slotuna yalnızca GK; diğer slotlara kalan en iyiler.
+  // (Eski kod son çarede non-GK'yi GK'ye koyabiliyordu.)
   const leftovers = ranked.filter((p) => !used.has(p.playerId));
   slots.forEach((pos) => {
     if (finalAssignments.some((a) => a.pos === pos)) return;
-    const idx = leftovers.findIndex((p) =>
-      !used.has(p.playerId) && (pos !== "GK" || (p.naturalPos || p.pos) === "GK"),
-    );
-    const pick = idx !== -1 ? leftovers[idx] : leftovers.find((p) => !used.has(p.playerId));
+    let pick = null;
+    if (pos === "GK") {
+      pick = leftovers.find(
+        (p) =>
+          !used.has(p.playerId) &&
+          String(p.naturalPos || p.pos || "").toUpperCase() === "GK",
+      );
+    } else {
+      pick = leftovers.find((p) => !used.has(p.playerId));
+    }
     if (pick) {
       used.add(pick.playerId);
       finalAssignments.push({ playerId: pick.playerId, pos });

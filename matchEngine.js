@@ -29,6 +29,7 @@ const {
 const { applyNormalizedTacticsToTeam } = require("./tacticNormalize");
 const { invalidateTeamCombat } = require("./ballSystem");
 const { mt } = require("./matchI18n");
+const { simulatePenaltyShootout } = require("./penaltyShootout");
 
 class Match {
   constructor(id, playerA, playerB, ioNamespace, options = {}) {
@@ -40,6 +41,17 @@ class Match {
     this.circulationMs = options.circulationMs || DEFAULT_CIRCULATION_MS;
     // Maç log dili: en / es / de / it / pt / fr / tr
     this.lang = options.lang || process.env.MATCH_LOG_LANG || "en";
+    // Kupa / eleme: beraberlikte 90 sonrası uzatma → 120, hâlâ eşitse penaltı (repo)
+    this.competition = options.competition || null;
+    this.extraTimeOnDraw = !!options.extraTimeOnDraw;
+    this.allowPenalties = options.allowPenalties !== false;
+    this.regulationMinutes = MATCH_MINUTES; // 90
+    this.maxMinutes =
+      options.maxTime != null ? Number(options.maxTime) : MATCH_MINUTES;
+    if (!Number.isFinite(this.maxMinutes) || this.maxMinutes < 1) {
+      this.maxMinutes = MATCH_MINUTES;
+    }
+    this.inExtraTime = false;
     this.players = {
       home: {
         userId: playerA.userId,
@@ -268,7 +280,30 @@ class Match {
       });
     }
 
-    if (this.minute >= MATCH_MINUTES) {
+    // Normal süre bitti: eleme maçında beraberlik → uzatma (120')
+    if (
+      this.minute === this.regulationMinutes &&
+      this.extraTimeOnDraw &&
+      !this.inExtraTime &&
+      this.score.home === this.score.away
+    ) {
+      this.inExtraTime = true;
+      this.maxMinutes = Math.max(this.maxMinutes, 120);
+      this.addLog(
+        mt("extra_time", this.lang, {
+          min: this.minute,
+          hs: this.score.home,
+          as: this.score.away,
+        }) ||
+          this.minute +
+            "' — Uzatma! (120'ye kadar; hâlâ eşitse penaltılar)",
+      );
+      this.broadcast("match:state", this.getPublicState(true));
+      return;
+    }
+
+    if (this.minute >= this.maxMinutes) {
+      // Uzatma da bitti / normal bitiş; beraberlikte penaltı cupRepo.applyMatchResult'ta
       this.end();
     }
   }
@@ -358,6 +393,20 @@ class Match {
     this.status = "ended";
     clearInterval(this.tickInterval);
     clearInterval(this.circulationInterval);
+
+    // Eleme / kupa: 120' sonunda hâlâ eşit → penaltı atışları
+    if (
+      this.allowPenalties &&
+      (this.extraTimeOnDraw || this.competition === "cup") &&
+      this.score.home === this.score.away
+    ) {
+      try {
+        this.runPenaltyShootout();
+      } catch (ePen) {
+        console.error("[match] penaltyShootout", ePen);
+      }
+    }
+
     {
       this.addLog(
         mt("match_end", this.lang, {
@@ -380,6 +429,68 @@ class Match {
         console.error("[match] onEnd hata", e);
       }
     }
+  }
+
+  /**
+   * Penaltı atışları: skor (90/120) korunur; pen serisi ayrı kaydedilir.
+   * Kazanan tarafı state.penalties / penaltyWinner ile işaretlenir.
+   * onEnd'e giden score eşit kalabilir; cupRepo.penalties + winner kullanır.
+   */
+  runPenaltyShootout() {
+    if (this.penaltyShootout) return this.penaltyShootout;
+
+    this.addLog(
+      this.minute +
+        "' — Penaltı atışları! (" +
+        (this.players.home.username || "Ev") +
+        " vs " +
+        (this.players.away.username || "Dep") +
+        ")",
+    );
+
+    const result = simulatePenaltyShootout({
+      homeTeam: this.players.home.team,
+      awayTeam: this.players.away.team,
+      homeName: this.players.home.username,
+      awayName: this.players.away.username,
+      onKick: (kick) => {
+        const mark = kick.scored ? "GOL" : "kurtarış/aut";
+        this.addLog(
+          "Pen " +
+            kick.round +
+            " · " +
+            (kick.side === "home"
+              ? this.players.home.username
+              : this.players.away.username) +
+            " · " +
+            kick.taker +
+            " → " +
+            mark +
+            " (" +
+            kick.homeScore +
+            "-" +
+            kick.awayScore +
+            ")",
+        );
+      },
+    });
+
+    this.penaltyShootout = result;
+    this.penalties = true;
+    this.penaltyScore = {
+      home: result.homeScore,
+      away: result.awayScore,
+    };
+    this.penaltyWinner = result.winner; // 'home' | 'away'
+
+    this.addLog(result.summary);
+    this.broadcast("match:state", this.getPublicState(true));
+    this.broadcast("match:penalties", {
+      fixtureId: this.fixtureId,
+      matchId: this.id,
+      ...result,
+    });
+    return result;
   }
 
   _buildPositions() {
@@ -440,6 +551,13 @@ class Match {
         ? { x: this.ball.x, y: this.ball.y, holderSide: this.ball.holderSide }
         : null,
       positions: this._cachedPositions,
+      // Penaltı atışları (varsa)
+      penalties: !!this.penalties,
+      penaltyShootout: this.penaltyShootout || null,
+      penaltyScore: this.penaltyScore || null,
+      penaltyWinner: this.penaltyWinner || null,
+      inExtraTime: !!this.inExtraTime,
+      maxMinutes: this.maxMinutes,
     };
   }
 }
