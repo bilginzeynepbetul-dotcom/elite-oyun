@@ -3587,7 +3587,12 @@ function renderServerMatchState(state) {
       if (errorEl) errorEl.innerText = "";
       await afterServerLogin(data);
     } catch (e) {
-      if (errorEl) errorEl.innerText = e.message || "Kayıt başarısız.";
+      var msg = (e && e.message) || "Kayıt başarısız.";
+      if (/relation|does not exist|migrate|42P01/i.test(msg)) {
+        msg =
+          "Veritabanı şeması eksik. Render Shell'de: npm run migrate";
+      }
+      if (errorEl) errorEl.innerText = msg;
     }
   }
 
@@ -7981,9 +7986,19 @@ function renderServerMatchState(state) {
       if (errorEl) errorEl.innerText = e.message || "Yerel kayıt başarısız.";
     }
   }
+  window.handleServerRegister = handleServerRegister;
+  window.handleSmartRegister = handleSmartRegister;
+  window.handleSmartLogin = handleSmartLogin;
+  window.handleServerLogin = handleServerLogin;
+  window.afterServerLogin = afterServerLogin;
   rewireButton("loginBtn", handleSmartLogin);
   rewireButton("registerBtn", handleSmartRegister);
   wireEnterSubmit(["loginUsername", "loginPassword"], handleSmartLogin);
+  // Kayıt formunda Enter → kayıt
+  wireEnterSubmit(
+    ["regUsername", "regEmail", "regPassword", "regSecurityAnswer"],
+    handleSmartRegister,
+  );
   probeServerHealth();
   setInterval(function () {
     probeServerHealth();

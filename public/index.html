@@ -2763,10 +2763,14 @@
           linear-gradient(165deg, #0a1224 0%, #060b16 45%, #030712 100%);
         display: flex;
         justify-content: center;
-        align-items: center;
+        align-items: flex-start;
         z-index: 99999;
         transition: opacity 0.45s ease;
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 16px 0 32px;
+        box-sizing: border-box;
       }
       .login-overlay::before {
         content: "";
@@ -2828,15 +2832,65 @@
         );
         border: 1px solid rgba(56, 189, 248, 0.22);
         border-radius: 24px;
-        padding: 36px 32px 32px;
+        padding: 28px 22px 24px;
         max-width: 400px;
-        width: 92%;
+        width: min(92%, 400px);
+        margin: 12px auto;
         text-align: center;
         box-shadow:
           0 0 0 1px rgba(255, 255, 255, 0.04) inset,
           0 25px 60px rgba(0, 0, 0, 0.55),
           0 0 80px rgba(56, 189, 248, 0.08);
         backdrop-filter: blur(16px);
+        box-sizing: border-box;
+        max-height: none;
+        overflow: visible;
+      }
+      .login-box input,
+      .login-box select,
+      .login-box button,
+      .login-box label,
+      .login-box p,
+      .login-box .subtitle,
+      .login-box .register-link {
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      .login-box label[style*="display:flex"],
+      .login-box label[style*="display: flex"] {
+        text-align: left;
+        word-break: break-word;
+      }
+      @media (max-width: 480px) {
+        .login-overlay {
+          align-items: flex-start;
+          padding: 8px 0 40px;
+        }
+        .login-box {
+          width: calc(100% - 20px);
+          max-width: 100%;
+          padding: 20px 14px 18px;
+          border-radius: 16px;
+          margin: 8px auto;
+        }
+        .login-box h1 {
+          font-size: 22px !important;
+        }
+        .login-box .login-badge {
+          width: 52px;
+          height: 52px;
+          font-size: 24px;
+          margin-bottom: 10px;
+        }
+        .login-box input,
+        .login-box select {
+          padding: 11px 12px;
+          font-size: 16px; /* iOS zoom önleme */
+          margin-bottom: 10px;
+        }
+        .login-box .field-label {
+          font-size: 10px;
+        }
       }
       .login-box .login-badge {
         display: inline-flex;
@@ -4055,14 +4109,16 @@
             id="regUsername"
             placeholder="Kullanıcı adı"
             maxlength="20"
-            value="admin"
+            value=""
+            autocomplete="username"
           />
           <label class="field-label" for="regEmail">E-posta</label>
           <input
             type="email"
             id="regEmail"
             placeholder="ornek@mail.com"
-            value="admin@test.com"
+            value=""
+            autocomplete="email"
           />
           <label class="field-label" for="regCountry">Ülke</label>
           <select id="regCountry">
@@ -24900,7 +24956,14 @@ function goToCommunity(tab) {
         } catch (e) {}
       })();
 
-      document.getElementById("registerBtn").addEventListener("click", () => {
+      document.getElementById("registerBtn").addEventListener("click", async () => {
+        // multiplayer-client yüklendiyse sunucu kaydı (rewire eder); yedek yol:
+        if (typeof window.handleSmartRegister === "function") {
+          return window.handleSmartRegister();
+        }
+        if (typeof window.handleServerRegister === "function") {
+          return window.handleServerRegister();
+        }
         const username = document.getElementById("regUsername").value.trim();
         const email = document.getElementById("regEmail").value.trim();
         const password = document.getElementById("regPassword").value;
@@ -24917,13 +24980,62 @@ function goToCommunity(tab) {
             "Kayıt için yaş / yasal temsilci onayını işaretlemelisin.";
           return;
         }
-        if (!username || !email || password.length < 6) {
-          errorEl.innerText =
-            "Lütfen tüm alanları doğru doldurun (şifre en az 8 karakter).";
+        if (!username || username.length < 3) {
+          errorEl.innerText = "Kullanıcı adı en az 3 karakter olmalı.";
           return;
         }
-        errorEl.innerText = "";
-        completeLogin(username);
+        if (!email || email.indexOf("@") < 1) {
+          errorEl.innerText = "Geçerli bir e-posta gir.";
+          return;
+        }
+        if (!password || password.length < 8) {
+          errorEl.innerText = "Şifre en az 8 karakter olmalı.";
+          return;
+        }
+        errorEl.innerText = "Kayıt deneniyor...";
+        try {
+          const base =
+            (window.EM_API_BASE || window.location.origin || "").replace(/\/$/, "");
+          const res = await fetch(base + "/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: username,
+              password: password,
+              email: email,
+              teamName: username + " SK",
+              country:
+                (document.getElementById("regCountry") || {}).value || "Türkiye",
+              securityQuestion: (
+                (document.getElementById("regSecurityQuestion") || {}).value || ""
+              ).trim(),
+              securityAnswer: (
+                (document.getElementById("regSecurityAnswer") || {}).value || ""
+              ).trim(),
+              ageAccepted: true,
+              legalAccepted: true,
+            }),
+          });
+          const data = await res.json().catch(function () {
+            return {};
+          });
+          if (!res.ok) {
+            errorEl.innerText =
+              (data && (data.error || data.message)) ||
+              "Kayıt başarısız (" + res.status + ")";
+            return;
+          }
+          errorEl.innerText = "";
+          if (typeof window.afterServerLogin === "function") {
+            await window.afterServerLogin(data);
+          } else if (typeof completeLogin === "function") {
+            completeLogin(username);
+          }
+        } catch (e) {
+          errorEl.innerText =
+            (e && e.message) ||
+            "Sunucuya ulaşılamadı. Bağlantıyı ve DATABASE_URL / migrate kontrol et.";
+        }
       });
 
       document.getElementById("showRegister").addEventListener("click", () => {
