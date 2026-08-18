@@ -4,12 +4,10 @@
 
 const { query, withTransaction } = require("../db");
 
-const CL_SLOTS_BY_RANK = [4, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1];
-
-function slotsForRank(rank) {
-  const idx = Math.max(0, Number(rank) - 1);
-  return idx < CL_SLOTS_BY_RANK.length ? CL_SLOTS_BY_RANK[idx] : 1;
-}
+// 16 grup × 4 takım = 64 (her ülkenin 1. Lig şampiyonu)
+const CL_GROUP_SIZE = 4;
+const CL_TARGET_GROUPS = 16;
+const CL_GROUP_LETTERS = "ABCDEFGHIJKLMNOP"; // 16 harf (grp CHAR(1))
 
 async function getCurrentEdition() {
   const { rows } = await query(
@@ -24,110 +22,156 @@ async function getCurrentEdition() {
 }
 
 /**
- * Ülke lig ranking'ine göre kontenjan + kulüp seçimi.
- * En az 8 kulüp hedeflenir.
+ * Her ülkenin 1. Lig lideri (şampiyon / sezon lideri) — ülke başına 1 kulüp.
+ * Milli elemeler gibi: ülke temsilcileri gruplara serpilir.
  */
-async function pickQualifiers(targetSize = 8) {
-  // Ülke sıralaması: division 1 mevcut sezon ortalama puan / toplam puan
-  const { rows: countryRows } = await query(
-    `SELECT c.country,
-            SUM(ls.pts)::int AS pts,
-            COUNT(DISTINCT c.id)::int AS clubs
-     FROM clubs c
-     JOIN league_standings ls ON ls.club_id = c.id
-     JOIN seasons s ON s.id = ls.season_id AND s.is_current = TRUE AND s.division = 1
-     WHERE c.division = 1
-     GROUP BY c.country
-     ORDER BY SUM(ls.pts) DESC, COUNT(DISTINCT c.id) DESC, c.country ASC`,
+async function pickQualifiers() {
+  // 3. sezon+: katsayı kontenjanı
+  try {
+    const coeff = require("../countryCoefficient");
+    const mode = await coeff.getAccessMode();
+    if (mode.mode === "coefficient") {
+      const picked = await coeff.pickClubsBySlots("kitasal");
+      if (picked.ok && picked.clubs.length >= 4) {
+        let qualifiers = picked.clubs.map((c, i) => ({
+          id: c.id,
+          name: c.name,
+          country: c.country,
+          pts: c.pts || 0,
+          gd: 0,
+          countryRank: c.countryRank || i + 1,
+        }));
+        if (qualifiers.length > CL_TARGET_GROUPS * CL_GROUP_SIZE) {
+          qualifiers = qualifiers.slice(0, CL_TARGET_GROUPS * CL_GROUP_SIZE);
+        }
+        const nKeep = Math.floor(qualifiers.length / CL_GROUP_SIZE) * CL_GROUP_SIZE;
+        if (nKeep >= 4 && nKeep < qualifiers.length) qualifiers = qualifiers.slice(0, nKeep);
+        const pot = (picked.pot || []).map((p) => ({
+          country: p.country,
+          pts: p.points,
+          rank: p.rank,
+          slots: p.kitasalSlots,
+          clubName: null,
+        }));
+        return { pot, qualifiers, mode: "coefficient" };
+      }
+    }
+  } catch (e) {
+    console.warn("[continental] coeff pick", e.message);
+  }
+
+  // 2. sezon (fixed): kapanmış sezon şampiyonları
+  // Kapanmış son 1. Lig sezonunun şampiyonu (1. sıra) — ülke başına 1
+  const { rows: leaders } = await query(
+    `WITH last_season AS (
+       SELECT DISTINCT ON (country)
+              id, country, year_label
+       FROM seasons
+       WHERE division = 1 AND is_current = FALSE
+       ORDER BY country, id DESC
+     ),
+     ranked AS (
+       SELECT c.id, c.name, c.country,
+              COALESCE(ls.pts, 0) AS pts,
+              COALESCE(ls.gf - ls.ga, 0) AS gd,
+              COALESCE(ls.gf, 0) AS gf,
+              ROW_NUMBER() OVER (
+                PARTITION BY c.country
+                ORDER BY COALESCE(ls.pts, 0) DESC,
+                         (COALESCE(ls.gf, 0) - COALESCE(ls.ga, 0)) DESC,
+                         COALESCE(ls.gf, 0) DESC,
+                         c.name ASC
+              ) AS rk,
+              ls_s.year_label AS "seasonLabel"
+       FROM last_season ls_s
+       JOIN league_standings ls ON ls.season_id = ls_s.id
+       JOIN clubs c ON c.id = ls.club_id
+     )
+     SELECT id, name, country, pts, gd, gf, "seasonLabel"
+     FROM ranked
+     WHERE rk = 1
+     ORDER BY pts DESC, gd DESC, name ASC`,
   );
 
-  let pot = countryRows.map((r, i) => ({
-    country: r.country,
-    pts: r.pts,
-    clubs: r.clubs,
-    rank: i + 1,
-    slots: slotsForRank(i + 1),
+  let qualifiers = leaders.map((c, i) => ({
+    id: c.id,
+    name: c.name,
+    country: c.country,
+    pts: Number(c.pts) || 0,
+    gd: Number(c.gd) || 0,
+    countryRank: i + 1,
+    seasonLabel: c.seasonLabel,
   }));
 
-  if (!pot.length) {
-    // Fallback: herhangi division 1 kulüpleri
-    const { rows: anyC } = await query(
-      `SELECT country, COUNT(*)::int AS clubs FROM clubs
-       WHERE division = 1 GROUP BY country ORDER BY COUNT(*) DESC`,
-    );
-    pot = anyC.map((r, i) => ({
-      country: r.country,
-      pts: 0,
-      clubs: r.clubs,
-      rank: i + 1,
-      slots: slotsForRank(i + 1),
-    }));
+  if (qualifiers.length > CL_TARGET_GROUPS * CL_GROUP_SIZE) {
+    qualifiers = qualifiers.slice(0, CL_TARGET_GROUPS * CL_GROUP_SIZE);
   }
 
-  const qualifiers = [];
-  for (const p of pot) {
-    if (qualifiers.length >= targetSize) break;
-    const need = Math.min(p.slots, targetSize - qualifiers.length);
-    const { rows: clubs } = await query(
-      `SELECT c.id, c.name, c.country, COALESCE(ls.pts, 0) AS pts
-       FROM clubs c
-       LEFT JOIN league_standings ls ON ls.club_id = c.id
-       LEFT JOIN seasons s ON s.id = ls.season_id AND s.is_current = TRUE AND s.division = 1
-       WHERE c.country = $1 AND c.division = 1
-       ORDER BY COALESCE(ls.pts, 0) DESC, c.name ASC
-       LIMIT $2`,
-      [p.country, need],
-    );
-    for (const c of clubs) {
-      if (qualifiers.length >= targetSize) break;
-      if (qualifiers.some((q) => String(q.id) === String(c.id))) continue;
-      qualifiers.push({
-        id: c.id,
-        name: c.name,
-        country: c.country,
-        pts: c.pts,
-        countryRank: p.rank,
-      });
-    }
+  const nKeep =
+    Math.floor(qualifiers.length / CL_GROUP_SIZE) * CL_GROUP_SIZE;
+  if (nKeep >= 4 && nKeep < qualifiers.length) {
+    qualifiers = qualifiers.slice(0, nKeep);
   }
 
-  // Hâlâ eksikse herhangi kulüp
-  if (qualifiers.length < Math.min(8, targetSize)) {
-    const { rows: more } = await query(
-      `SELECT id, name, country FROM clubs
-       WHERE division = 1
-       ORDER BY RANDOM() LIMIT $1`,
-      [targetSize],
-    );
-    for (const c of more) {
-      if (qualifiers.length >= targetSize) break;
-      if (qualifiers.some((q) => String(q.id) === String(c.id))) continue;
-      qualifiers.push({
-        id: c.id,
-        name: c.name,
-        country: c.country,
-        pts: 0,
-        countryRank: 99,
-      });
-    }
-  }
+  const pot = qualifiers.map((q, i) => ({
+    country: q.country,
+    pts: q.pts,
+    rank: i + 1,
+    slots: 1,
+    clubName: q.name,
+  }));
 
   return { pot, qualifiers };
 }
 
+/**
+ * Milli kura benzeri: güç sırasına göre 4 torba, 16 (veya n/4) gruba serpme.
+ * Grup etiketleri A–P (CHAR(1)).
+ */
 function splitGroups(qualifiers) {
-  // Snake draft into A/B (and C/D if 16)
-  const groups = { A: [], B: [], C: [], D: [] };
-  const keys =
-    qualifiers.length >= 16
-      ? ["A", "B", "C", "D"]
-      : ["A", "B"];
-  const sorted = qualifiers.slice().sort((a, b) => (b.pts || 0) - (a.pts || 0));
+  const sorted = (qualifiers || [])
+    .slice()
+    .sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0));
+  const n = sorted.length;
+  let nGroups = Math.floor(n / CL_GROUP_SIZE);
+  if (nGroups < 2) nGroups = Math.max(1, nGroups);
+  if (nGroups > CL_TARGET_GROUPS) nGroups = CL_TARGET_GROUPS;
+
+  const keys = [];
+  for (let i = 0; i < nGroups; i++) {
+    keys.push(CL_GROUP_LETTERS[i] || String(i));
+  }
+
+  // 4 torba
+  const potSize = Math.ceil(n / 4) || 1;
+  const pots = [[], [], [], []];
   sorted.forEach((q, i) => {
-    const k = keys[i % keys.length];
-    groups[k].push(q);
+    const pot = Math.min(3, Math.floor(i / potSize));
+    pots[pot].push(q);
   });
-  // Drop empty
+  // Torba içi karıştır
+  pots.forEach((p) => {
+    for (let i = p.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = p[i];
+      p[i] = p[j];
+      p[j] = t;
+    }
+  });
+
+  const groups = {};
+  keys.forEach((k) => {
+    groups[k] = [];
+  });
+  for (let potIdx = 0; potIdx < 4; potIdx++) {
+    for (let i = 0; i < pots[potIdx].length; i++) {
+      const k = keys[i % nGroups];
+      if (groups[k].length < CL_GROUP_SIZE) {
+        groups[k].push(pots[potIdx][i]);
+      }
+    }
+  }
+
   Object.keys(groups).forEach((k) => {
     if (!groups[k].length) delete groups[k];
   });
@@ -135,7 +179,6 @@ function splitGroups(qualifiers) {
 }
 
 function groupFixtures(groupClubs) {
-  // Single round-robin
   const ids = groupClubs.map((c) => c.id);
   const pairs = [];
   for (let i = 0; i < ids.length; i++) {
@@ -146,17 +189,30 @@ function groupFixtures(groupClubs) {
   return pairs;
 }
 
+// 9 haftalık sezon: grup 3 Çarşamba, eleme sonraki Çarşambalar — hepsi 15:00 TR
+const CL_SEASON_WEEKS = 9;
+const CL_SEASON_SPAN_MS = CL_SEASON_WEEKS * 7 * 24 * 3600 * 1000;
+
 async function createEdition(yearLabel, opts = {}) {
-  const target = opts.targetSize || 8;
-  const { pot, qualifiers } = await pickQualifiers(target);
+  const cal = require("../calendarSchedule");
+  const { pot, qualifiers } = await pickQualifiers();
   if (qualifiers.length < 4) {
-    return { ok: false, error: "Yeterli kulüp yok (min 4)", pot, qualifiers };
+    return {
+      ok: false,
+      error:
+        "Yeterli 1. Lig şampiyonu yok (min 4 ülke, kapanmış sezon gerekli)",
+      pot,
+      qualifiers,
+    };
   }
 
-  // 8 veya 16'ya yuvarla
-  let take = qualifiers.length >= 16 ? 16 : qualifiers.length >= 8 ? 8 : 4;
-  const selected = qualifiers.slice(0, take);
-  const groups = splitGroups(selected);
+  const groups = splitGroups(qualifiers);
+  const groupCount = Object.keys(groups).length;
+  // Ortak slot: Çarşamba 15:00 TR (Elite Kupa ile aynı)
+  const startAt =
+    opts.startAt instanceof Date
+      ? opts.startAt
+      : cal.nextWednesday1500TR();
 
   return withTransaction(async (client) => {
     await client.query(
@@ -166,7 +222,7 @@ async function createEdition(yearLabel, opts = {}) {
       `INSERT INTO continental_editions (year_label, is_current, phase)
        VALUES ($1, TRUE, 'group')
        RETURNING id, year_label AS "yearLabel", phase`,
-      [yearLabel || "CL-" + new Date().getFullYear()],
+      [yearLabel || "KL-" + new Date().getFullYear()],
     );
     const edition = ins.rows[0];
 
@@ -181,21 +237,14 @@ async function createEdition(yearLabel, opts = {}) {
       }
     }
 
-    // Kickoff: gelecek Çarşamba 15:00 TR (UTC+3) ≈ 12:00 UTC
-    let kick = new Date();
-    kick.setUTCHours(12, 0, 0, 0);
-    while (kick.getUTCDay() !== 3) {
-      kick = new Date(kick.getTime() + 86400000);
-    }
-    if (kick.getTime() < Date.now()) {
-      kick = new Date(kick.getTime() + 7 * 86400000);
-    }
-
+    // Grup: 3 maç günü = 3 ardışık Çarşamba 15:00 TR (tur içi tüm maçlar aynı saat)
     let slot = 0;
     for (const [grp, clubs] of Object.entries(groups)) {
       const pairs = groupFixtures(clubs);
-      for (const p of pairs) {
-        const ko = new Date(kick.getTime() + slot * 3 * 3600000);
+      for (let pi = 0; pi < pairs.length; pi++) {
+        const p = pairs[pi];
+        const matchday = pi % 3;
+        const ko = cal.wednesday1500TRPlusWeeks(startAt, matchday);
         await client.query(
           `INSERT INTO continental_fixtures
              (edition_id, phase, round_label, grp, slot, home_club_id, away_club_id, kickoff_at, status)
@@ -218,7 +267,8 @@ async function createEdition(yearLabel, opts = {}) {
       ok: true,
       edition,
       pot,
-      qualifiers: selected,
+      qualifiers,
+      groupCount,
       groups: Object.fromEntries(
         Object.entries(groups).map(([k, v]) => [
           k,
@@ -226,6 +276,10 @@ async function createEdition(yearLabel, opts = {}) {
         ]),
       ),
       fixtureCount: slot,
+      startAt: startAt.toISOString(),
+      kickoffSlot: "Çarşamba 15:00 TR",
+      format: "kitasal_lig_16x4_group_winners",
+      name: "Kıtasal Lig",
     };
   });
 }
@@ -233,6 +287,21 @@ async function createEdition(yearLabel, opts = {}) {
 async function ensureEditionExists(yearLabel) {
   let ed = await getCurrentEdition();
   if (ed) return { edition: ed, created: false };
+
+  // Bu sezon kilidi: 1. sezon bitmeden oluşturma
+  try {
+    const gate = require("../continentalGate");
+    const can = await gate.canStartContinentalCompetitions();
+    if (!can.ok) {
+      return {
+        edition: null,
+        created: false,
+        skipped: true,
+        error: can.hint || can.reason,
+      };
+    }
+  } catch (_) {}
+
   const res = await createEdition(yearLabel);
   if (!res.ok) return { edition: null, created: false, error: res.error };
   return { edition: res.edition, created: true, ...res };
@@ -308,7 +377,10 @@ async function setFixtureLive(fixtureId, matchId) {
   );
 }
 
-async function applyMatchResult(fixtureId, homeGoals, awayGoals, matchId) {
+/**
+ * @param {object} [penOpts] matchEngine penaltı sonucu (opsiyonel)
+ */
+async function applyMatchResult(fixtureId, homeGoals, awayGoals, matchId, penOpts) {
   return withTransaction(async (client) => {
     const { rows } = await client.query(
       `SELECT * FROM continental_fixtures WHERE id = $1 FOR UPDATE`,
@@ -326,23 +398,42 @@ async function applyMatchResult(fixtureId, homeGoals, awayGoals, matchId) {
     let penAway = null;
     if (hg > ag) winner = f.home_club_id;
     else if (ag > hg) winner = f.away_club_id;
-    // Grupta beraberlik OK; elemede 5'er penaltı simülasyonu
+    // Grupta beraberlik OK; elemede (qf/sf/final) 120' sonrası penaltı
     else if (f.phase !== "group") {
       penalties = true;
-      penHome = 0;
-      penAway = 0;
-      for (let i = 0; i < 5; i++) {
-        if (Math.random() < 0.72) penHome++;
-        if (Math.random() < 0.72) penAway++;
+      const pre = penOpts || {};
+      if (pre.penaltyWinner === "home" || pre.penaltyWinner === "away") {
+        winner =
+          pre.penaltyWinner === "home" ? f.home_club_id : f.away_club_id;
+        if (pre.penaltyScore) {
+          penHome = pre.penaltyScore.home;
+          penAway = pre.penaltyScore.away;
+        }
+      } else {
+        try {
+          const { simulatePenaltyShootout } = require("../penaltyShootout");
+          const sim = simulatePenaltyShootout({});
+          winner =
+            sim.winner === "home" ? f.home_club_id : f.away_club_id;
+          penHome = sim.homeScore;
+          penAway = sim.awayScore;
+        } catch (_) {
+          penHome = 0;
+          penAway = 0;
+          for (let i = 0; i < 5; i++) {
+            if (Math.random() < 0.75) penHome++;
+            if (Math.random() < 0.75) penAway++;
+          }
+          let guard = 0;
+          while (penHome === penAway && guard < 12) {
+            if (Math.random() < 0.72) penHome++;
+            if (Math.random() < 0.72) penAway++;
+            guard++;
+          }
+          if (penHome === penAway) penHome++;
+          winner = penHome > penAway ? f.home_club_id : f.away_club_id;
+        }
       }
-      let guard = 0;
-      while (penHome === penAway && guard < 10) {
-        if (Math.random() < 0.7) penHome++;
-        if (Math.random() < 0.7) penAway++;
-        guard++;
-      }
-      if (penHome === penAway) penHome++;
-      winner = penHome > penAway ? f.home_club_id : f.away_club_id;
     }
 
     await client.query(
@@ -378,6 +469,40 @@ async function applyMatchResult(fixtureId, homeGoals, awayGoals, matchId) {
       );
     }
 
+
+    // Ülke katsayısı (2. sezon sonuçları → 3. sezon kontenjan)
+    try {
+      const coeff = require("../countryCoefficient");
+      let homeCountry = null;
+      let awayCountry = null;
+      if (f.home_club_id) {
+        const { rows: hc } = await client.query(
+          `SELECT country FROM clubs WHERE id = $1`, [f.home_club_id],
+        );
+        homeCountry = hc[0] && hc[0].country;
+      }
+      if (f.away_club_id) {
+        const { rows: ac } = await client.query(
+          `SELECT country FROM clubs WHERE id = $1`, [f.away_club_id],
+        );
+        awayCountry = ac[0] && ac[0].country;
+      }
+      let winnerCountry = null;
+      if (winner === f.home_club_id) winnerCountry = homeCountry;
+      else if (winner === f.away_club_id) winnerCountry = awayCountry;
+      await coeff.addMatchPoints("kitasal", {
+        homeCountry,
+        awayCountry,
+        homeGoals: hg,
+        awayGoals: ag,
+        phase: f.phase,
+        roundLabel: f.round_label,
+        winnerCountry,
+      });
+    } catch (eC) {
+      console.warn("[continental] coeff", eC.message);
+    }
+
     return {
       ok: true,
       editionId: f.edition_id,
@@ -390,8 +515,38 @@ async function applyMatchResult(fixtureId, homeGoals, awayGoals, matchId) {
   });
 }
 
+function nextWednesdayKick(fromDate) {
+  try {
+    return require("../calendarSchedule").nextWednesday1500TR(fromDate);
+  } catch (_) {
+    let kick = fromDate ? new Date(fromDate) : new Date();
+    kick.setUTCHours(12, 0, 0, 0);
+    while (kick.getUTCDay() !== 3) {
+      kick = new Date(kick.getTime() + 86400000);
+    }
+    if (kick.getTime() <= Date.now()) {
+      kick = new Date(kick.getTime() + 7 * 86400000);
+    }
+    return kick;
+  }
+}
+
+/** Bir sonraki eleme turu: bir sonraki Çarşamba 15:00 TR */
+function nextKnockoutKick() {
+  return nextWednesdayKick(new Date());
+}
+
+/** Tek maçlı eleme tur etiketleri (kalan takım sayısına göre). */
+function knockoutPhaseForCount(n) {
+  if (n <= 2) return { phase: "final", label: "Final", slotBase: 2000 };
+  if (n <= 4) return { phase: "sf", label: "Yarı Final", slotBase: 1000 };
+  if (n <= 8) return { phase: "qf", label: "Çeyrek Final", slotBase: 500 };
+  return { phase: "r16", label: "Son 16", slotBase: 200 };
+}
+
 /**
- * Gruplar bitince yarı final + final oluştur.
+ * Gruplar bitince: yalnızca grup liderleri (1.) üst tura.
+ * 16 lider → Son 16 → ÇF → YF → Final (tek maçlı eleme, uzatma+penaltı).
  */
 async function maybeAdvanceKnockout(editionId) {
   const { rows: openGroup } = await query(
@@ -403,95 +558,176 @@ async function maybeAdvanceKnockout(editionId) {
 
   const { rows: existingKo } = await query(
     `SELECT COUNT(*)::int AS c FROM continental_fixtures
-     WHERE edition_id = $1 AND phase IN ('sf', 'final')`,
+     WHERE edition_id = $1 AND phase IN ('r16', 'qf', 'sf', 'final')`,
     [editionId],
   );
   if (existingKo[0] && existingKo[0].c > 0) {
-    // SF bitti mi → final
-    return maybeCreateFinal(editionId);
+    return maybeAdvanceKnockoutRound(editionId);
   }
 
   const standings = await getGroupStandings(editionId);
   const groupKeys = Object.keys(standings).sort();
   if (groupKeys.length < 2) return { advanced: false, reason: "need_2_groups" };
 
-  // Her gruptan ilk 2
-  const adv = [];
+  // Yalnızca grup lideri (1.) — milli elemeler gibi
+  const winners = [];
   for (const g of groupKeys) {
-    const top = (standings[g] || []).slice(0, 2);
-    adv.push(...top);
+    const top = (standings[g] || [])[0];
+    if (top && top.clubId) winners.push(top);
   }
-  if (adv.length < 4) return { advanced: false, reason: "need_4" };
+  if (winners.length < 2) return { advanced: false, reason: "need_2_winners" };
 
-  // SF: A1 vs B2, B1 vs A2 (veya ilk 4 snake)
-  const pairs =
-    adv.length >= 4
-      ? [
-          [adv[0], adv[3]],
-          [adv[1], adv[2]],
-        ]
-      : [];
-
-  let kick = new Date();
-  kick.setUTCHours(12, 0, 0, 0);
-  while (kick.getUTCDay() !== 3) {
-    kick = new Date(kick.getTime() + 86400000);
+  // Eşleştirme: 1–son, 2–sondan bir... (komşu gruplar)
+  const ids = winners.map((w) => w.clubId);
+  const pairs = [];
+  for (let i = 0; i < Math.floor(ids.length / 2); i++) {
+    pairs.push([ids[i], ids[ids.length - 1 - i]]);
   }
-  if (kick.getTime() < Date.now()) kick = new Date(kick.getTime() + 7 * 86400000);
+  // Tek kalan bye (kazanan olarak yaz)
+  const byeId = ids.length % 2 === 1 ? ids[Math.floor(ids.length / 2)] : null;
 
-  let slot = 1000;
+  const meta = knockoutPhaseForCount(ids.length);
+  // Tüm eleme maçları aynı slot: Çarşamba 15:00 TR
+  const kick = nextKnockoutKick();
+  let slot = meta.slotBase;
+
   for (let i = 0; i < pairs.length; i++) {
     const [h, a] = pairs[i];
-    const ko = new Date(kick.getTime() + i * 3 * 3600000);
     await query(
       `INSERT INTO continental_fixtures
          (edition_id, phase, round_label, slot, home_club_id, away_club_id, kickoff_at, status)
-       VALUES ($1, 'sf', 'Yarı Final', $2, $3, $4, $5, 'scheduled')`,
-      [editionId, slot++, h.clubId, a.clubId, ko.toISOString()],
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'scheduled')`,
+      [editionId, meta.phase, meta.label, slot++, h, a, kick.toISOString()],
     );
   }
+  if (byeId) {
+    await query(
+      `INSERT INTO continental_fixtures
+         (edition_id, phase, round_label, slot, home_club_id, away_club_id, status, winner_club_id)
+       VALUES ($1, $2, $3, $4, $5, NULL, 'finished', $5)`,
+      [editionId, meta.phase, meta.label + " (bye)", slot++, byeId],
+    );
+  }
+
   await query(
     `UPDATE continental_editions SET phase = 'knockout' WHERE id = $1`,
     [editionId],
   );
-  return { advanced: true, phase: "sf", pairs: pairs.length };
+  return {
+    advanced: true,
+    phase: meta.phase,
+    pairs: pairs.length,
+    byes: byeId ? 1 : 0,
+    groupWinners: winners.length,
+  };
 }
 
-async function maybeCreateFinal(editionId) {
-  const { rows: openSf } = await query(
-    `SELECT COUNT(*)::int AS c FROM continental_fixtures
-     WHERE edition_id = $1 AND phase = 'sf' AND status IN ('scheduled', 'live')`,
-    [editionId],
-  );
-  if (openSf[0] && openSf[0].c > 0) return { advanced: false };
+/**
+ * Mevcut eleme turu bitince bir sonraki tur (veya şampiyon).
+ * Tur sırası: r16 → qf → sf → final → finished
+ */
+async function maybeAdvanceKnockoutRound(editionId) {
+  const order = ["r16", "qf", "sf", "final"];
+  for (let i = 0; i < order.length; i++) {
+    const phase = order[i];
+    const { rows: open } = await query(
+      `SELECT COUNT(*)::int AS c FROM continental_fixtures
+       WHERE edition_id = $1 AND phase = $2 AND status IN ('scheduled', 'live')`,
+      [editionId, phase],
+    );
+    if (open[0] && open[0].c > 0) return { advanced: false };
 
-  const { rows: existingFinal } = await query(
-    `SELECT COUNT(*)::int AS c FROM continental_fixtures
-     WHERE edition_id = $1 AND phase = 'final'`,
-    [editionId],
-  );
-  if (existingFinal[0] && existingFinal[0].c > 0) {
-    return maybeFinishEdition(editionId);
+    const { rows: phaseFx } = await query(
+      `SELECT COUNT(*)::int AS c FROM continental_fixtures
+       WHERE edition_id = $1 AND phase = $2`,
+      [editionId, phase],
+    );
+    if (!phaseFx[0] || phaseFx[0].c === 0) continue;
+
+    // Bu tur var ve tamamlanmış
+    if (phase === "final") {
+      return maybeFinishEdition(editionId);
+    }
+
+    // Sonraki tur zaten var mı?
+    const nextPhases = order.slice(i + 1);
+    let nextExists = false;
+    for (const np of nextPhases) {
+      const { rows: n } = await query(
+        `SELECT COUNT(*)::int AS c FROM continental_fixtures
+         WHERE edition_id = $1 AND phase = $2`,
+        [editionId, np],
+      );
+      if (n[0] && n[0].c > 0) {
+        nextExists = true;
+        break;
+      }
+    }
+    if (nextExists) continue;
+
+    const { rows: winners } = await query(
+      `SELECT winner_club_id FROM continental_fixtures
+       WHERE edition_id = $1 AND phase = $2 AND status = 'finished'
+         AND winner_club_id IS NOT NULL
+       ORDER BY slot ASC`,
+      [editionId, phase],
+    );
+    const ids = winners.map((w) => w.winner_club_id).filter(Boolean);
+    if (ids.length < 2) {
+      if (ids.length === 1) {
+        // Tek kalan = şampiyon
+        const { rows: club } = await query(
+          `SELECT name FROM clubs WHERE id = $1`,
+          [ids[0]],
+        );
+        await query(
+          `UPDATE continental_editions SET
+             phase = 'finished', is_current = FALSE,
+             champion_club_id = $2, champion_name = $3
+           WHERE id = $1`,
+          [editionId, ids[0], (club[0] && club[0].name) || "Şampiyon"],
+        );
+        return { advanced: true, phase: "finished", championClubId: ids[0] };
+      }
+      return { advanced: false, reason: "need_winners" };
+    }
+
+    const meta = knockoutPhaseForCount(ids.length);
+    const kick = nextKnockoutKick();
+    const pairs = [];
+    for (let p = 0; p < Math.floor(ids.length / 2); p++) {
+      pairs.push([ids[p * 2], ids[p * 2 + 1]]);
+    }
+    const byeId = ids.length % 2 === 1 ? ids[ids.length - 1] : null;
+    let slot = meta.slotBase;
+    for (let p = 0; p < pairs.length; p++) {
+      await query(
+        `INSERT INTO continental_fixtures
+           (edition_id, phase, round_label, slot, home_club_id, away_club_id, kickoff_at, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'scheduled')`,
+        [
+          editionId,
+          meta.phase,
+          meta.label,
+          slot++,
+          pairs[p][0],
+          pairs[p][1],
+          kick.toISOString(),
+        ],
+      );
+    }
+    if (byeId) {
+      await query(
+        `INSERT INTO continental_fixtures
+           (edition_id, phase, round_label, slot, home_club_id, away_club_id, status, winner_club_id)
+         VALUES ($1, $2, $3, $4, $5, NULL, 'finished', $5)`,
+        [editionId, meta.phase, meta.label + " (bye)", slot++, byeId],
+      );
+    }
+    return { advanced: true, phase: meta.phase, pairs: pairs.length };
   }
 
-  const { rows: sf } = await query(
-    `SELECT winner_club_id FROM continental_fixtures
-     WHERE edition_id = $1 AND phase = 'sf' AND status = 'finished'
-       AND winner_club_id IS NOT NULL
-     ORDER BY slot ASC`,
-    [editionId],
-  );
-  if (sf.length < 2) return { advanced: false, reason: "need_2_winners" };
-
-  let kick = new Date(Date.now() + 7 * 86400000);
-  kick.setUTCHours(12, 0, 0, 0);
-  await query(
-    `INSERT INTO continental_fixtures
-       (edition_id, phase, round_label, slot, home_club_id, away_club_id, kickoff_at, status)
-     VALUES ($1, 'final', 'Final', 2000, $2, $3, $4, 'scheduled')`,
-    [editionId, sf[0].winner_club_id, sf[1].winner_club_id, kick.toISOString()],
-  );
-  return { advanced: true, phase: "final" };
+  return maybeFinishEdition(editionId);
 }
 
 async function maybeFinishEdition(editionId) {
@@ -514,6 +750,28 @@ async function maybeFinishEdition(editionId) {
      WHERE id = $1`,
     [editionId, fin[0].winner_club_id, (club[0] && club[0].name) || "Şampiyon"],
   );
+  try {
+    const coeff = require("../countryCoefficient");
+    const { rows: ch } = await query(
+      `SELECT country FROM clubs WHERE id = $1`,
+      [fin[0].winner_club_id],
+    );
+    if (ch[0] && ch[0].country) {
+      await coeff.addMatchPoints("kitasal", {
+        homeCountry: ch[0].country,
+        awayCountry: null,
+        homeGoals: 1,
+        awayGoals: 0,
+        phase: "final",
+        winnerCountry: ch[0].country,
+        isChampion: true,
+      });
+    }
+    await coeff.recomputeTotalsAndSlots();
+  } catch (e) {
+    console.warn("[continental] coeff finish", e.message);
+  }
+
   return {
     advanced: true,
     phase: "finished",

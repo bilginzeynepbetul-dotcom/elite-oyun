@@ -574,18 +574,19 @@ async function listDueFixtures(limit = 10) {
 async function setFixtureLive(fixtureId, matchId) {
   await query(
     `UPDATE national_fixtures SET status = 'live', match_id = COALESCE($2, match_id)
-     WHERE id = $1`,
+     WHERE id = $1 AND status = 'scheduled'`,
     [fixtureId, matchId],
   );
 }
 
 async function finishFixture(fixtureId, homeGoals, awayGoals) {
-  await query(
+  const { rowCount } = await query(
     `UPDATE national_fixtures
      SET status = 'finished', home_goals = $2, away_goals = $3
-     WHERE id = $1`,
+     WHERE id = $1 AND status IN ('scheduled', 'live')`,
     [fixtureId, homeGoals, awayGoals],
   );
+  return { ok: true, updated: rowCount > 0 };
 }
 
 module.exports = {
