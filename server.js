@@ -1103,6 +1103,43 @@ api.get("/manager/:username", async (req, res) => {
   }
 });
 
+
+// ---- Anketler (herkes okur/oyar; oluşturma admin panelde) ----
+api.get("/polls", async (req, res) => {
+  try {
+    const polls = (global.__emPolls || []).filter((p) => p.active !== false);
+    res.json({ polls });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+api.post("/polls/:id/vote", async (req, res) => {
+  try {
+    const poll = (global.__emPolls || []).find(
+      (p) => p.id === req.params.id && p.active !== false,
+    );
+    if (!poll) return res.status(404).json({ error: "Anket yok" });
+    const option = String((req.body && req.body.option) || "");
+    if (!poll.options.includes(option)) {
+      return res.status(400).json({ error: "Geçersiz seçenek" });
+    }
+    const uid = String(
+      (req.user && (req.user.id || req.user.sub || req.user.username)) || "anon",
+    );
+    poll.votes[uid] = option;
+    const counts = {};
+    poll.options.forEach((o) => {
+      counts[o] = 0;
+    });
+    Object.values(poll.votes).forEach((v) => {
+      if (counts[v] != null) counts[v]++;
+    });
+    res.json({ ok: true, counts, total: Object.keys(poll.votes).length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Feature routers
 api.use(createLeagueRouter());
 api.use("/national", createNationalRouter({
